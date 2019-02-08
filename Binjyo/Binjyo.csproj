@@ -107,5 +107,11 @@
   <ItemGroup>
     <None Include="icon.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="lockon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="lockoff.ico" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

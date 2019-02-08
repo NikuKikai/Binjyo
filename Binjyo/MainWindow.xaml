@@ -25,5 +25,11 @@
         >
     <Grid Margin="0,0,0,0">
         <Canvas Name="canvas" Margin="0,0,0,0"></Canvas>
+        <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=canvas}">
+            <Grid>
+                <TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>
+                
+            </Grid>
+        </Popup>
     </Grid>
 </Window>

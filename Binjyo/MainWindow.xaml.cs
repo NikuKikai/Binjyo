@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Drawing;
+using System.Threading;
 
 namespace Binjyo
 {
@@ -75,6 +76,7 @@ namespace Binjyo
                 }
                 else
                 {
+                    linew.Opacity = 0; lineh.Opacity = 0;
                     Show();
                 }
                 Activate();
@@ -153,7 +155,7 @@ namespace Binjyo
             lineh.Opacity = 0.0;
             canvas.Children.Add(lineh);
             rect = new System.Windows.Shapes.Rectangle();
-            rect.Stroke = new SolidColorBrush(Colors.White);
+            rect.Stroke = new SolidColorBrush(Colors.Black);
             rect.Opacity = 0.0;
             canvas.Children.Add(rect);
         }
@@ -193,17 +195,22 @@ namespace Binjyo
 
             if (isdrag)
             {
-                linew.Opacity = 0.0; lineh.Opacity = 0.0;
+                linew.Opacity = 0; lineh.Opacity = 0;
                 rect.Width = x > startx ? x - startx : startx - x;
                 rect.Height = y > starty ? y - starty : starty - y;
                 Canvas.SetLeft(rect, x > startx ? startx + offset : x + offset);
                 Canvas.SetTop(rect, y > starty ? starty + offset : y + offset);
                 rect.Opacity = 0.8;
+
+                popup.HorizontalOffset = x + 40;
+                popup.VerticalOffset = y + 10;
+                poptext.Text = String.Format("{0}x{1}", (int)rect.Width, (int)rect.Height);
+                popup.IsOpen = true;
             }
             else
             {
                 // draw cross
-                rect.Opacity = 0.0;
+                rect.Opacity = 0; popup.IsOpen = false;
                 linew.X1 = x + offset; linew.X2 = x + offset; linew.Opacity = 1.0;
                 lineh.Y1 = y + offset; lineh.Y2 = y + offset; lineh.Opacity = 1.0;
             }
@@ -215,8 +222,8 @@ namespace Binjyo
             isshot = false;
             isdrag = false;
 
-            rect.Opacity = 0.0;
-            if (rect.Width > 10 && rect.Height > 10)
+            rect.Opacity = 0; popup.IsOpen = false; linew.Opacity = 0; lineh.Opacity = 0;
+            if (rect.Width > 20 && rect.Height > 20)
             {
                 var croppedImage = new Bitmap((int)rect.Width, (int)rect.Height);
                 using (var graphics = Graphics.FromImage(croppedImage))
@@ -241,6 +248,8 @@ namespace Binjyo
             Hide();
             isshot = false;
             isdrag = false;
+            rect.Opacity = 0;
+            popup.IsOpen = false;
         }
 
 

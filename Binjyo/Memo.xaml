@@ -5,22 +5,46 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Binjyo"
         mc:Ignorable="d"
-        Title="Memo" Height="100" Width="100"
+        Title="Memo" Height="100" Width="100" MinWidth="20" MinHeight="20"
         AllowsTransparency="True"
         WindowStyle="None"
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         KeyDown="Window_KeyDown"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
         MouseDown="Window_MouseDown"
+        PreviewMouseDown="Window_PreviewMouseDown"
         MouseMove="Window_MouseMove"
         MouseUp="Window_MouseUp"
         MouseDoubleClick="Window_MouseDoubleClick"
+        Deactivated="Window_Deactivated"
         >
+    <Window.Resources>
+        <Image x:Key="lockoff" Source="lockoff.ico" Height="18" Width="18" Margin="-1,-1,0,0" />
+        <Image x:Key="lockon" Source="lockon.ico" Height="18" Width="18" Margin="-1,-1,0,0"/>
+    </Window.Resources>
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
+        <Button Name="button" Margin="0,0,0,0" Width="20" Height="20" 
+                HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0"
+                BorderThickness="0"
+                Click="button_Click" PreviewMouseDown="Window_MouseDown"
+                >
+            <DynamicResource ResourceKey="lockoff"/>
+            
+        </Button>
+        <Polygon Name="resizer" Points="10,0 0,10 10,10" Fill="Black" 
+                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Opacity="0.1"
+                 Cursor="SizeNWSE" 
+                 MouseDown="resizer_MouseDown" MouseUp="resizer_MouseUp">
+            
+        </Polygon>
+        <!--<Popup Name="popup" IsOpen="True" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}"
+               HorizontalOffset="-100" VerticalOffset="100">
+            <Button Name="popbutton" Width="20" Height="20"></Button>
+        </Popup>-->
     </Grid>
 </Window>
