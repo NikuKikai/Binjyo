@@ -28,7 +28,9 @@ namespace Binjyo
         private double lastx, lasty;
         private double startdx, startdy;
         private BitmapSource bitmpasource;
-        private bool islock = false;
+        private int lockmode = 0;
+
+        private double scale = 1;
 
         public Memo()
         {
@@ -80,53 +82,123 @@ namespace Binjyo
         }
         private void TimerHandler()
         {
-            if (islock)
+            switch(lockmode)
             {
-                double x = System.Windows.Forms.Control.MousePosition.X;
-                double y = System.Windows.Forms.Control.MousePosition.Y;
-                if (Left < x && x < Left + Width &&
-                    Top < y && y < Top + Height)
-                {
-                    image.Opacity = 0;
-                    button.Opacity = 1;
-                }
-                else
-                {
-                    image.Opacity = 1;
-                    button.Opacity = 0.1;
-                }
-            }
-            else
-            {
-                if (isresize)
-                {
-                    if (System.Windows.Input.Mouse.LeftButton != MouseButtonState.Pressed)
-                        isresize = false;
-                    double w = System.Windows.Forms.Control.MousePosition.X + startdx - Left;
-                    double h = System.Windows.Forms.Control.MousePosition.Y + startdy - Top;
-                    if (w * bitmpasource.Height / bitmpasource.Width > h)
-                        h = w * bitmpasource.Height / bitmpasource.Width;
-                    else
-                        w = h * bitmpasource.Width / bitmpasource.Height;
-                    w = w < MinWidth ? MinWidth : w;
-                    h = h < MinHeight ? MinHeight : h;
-                    w = w > MaxWidth ? MaxWidth : w;
-                    h = h > MaxHeight ? MaxHeight : h;
-                    Width = w;
-                    Height = h;
-                }
-                if (isdrag)
-                {
-                    if (System.Windows.Input.Mouse.LeftButton != MouseButtonState.Pressed)
-                        isdrag = false;
+                case 1:
                     double x = System.Windows.Forms.Control.MousePosition.X;
                     double y = System.Windows.Forms.Control.MousePosition.Y;
-                    Left += x - lastx;
-                    Top += y - lasty;
-                    lastx = x;
-                    lasty = y;
-                }
+                    if (Left < x && x < Left + Width &&
+                        Top < y && y < Top + Height)
+                    {
+                        image.Opacity = 0;
+                        button.Opacity = 1;
+                    }
+                    else
+                    {
+                        image.Opacity = 1;
+                        button.Opacity = 0.1;
+                    }
+                    break;
+
+                case 0:
+                    /*if (isresize)
+                    {
+                        if (System.Windows.Forms.Control.MouseButtons == System.Windows.Forms.MouseButtons.None)
+                        {
+                            isresize = false;
+                            print("v");
+                        }
+                        double w = System.Windows.Forms.Control.MousePosition.X + startdx - Left;
+                        double h = System.Windows.Forms.Control.MousePosition.Y + startdy - Top;
+                        if (w * bitmpasource.Height / bitmpasource.Width > h)
+                            h = w * bitmpasource.Height / bitmpasource.Width;
+                        else
+                            w = h * bitmpasource.Width / bitmpasource.Height;
+                        if (w < MinWidth)
+                        {
+                            w = MinWidth; h = w * bitmpasource.Height / bitmpasource.Width;
+                        }
+                        if (h < MinHeight)
+                        {
+                            h = MinHeight; w = h * bitmpasource.Width / bitmpasource.Height;
+                        }
+                        if (w > MaxWidth)
+                        {
+                            w = MaxWidth; h = w * bitmpasource.Height / bitmpasource.Width;
+                        }
+                        if (h > MaxHeight)
+                        {
+                            h = MaxHeight; w = h * bitmpasource.Width / bitmpasource.Height;
+                        }
+                        Width = w;
+                        Height = h;
+                    }*/
+                    if (isdrag)
+                    {
+                        if (Mouse.LeftButton != MouseButtonState.Pressed)
+                            isdrag = false;
+                        double xx = System.Windows.Forms.Control.MousePosition.X;
+                        double yy = System.Windows.Forms.Control.MousePosition.Y;
+                        Left += xx - lastx;
+                        Top += yy - lasty;
+                        lastx = xx;
+                        lasty = yy;
+                    }
+                    break;
+
+                default:
+                    break;
             }
+        }
+
+        public void minimize()
+        {
+            isdrag = false; lockmode = 2;
+            image.Opacity = 0;
+            //resizer.Opacity = 0;
+            button.Opacity = 1;
+            button.Content = FindResource("lockmin");
+        }
+        public void expand()
+        {
+            isdrag = false; lockmode = 0;
+            image.Opacity = 1;
+            //resizer.Opacity = 0.5;
+            button.Opacity = 0.7;
+            button.Content = FindResource("lockoff");
+        }
+        public void resize(double s)
+        {
+            if (s <= 0 || s >= 20) return;
+            if (!isdrag)// && !isresize)
+            {
+                scale = s;
+                double right = Left + Width;
+                Opacity = 0.001;
+                Width = bitmpasource.Width * s; Height = bitmpasource.Height * s;
+                Left = right - Width;
+                Opacity = 1;
+            }
+        }
+        public void sizeup()
+        {
+            if (scale < 2)
+            {
+                scale += 0.2;
+                resize(scale);
+            }
+        }
+        public void sizedown()
+        {
+            if (scale > 0.2)
+            {
+                scale -= 0.2;
+                resize(scale);
+            }
+        }
+        public void resetSize()
+        {
+            resize(1);
         }
 
         public void save()
@@ -172,6 +244,15 @@ namespace Binjyo
                         Close();
                     }
                     break;
+                case Key.R:
+                    resetSize();
+                    break;
+                case Key.D:
+                    sizedown();
+                    break;
+                case Key.F:
+                    sizeup();
+                    break;
                 default:
                     break;
             }
@@ -205,6 +286,7 @@ namespace Binjyo
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
         {
             isdrag = false;
+            isresize = false;
         }
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -215,43 +297,44 @@ namespace Binjyo
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
-            if (!islock)
+            if (lockmode == 0)
             {
                 button.Opacity = 0.7;
-                resizer.Opacity = 0.5;
+                //resizer.Opacity = 0.5;
             }
         }
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
-            isdrag = false;
-            if (!islock)
+            //isdrag = false;
+            if (lockmode == 0)
             {
                 button.Opacity = 0.1;
-                resizer.Opacity = 0.1;
+                //resizer.Opacity = 0.1;
             }
         }
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
-            if (islock)
+            switch (lockmode)
             {
-                islock = false;
-                image.Opacity = 1;
-                resizer.Opacity = 0.5;
-                button.Opacity = 0.7;
-                button.Content = FindResource("lockoff");
-            }
-            else
-            {
-                islock = true;
-                //image.Opacity = 0;
-                resizer.Opacity = 0;
-                button.Opacity = 1;
-                button.Content = FindResource("lockon");
+                case 2:
+                    expand();
+                    break;
+                case 0:
+                    lockmode = 1;
+                    //image.Opacity = 0;
+                    //resizer.Opacity = 0;
+                    button.Opacity = 1;
+                    button.Content = FindResource("lockon");
+                    break;
+                case 1:
+                    minimize();
+                    break;
             }
         }
 
+        /*
         private void resizer_MouseDown(object sender, MouseButtonEventArgs e)
         {
             isresize = true;
@@ -263,12 +346,12 @@ namespace Binjyo
         private void resizer_MouseUp(object sender, MouseButtonEventArgs e)
         {
             isresize = false;
-        }
+        }*/
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
             isdrag = false;
-            isresize = false;
+            //isresize = false;
         }
 
         private void button_MouseDown(object sender, MouseButtonEventArgs e)
@@ -289,6 +372,17 @@ namespace Binjyo
         const int WM_SYSCOMMAND = 0x0112;
         const int SC_MINIMIZE = 0xF020;
         const int SC_MAXIMIZE = 0xF030;
+
+        private void Window_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void button_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+        }
+
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             int command = wParam.ToInt32() & 0xfff0;
@@ -306,6 +400,10 @@ namespace Binjyo
         #endregion
 
         void print(string s)
+        {
+            System.Diagnostics.Debug.WriteLine(s);
+        }
+        void print(double s)
         {
             System.Diagnostics.Debug.WriteLine(s);
         }

@@ -77,7 +77,10 @@ namespace Binjyo
                 else
                 {
                     linew.Opacity = 0; lineh.Opacity = 0;
+                    Opacity = 0.0001;
                     Show();
+                    //Thread.Sleep(10);
+                    base.Opacity = 1;
                 }
                 Activate();
             }

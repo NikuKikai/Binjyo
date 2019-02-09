@@ -67,7 +67,37 @@ namespace Binjyo
             _notifyIcon.ContextMenuStrip =
               new System.Windows.Forms.ContextMenuStrip();
             //_notifyIcon.ContextMenuStrip.Items.Add("MainWindow...").Click += (s, e) => ShowMainWindow();
+            _notifyIcon.ContextMenuStrip.Items.Add("Minimize All").Click += (s, e) => MinimizeAll();
+            _notifyIcon.ContextMenuStrip.Items.Add("Expand/Unlock All").Click += (s, e) => ExpandAll();
+            _notifyIcon.ContextMenuStrip.Items.Add("Close All").Click += (s, e) => CloseAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Exit").Click += (s, e) => ExitApplication();
+        }
+        private void MinimizeAll()
+        {
+            foreach (Window item in Application.Current.Windows)
+            {
+                if (item.Title == "Memo")
+                {
+                    ((Memo)item).minimize();
+                }
+            }
+        }
+        private void ExpandAll()
+        {
+            foreach (Window item in Application.Current.Windows)
+            {
+                if (item.Title == "Memo")
+                {
+                    ((Memo)item).expand();
+                }
+            }
+        }
+        private void CloseAll()
+        {
+            foreach (Window item in Application.Current.Windows)
+            {
+                if (item.Title == "Memo") item.Close();
+            }
         }
 
         private void ExitApplication()
@@ -81,22 +111,6 @@ namespace Binjyo
             MainWindow.Close();
             _notifyIcon.Dispose();
             _notifyIcon = null;
-        }
-
-        private void ShowMainWindow()
-        {
-            if (MainWindow.IsVisible)
-            {
-                if (MainWindow.WindowState == WindowState.Minimized)
-                {
-                    MainWindow.WindowState = WindowState.Normal;
-                }
-                MainWindow.Activate();
-            }
-            else
-            {
-                MainWindow.Show();
-            }
         }
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)

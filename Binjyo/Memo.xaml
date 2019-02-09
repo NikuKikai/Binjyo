@@ -6,12 +6,13 @@
         xmlns:local="clr-namespace:Binjyo"
         mc:Ignorable="d"
         Title="Memo" Height="100" Width="100" MinWidth="20" MinHeight="20"
+        MaxWidth="1920" MaxHeight="1080"
         AllowsTransparency="True"
         WindowStyle="None"
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
-        ResizeMode="CanResize"
+        ResizeMode="NoResize"
         KeyDown="Window_KeyDown"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
@@ -20,28 +21,31 @@
         MouseMove="Window_MouseMove"
         MouseUp="Window_MouseUp"
         MouseDoubleClick="Window_MouseDoubleClick"
+        PreviewMouseDoubleClick="Window_PreviewMouseDoubleClick"
         Deactivated="Window_Deactivated"
         >
     <Window.Resources>
-        <Image x:Key="lockoff" Source="lockoff.ico" Height="18" Width="18" Margin="-1,-1,0,0" />
-        <Image x:Key="lockon" Source="lockon.ico" Height="18" Width="18" Margin="-1,-1,0,0"/>
+        <Image x:Key="lockoff" Source="Resources/lockoff.ico" Height="16" Width="16" Margin="0,0,0,0" />
+        <Image x:Key="lockon" Source="Resources/lockon.ico" Height="16" Width="16" Margin="0,0,0,0"/>
+        <Image x:Key="lockmin" Source="Resources/lockmin.ico" Height="16" Width="16" Margin="0,0,0,0"/>
     </Window.Resources>
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
-        <Button Name="button" Margin="0,0,0,0" Width="20" Height="20" 
+        <Button Name="button" Margin="0,0,0,0" Width="18" Height="18" 
                 HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0"
                 BorderThickness="0"
                 Click="button_Click" PreviewMouseDown="Window_MouseDown"
+                PreviewMouseDoubleClick="button_PreviewMouseDoubleClick"
                 >
             <DynamicResource ResourceKey="lockoff"/>
             
         </Button>
-        <Polygon Name="resizer" Points="10,0 0,10 10,10" Fill="Black" 
+        <!--<Polygon Name="resizer" Points="10,0 0,10 10,10" Fill="Black" 
                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Opacity="0.1"
                  Cursor="SizeNWSE" 
                  MouseDown="resizer_MouseDown" MouseUp="resizer_MouseUp">
             
-        </Polygon>
+        </Polygon>-->
         <!--<Popup Name="popup" IsOpen="True" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}"
                HorizontalOffset="-100" VerticalOffset="100">
             <Button Name="popbutton" Width="20" Height="20"></Button>

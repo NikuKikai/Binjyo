@@ -33,6 +33,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -108,10 +111,13 @@
     <None Include="icon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="lockon.ico" />
+    <Resource Include="Resources\lockon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="lockoff.ico" />
+    <Resource Include="Resources\lockoff.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\lockmin.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
