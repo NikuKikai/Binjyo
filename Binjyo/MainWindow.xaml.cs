@@ -49,10 +49,13 @@ namespace Binjyo
             canvas.Background = new SolidColorBrush(Colors.Transparent);
 
             Create_Objects();
+            Show();
         }
 
         public void Shot()
         {
+            //Opacity = 0.01;
+            //canvas.Opacity = 0.0;
             if (isshot == false)
             {
                 isshot = true;
@@ -67,21 +70,13 @@ namespace Binjyo
             
                 canvas.Background = new ImageBrush(bs);
 
-                if (IsVisible)
-                {
-                    if (WindowState != WindowState.Maximized)
-                    {
-                        WindowState = WindowState.Maximized;
-                    }
-                }
-                else
-                {
-                    linew.Opacity = 0; lineh.Opacity = 0;
-                    Opacity = 0.0001;
-                    Show();
-                    //Thread.Sleep(10);
-                    base.Opacity = 1;
-                }
+                
+                linew.Opacity = 0; lineh.Opacity = 0;
+                //Show();
+                Opacity = 1;
+                Thread.Sleep(10);
+                canvas.Opacity = 1;
+                
                 Activate();
             }
             
@@ -89,7 +84,8 @@ namespace Binjyo
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            Hide();
+            //Hide();
+            Opacity = 0;
             isshot = false;
             isdrag = false;
         }
@@ -109,7 +105,8 @@ namespace Binjyo
             if (e.Key == Key.Escape || e.Key == Key.System || e.Key == Key.LeftAlt || 
                 e.Key == Key.RightAlt || e.Key == Key.LWin || e.Key == Key.RWin)
             {
-                Hide();
+                //Hide();
+                Opacity = 0;
                 isshot = false;
                 isdrag = false;
             }
@@ -149,17 +146,17 @@ namespace Binjyo
             linew.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x80, 0x00, 0x00, 0x00));
             linew.StrokeThickness = 1;
             linew.X1 = 0; linew.X2 = 0; linew.Y1 = offset; linew.Y2 = h + offset;
-            linew.Opacity = 0.0;
+            linew.Opacity = 0;
             canvas.Children.Add(linew);
             lineh = new Line();
             lineh.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x80, 0x00, 0x00, 0x00));
             lineh.StrokeThickness = 1;
             lineh.X1 = offset; lineh.X2 = w + offset; lineh.Y1 = 0; lineh.Y2 = 0;
-            lineh.Opacity = 0.0;
+            lineh.Opacity = 0;
             canvas.Children.Add(lineh);
             rect = new System.Windows.Shapes.Rectangle();
             rect.Stroke = new SolidColorBrush(Colors.Black);
-            rect.Opacity = 0.0;
+            rect.Opacity = 0;
             canvas.Children.Add(rect);
         }
 
@@ -221,7 +218,8 @@ namespace Binjyo
 
         private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            Hide();
+            //Hide();
+            Opacity = 0;
             isshot = false;
             isdrag = false;
 
@@ -248,7 +246,8 @@ namespace Binjyo
 
         private void Window_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            Hide();
+            //Hide();
+            Opacity = 0;
             isshot = false;
             isdrag = false;
             rect.Opacity = 0;
