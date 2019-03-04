@@ -41,8 +41,10 @@ namespace Binjyo
             InitializeComponent();
             //this.SourceInitialized += new EventHandler(OnSourceInitialized);
             
-            w = (int)SystemParameters.VirtualScreenWidth;
-            h = (int)SystemParameters.VirtualScreenHeight;
+            //w = (int)SystemParameters.VirtualScreenWidth;
+            w = System.Windows.Forms.Screen.AllScreens[0].Bounds.Width;
+            //h = (int)SystemParameters.VirtualScreenHeight;
+            h = System.Windows.Forms.Screen.AllScreens[0].Bounds.Height;
 
             bitmap = new Bitmap(w, h);
 
@@ -54,8 +56,6 @@ namespace Binjyo
 
         public void Shot()
         {
-            //Opacity = 0.01;
-            //canvas.Opacity = 0.0;
             if (isshot == false)
             {
                 isshot = true;
@@ -70,24 +70,40 @@ namespace Binjyo
             
                 canvas.Background = new ImageBrush(bs);
 
-                
-                linew.Opacity = 0; lineh.Opacity = 0;
-                //Show();
-                Opacity = 1;
-                Thread.Sleep(10);
-                canvas.Opacity = 1;
-                
-                Activate();
+                _Show();
             }
             
         }
 
-        private void Window_Deactivated(object sender, EventArgs e)
+        private void _Show()
+        {
+            //Show();
+            Opacity = 1;
+            Thread.Sleep(10);
+            canvas.Opacity = 1;
+            Visibility = Visibility.Visible;
+
+            double x = System.Windows.Forms.Control.MousePosition.X;
+            double y = System.Windows.Forms.Control.MousePosition.Y;
+            linew.X1 = x + offset; linew.X2 = x + offset; linew.Opacity = 1.0;
+            lineh.Y1 = y + offset; lineh.Y2 = y + offset; lineh.Opacity = 1.0;
+            Activate();
+        }
+        private void _Hide()
         {
             //Hide();
-            Opacity = 0;
+            //Opacity = 0;
+            Visibility = Visibility.Hidden;
             isshot = false;
             isdrag = false;
+            rect.Opacity = 0;
+            popup.IsOpen = false;
+            linew.Opacity = 0; lineh.Opacity = 0;
+        }
+
+        private void Window_Deactivated(object sender, EventArgs e)
+        {
+            _Hide();
         }
 
         private void Window_StateChanged(object sender, EventArgs e)
@@ -99,16 +115,13 @@ namespace Binjyo
             }
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             Console.WriteLine(e.Key);
             if (e.Key == Key.Escape || e.Key == Key.System || e.Key == Key.LeftAlt || 
                 e.Key == Key.RightAlt || e.Key == Key.LWin || e.Key == Key.RWin)
             {
-                //Hide();
-                Opacity = 0;
-                isshot = false;
-                isdrag = false;
+                _Hide();
             }
         }
 
@@ -218,10 +231,7 @@ namespace Binjyo
 
         private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            //Hide();
-            Opacity = 0;
-            isshot = false;
-            isdrag = false;
+            _Hide();
 
             rect.Opacity = 0; popup.IsOpen = false; linew.Opacity = 0; lineh.Opacity = 0;
             if (rect.Width > 20 && rect.Height > 20)
@@ -246,12 +256,7 @@ namespace Binjyo
 
         private void Window_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            //Hide();
-            Opacity = 0;
-            isshot = false;
-            isdrag = false;
-            rect.Opacity = 0;
-            popup.IsOpen = false;
+            _Hide();
         }
 
 

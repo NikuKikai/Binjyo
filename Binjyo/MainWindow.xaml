@@ -14,7 +14,7 @@
         Deactivated="Window_Deactivated"
         StateChanged="Window_StateChanged"
         Background="Transparent"
-        ShowInTaskbar="False"
+        ShowInTaskbar="False" Visibility="Hidden"
         KeyDown="Window_KeyDown"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
         MouseLeftButtonUp="Window_MouseLeftButtonUp"

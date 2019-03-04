@@ -229,6 +229,7 @@ namespace Binjyo
             {
                 case Key.Escape:
                     Close();
+                    e.Handled = true;
                     break;
                 case Key.S:
                     save();
