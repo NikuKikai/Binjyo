@@ -23,107 +23,30 @@ namespace Binjyo
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Bitmap bitmap;
-        ImageBrush ib;
-
-        private bool isshot = false;
-        private bool isdrag = false;
-        private double startx, starty;
-
-        private int w, h;
-
-        private int offset = 0; // 7
-        private Line linew, lineh;
-        private System.Windows.Shapes.Rectangle rect;
-
+        Screenshot ss;
         public MainWindow()
         {
             InitializeComponent();
             //this.SourceInitialized += new EventHandler(OnSourceInitialized);
-            
-            //w = (int)SystemParameters.VirtualScreenWidth;
-            w = System.Windows.Forms.Screen.AllScreens[0].Bounds.Width;
-            //h = (int)SystemParameters.VirtualScreenHeight;
-            h = System.Windows.Forms.Screen.AllScreens[0].Bounds.Height;
+            ss = new Screenshot();
 
-            bitmap = new Bitmap(w, h);
-
-            canvas.Background = new SolidColorBrush(Colors.Transparent);
-
-            Create_Objects();
             Show();
+            ss.Owner = this;
+            Hide();
         }
 
         public void Shot()
         {
-            if (isshot == false)
+            /*foreach(var scr in System.Windows.Forms.Screen.AllScreens)
             {
-                isshot = true;
+                Screenshot ss = new Screenshot();
+                ss.Shot(scr);
+            }*/
 
-                Graphics g = Graphics.FromImage(bitmap);
-                g.CopyFromScreen(0, 0, 0, 0, bitmap.Size);
-                g.Dispose();
-
-                IntPtr hbitmap = bitmap.GetHbitmap();
-                BitmapSource bs = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-                DeleteObject(hbitmap);
             
-                canvas.Background = new ImageBrush(bs);
-
-                _Show();
-            }
-            
+            ss.Shot();
         }
-
-        private void _Show()
-        {
-            //Show();
-            Opacity = 1;
-            Thread.Sleep(10);
-            canvas.Opacity = 1;
-            Visibility = Visibility.Visible;
-
-            double x = System.Windows.Forms.Control.MousePosition.X;
-            double y = System.Windows.Forms.Control.MousePosition.Y;
-            linew.X1 = x + offset; linew.X2 = x + offset; linew.Opacity = 1.0;
-            lineh.Y1 = y + offset; lineh.Y2 = y + offset; lineh.Opacity = 1.0;
-            Activate();
-        }
-        private void _Hide()
-        {
-            //Hide();
-            //Opacity = 0;
-            Visibility = Visibility.Hidden;
-            isshot = false;
-            isdrag = false;
-            rect.Opacity = 0;
-            popup.IsOpen = false;
-            linew.Opacity = 0; lineh.Opacity = 0;
-        }
-
-        private void Window_Deactivated(object sender, EventArgs e)
-        {
-            _Hide();
-        }
-
-        private void Window_StateChanged(object sender, EventArgs e)
-        {
-            if (WindowState != WindowState.Maximized)
-            {
-                WindowState = WindowState.Maximized;
-                Topmost = true;
-            }
-        }
-
-        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            Console.WriteLine(e.Key);
-            if (e.Key == Key.Escape || e.Key == Key.System || e.Key == Key.LeftAlt || 
-                e.Key == Key.RightAlt || e.Key == Key.LWin || e.Key == Key.RWin)
-            {
-                _Hide();
-            }
-        }
+        
 
         /*private void OnSourceInitialized(object sender, EventArgs e)
         {
@@ -149,116 +72,6 @@ namespace Binjyo
 
         [System.Runtime.InteropServices.DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
-
-        private void Create_Objects()
-        {
-            ib = new ImageBrush();
-            ib.Stretch = Stretch.None;
-
-            linew = new Line();
-            linew.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x80, 0x00, 0x00, 0x00));
-            linew.StrokeThickness = 1;
-            linew.X1 = 0; linew.X2 = 0; linew.Y1 = offset; linew.Y2 = h + offset;
-            linew.Opacity = 0;
-            canvas.Children.Add(linew);
-            lineh = new Line();
-            lineh.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x80, 0x00, 0x00, 0x00));
-            lineh.StrokeThickness = 1;
-            lineh.X1 = offset; lineh.X2 = w + offset; lineh.Y1 = 0; lineh.Y2 = 0;
-            lineh.Opacity = 0;
-            canvas.Children.Add(lineh);
-            rect = new System.Windows.Shapes.Rectangle();
-            rect.Stroke = new SolidColorBrush(Colors.Black);
-            rect.Opacity = 0;
-            canvas.Children.Add(rect);
-        }
-
-        /*
-        private void Draw(Bitmap bmp)
-        {
-            IntPtr hbitmap = bmp.GetHbitmap();
-            image.Source = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            DeleteObject(hbitmap);
-        }
-
-        private void Draw_cross(double x, double y)
-        {
-            Bitmap bmp = (Bitmap)bitmap.Clone();
-            Graphics g = Graphics.FromImage(bmp);
-            System.Drawing.Pen p = new System.Drawing.Pen(System.Drawing.Color.White, 1);
-            g.DrawLine(p, (float)x, 0, (float)x, h);
-            g.DrawLine(p, 0, (float)y, w, (float)y);
-            g.Dispose();
-            p.Dispose();
-            Draw(bmp);
-            bmp.Dispose();
-        }*/
-
-        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            isdrag = true;
-            startx = System.Windows.Forms.Control.MousePosition.X;
-            starty = System.Windows.Forms.Control.MousePosition.Y;
-        }
-
-        private void Window_MouseMove(object sender, MouseEventArgs e)
-        {
-            double x = System.Windows.Forms.Control.MousePosition.X;
-            double y = System.Windows.Forms.Control.MousePosition.Y;
-
-            if (isdrag)
-            {
-                linew.Opacity = 0; lineh.Opacity = 0;
-                rect.Width = x > startx ? x - startx : startx - x;
-                rect.Height = y > starty ? y - starty : starty - y;
-                Canvas.SetLeft(rect, x > startx ? startx + offset : x + offset);
-                Canvas.SetTop(rect, y > starty ? starty + offset : y + offset);
-                rect.Opacity = 0.8;
-
-                popup.HorizontalOffset = x + 40;
-                popup.VerticalOffset = y + 10;
-                poptext.Text = String.Format("{0}x{1}", (int)rect.Width, (int)rect.Height);
-                popup.IsOpen = true;
-            }
-            else
-            {
-                // draw cross
-                rect.Opacity = 0; popup.IsOpen = false;
-                linew.X1 = x + offset; linew.X2 = x + offset; linew.Opacity = 1.0;
-                lineh.Y1 = y + offset; lineh.Y2 = y + offset; lineh.Opacity = 1.0;
-            }
-        }
-
-        private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            _Hide();
-
-            rect.Opacity = 0; popup.IsOpen = false; linew.Opacity = 0; lineh.Opacity = 0;
-            if (rect.Width > 20 && rect.Height > 20)
-            {
-                var croppedImage = new Bitmap((int)rect.Width, (int)rect.Height);
-                using (var graphics = Graphics.FromImage(croppedImage))
-                {
-                    
-                    var srcrect = new System.Drawing.Rectangle(
-                        (int)Canvas.GetLeft(rect) - offset, 
-                        (int)Canvas.GetTop(rect) - offset, 
-                        (int)rect.Width, 
-                        (int)rect.Height);
-                    graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
-                }
-
-                Memo memo = new Memo();
-                memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect) - offset, (int)Canvas.GetTop(rect) - offset);
-                memo = null;
-            }
-        }
-
-        private void Window_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _Hide();
-        }
-
-
+        
     }
 }
