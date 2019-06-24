@@ -169,32 +169,33 @@ namespace Binjyo
         }
         public void resize(double s)
         {
-            if (s <= 0 || s >= 20) return;
             if (!isdrag)// && !isresize)
             {
                 scale = s;
                 double right = Left + Width;
-                Opacity = 0.001;
+                //Opacity = 0.001;
                 Width = bitmpasource.Width * s; Height = bitmpasource.Height * s;
-                Left = right - Width;
-                Opacity = 1;
+                //Left = right - Width;
+                //Opacity = 1;
             }
         }
         public void sizeup()
         {
-            if (scale < 2)
-            {
-                scale += 0.2;
+            scale += 0.2;
+            if (scale <= 0 || scale >= 3 || 
+                bitmpasource.Width * scale < 30 || bitmpasource.Height * scale < 30)
+                scale -= 0.2;
+            else
                 resize(scale);
-            }
         }
         public void sizedown()
         {
-            if (scale > 0.2)
-            {
-                scale -= 0.2;
+            scale -= 0.2;
+            if (scale <= 0 || scale >= 3 ||
+                bitmpasource.Width * scale < 30 || bitmpasource.Height * scale < 30)
+                scale += 0.2;
+            else
                 resize(scale);
-            }
         }
         public void resetSize()
         {

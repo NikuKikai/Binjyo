@@ -26,7 +26,7 @@ namespace Binjyo
         private bool isdrag = false;
         private double startx, starty;
         
-        private int w, h;
+        private int w, h, l, t;
 
         private Line linew, lineh;
         private System.Windows.Shapes.Rectangle rect;
@@ -72,12 +72,14 @@ namespace Binjyo
         {
             w = (int)SystemParameters.VirtualScreenWidth;
             h = (int)SystemParameters.VirtualScreenHeight;
+            l = (int)SystemParameters.VirtualScreenLeft;
+            t = (int)SystemParameters.VirtualScreenTop;
             WindowState = WindowState.Normal;
-            Width = w; Height = h;
+            Width = w; Height = h; Left = l; Top = t;
 
             bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             Graphics g = Graphics.FromImage(bitmap);
-            g.CopyFromScreen(0, 0, 0, 0, bitmap.Size);
+            g.CopyFromScreen(l, t, 0, 0, bitmap.Size);
             g.Dispose();
 
             IntPtr hbitmap = bitmap.GetHbitmap();
@@ -145,14 +147,14 @@ namespace Binjyo
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             isdrag = true;
-            startx = System.Windows.Forms.Control.MousePosition.X;
-            starty = System.Windows.Forms.Control.MousePosition.Y;
+            startx = System.Windows.Forms.Control.MousePosition.X - l;
+            starty = System.Windows.Forms.Control.MousePosition.Y - t;
         }
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            double x = System.Windows.Forms.Control.MousePosition.X;
-            double y = System.Windows.Forms.Control.MousePosition.Y;
+            double x = System.Windows.Forms.Control.MousePosition.X - l;
+            double y = System.Windows.Forms.Control.MousePosition.Y - t;
             
             if (isdrag)
             {
@@ -195,7 +197,7 @@ namespace Binjyo
                 }
 
                 Memo memo = new Memo();
-                memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect), (int)Canvas.GetTop(rect));
+                memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect) + l, (int)Canvas.GetTop(rect) + t);
                 memo = null;
             }
             _Hide();

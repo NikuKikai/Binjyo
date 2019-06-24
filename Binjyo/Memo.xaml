@@ -31,7 +31,7 @@
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
         <Button Name="button" Margin="0,0,0,0" Width="18" Height="18" 
-                HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0"
+                HorizontalAlignment="Left" VerticalAlignment="Top" Opacity="0"
                 BorderThickness="0"
                 Click="button_Click" PreviewMouseDown="Window_MouseDown"
                 PreviewMouseDoubleClick="button_PreviewMouseDoubleClick"

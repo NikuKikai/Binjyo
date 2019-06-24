@@ -23,7 +23,7 @@ namespace Binjyo
     /// </summary>
     public partial class MainWindow : Window
     {
-        Screenshot ss;
+        readonly Screenshot ss;
         public MainWindow()
         {
             InitializeComponent();
