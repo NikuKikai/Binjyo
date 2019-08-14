@@ -78,7 +78,7 @@ namespace Binjyo
             {
                 if (item.Title == "Memo")
                 {
-                    ((Memo)item).minimize();
+                    ((Memo)item).Minimize();
                 }
             }
         }
@@ -88,7 +88,7 @@ namespace Binjyo
             {
                 if (item.Title == "Memo")
                 {
-                    ((Memo)item).expand();
+                    ((Memo)item).Expand();
                 }
             }
         }

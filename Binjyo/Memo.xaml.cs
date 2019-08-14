@@ -15,6 +15,7 @@ using System.Drawing;
 using System.Windows.Interop;
 //using System.Threading;
 using System.Timers;
+using System.Runtime.InteropServices;
 
 namespace Binjyo
 {
@@ -24,9 +25,10 @@ namespace Binjyo
     public partial class Memo : Window
     {
         private bool isdrag = false;
-        private bool isresize = false;
+
         private double lastx, lasty;
-        private double startdx, startdy;
+
+        private Bitmap bitmap;
         private BitmapSource bitmpasource;
         private int lockmode = 0;
 
@@ -52,6 +54,7 @@ namespace Binjyo
         {
             Left = x; Top = y;
             Width = bmp.Width; Height = bmp.Height;
+            bitmap = bmp;
 
             IntPtr hbitmap = bmp.GetHbitmap();
             bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
@@ -101,38 +104,6 @@ namespace Binjyo
                     break;
 
                 case 0:
-                    /*if (isresize)
-                    {
-                        if (System.Windows.Forms.Control.MouseButtons == System.Windows.Forms.MouseButtons.None)
-                        {
-                            isresize = false;
-                            print("v");
-                        }
-                        double w = System.Windows.Forms.Control.MousePosition.X + startdx - Left;
-                        double h = System.Windows.Forms.Control.MousePosition.Y + startdy - Top;
-                        if (w * bitmpasource.Height / bitmpasource.Width > h)
-                            h = w * bitmpasource.Height / bitmpasource.Width;
-                        else
-                            w = h * bitmpasource.Width / bitmpasource.Height;
-                        if (w < MinWidth)
-                        {
-                            w = MinWidth; h = w * bitmpasource.Height / bitmpasource.Width;
-                        }
-                        if (h < MinHeight)
-                        {
-                            h = MinHeight; w = h * bitmpasource.Width / bitmpasource.Height;
-                        }
-                        if (w > MaxWidth)
-                        {
-                            w = MaxWidth; h = w * bitmpasource.Height / bitmpasource.Width;
-                        }
-                        if (h > MaxHeight)
-                        {
-                            h = MaxHeight; w = h * bitmpasource.Width / bitmpasource.Height;
-                        }
-                        Width = w;
-                        Height = h;
-                    }*/
                     if (isdrag)
                     {
                         if (Mouse.LeftButton != MouseButtonState.Pressed)
@@ -151,23 +122,23 @@ namespace Binjyo
             }
         }
 
-        public void minimize()
+        public void Minimize()
         {
             isdrag = false; lockmode = 2;
             image.Opacity = 0;
-            //resizer.Opacity = 0;
+
             button.Opacity = 1;
             button.Content = FindResource("lockmin");
         }
-        public void expand()
+        public void Expand()
         {
             isdrag = false; lockmode = 0;
             image.Opacity = 1;
-            //resizer.Opacity = 0.5;
+
             button.Opacity = 0.7;
             button.Content = FindResource("lockoff");
         }
-        public void resize(double s)
+        public void Resize(double s)
         {
             if (!isdrag)// && !isresize)
             {
@@ -179,30 +150,30 @@ namespace Binjyo
                 //Opacity = 1;
             }
         }
-        public void sizeup()
+        public void Sizeup()
         {
             scale += 0.2;
             if (scale <= 0 || scale >= 3 || 
                 bitmpasource.Width * scale < 30 || bitmpasource.Height * scale < 30)
                 scale -= 0.2;
             else
-                resize(scale);
+                Resize(scale);
         }
-        public void sizedown()
+        public void Sizedown()
         {
             scale -= 0.2;
             if (scale <= 0 || scale >= 3 ||
                 bitmpasource.Width * scale < 30 || bitmpasource.Height * scale < 30)
                 scale += 0.2;
             else
-                resize(scale);
+                Resize(scale);
         }
-        public void resetSize()
+        public void ResetSize()
         {
-            resize(1);
+            Resize(1);
         }
 
-        public void save()
+        public void Save()
         {
             Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
             var time = DateTime.Now;
@@ -220,8 +191,9 @@ namespace Binjyo
             }
         }
 
-        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
+
 
         #region Event
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -233,7 +205,7 @@ namespace Binjyo
                     e.Handled = true;
                     break;
                 case Key.S:
-                    save();
+                    Save();
                     break;
                 case Key.C:
                     if(Keyboard.IsKeyDown(Key.LeftCtrl))
@@ -247,13 +219,13 @@ namespace Binjyo
                     }
                     break;
                 case Key.R:
-                    resetSize();
+                    ResetSize();
                     break;
                 case Key.D:
-                    sizedown();
+                    Sizedown();
                     break;
                 case Key.F:
-                    sizeup();
+                    Sizeup();
                     break;
                 default:
                     break;
@@ -262,7 +234,6 @@ namespace Binjyo
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            print("Window MouseDown");
             isdrag = true;
             lastx = System.Windows.Forms.Control.MousePosition.X;
             lasty = System.Windows.Forms.Control.MousePosition.Y;
@@ -274,21 +245,18 @@ namespace Binjyo
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isdrag)
+            var x = System.Windows.Forms.Control.MousePosition.X;
+            var y = System.Windows.Forms.Control.MousePosition.Y;
+            if (!isdrag)
             {
-                /*double x = System.Windows.Forms.Control.MousePosition.X;
-                double y = System.Windows.Forms.Control.MousePosition.Y;
-                Left += x - lastx;
-                Top += y - lasty;
-                lastx = x;
-                lasty = y;*/
+                var px = bitmap.GetPixel(x - (int)Left, y - (int)Top);
+                Console.WriteLine("RGB " + px.R + " "+px.G+" "+px.B);
             }
         }
 
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
         {
             isdrag = false;
-            isresize = false;
         }
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -321,7 +289,7 @@ namespace Binjyo
             switch (lockmode)
             {
                 case 2:
-                    expand();
+                    Expand();
                     break;
                 case 0:
                     lockmode = 1;
@@ -331,7 +299,7 @@ namespace Binjyo
                     button.Content = FindResource("lockon");
                     break;
                 case 1:
-                    minimize();
+                    Minimize();
                     break;
             }
         }
@@ -400,15 +368,6 @@ namespace Binjyo
             return IntPtr.Zero;
         }
         #endregion
-
-        void print(string s)
-        {
-            System.Diagnostics.Debug.WriteLine(s);
-        }
-        void print(double s)
-        {
-            System.Diagnostics.Debug.WriteLine(s);
-        }
 
     }
 }
