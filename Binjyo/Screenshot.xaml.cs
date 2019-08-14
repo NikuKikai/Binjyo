@@ -31,7 +31,7 @@ namespace Binjyo
         private Line linew, lineh;
         private System.Windows.Shapes.Rectangle rect;
 
-        //private Bitmap bitmap;
+        private Bitmap bitmap;
 
         public Screenshot()
         {
@@ -78,12 +78,12 @@ namespace Binjyo
             WindowState = WindowState.Normal;
             Width = w; Height = h; Left = l; Top = t;
 
-            /*
+            
             bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             Graphics g = Graphics.FromImage(bitmap);
             g.CopyFromScreen(l, t, 0, 0, bitmap.Size);
             g.Dispose();
-
+            /*
             IntPtr hbitmap = bitmap.GetHbitmap();
             BitmapSource bs = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             DeleteObject(hbitmap);
@@ -118,7 +118,7 @@ namespace Binjyo
                 rect.Opacity = 0;
                 popup.IsOpen = false;
                 linew.Opacity = 0; lineh.Opacity = 0;
-                
+                bitmap.Dispose();
                 isshot = false;
             }
         }
@@ -169,7 +169,7 @@ namespace Binjyo
                 rect.Opacity = 1;
 
                 popup.HorizontalOffset = x + 40;
-                popup.VerticalOffset = y + 10;
+                popup.VerticalOffset = y + 11;
                 poptext.Text = String.Format("{0}x{1}", (int)rect.Width, (int)rect.Height);
                 popup.IsOpen = true;
             }
@@ -187,11 +187,12 @@ namespace Binjyo
             rect.Opacity = 0; popup.IsOpen = false; linew.Opacity = 0; lineh.Opacity = 0;
             if (rect.Width > 20 && rect.Height > 20)
             {
+                /*linew.Opacity = 0; lineh.Opacity = 0; Thread.Sleep(10);
                 // Get bitmap from screen
                 Bitmap bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
                 Graphics g = Graphics.FromImage(bitmap);
                 g.CopyFromScreen(l, t, 0, 0, bitmap.Size);
-                g.Dispose();
+                g.Dispose();*/
 
                 // Crop bitmap with rect
                 var croppedImage = new Bitmap((int)rect.Width, (int)rect.Height);
@@ -205,7 +206,7 @@ namespace Binjyo
                         (int)rect.Height - 2);
                     graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
                 }
-                bitmap.Dispose();
+                //bitmap.Dispose();
 
                 // Create Memo from cropped bitmap
                 Memo memo = new Memo();

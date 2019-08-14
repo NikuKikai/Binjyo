@@ -34,6 +34,8 @@ namespace Binjyo
 
         private double scale = 1;
 
+        private bool isOverButton = false;
+
         public Memo()
         {
             InitializeComponent();
@@ -99,7 +101,7 @@ namespace Binjyo
                     else
                     {
                         image.Opacity = 1;
-                        button.Opacity = 0.1;
+                        button.Opacity = 0.005;
                     }
                     break;
 
@@ -247,11 +249,19 @@ namespace Binjyo
         {
             var x = System.Windows.Forms.Control.MousePosition.X;
             var y = System.Windows.Forms.Control.MousePosition.Y;
-            if (!isdrag)
+            if (!isdrag && Keyboard.IsKeyDown(Key.LeftShift) && !isOverButton)
             {
+                popup.IsOpen = true;
+                if (x - (int)Left < 0 || x - (int)Left >= bitmap.Width || y - (int)Top < 0 || y - (int)Top >= bitmap.Height)
+                    return;
                 var px = bitmap.GetPixel(x - (int)Left, y - (int)Top);
-                Console.WriteLine("RGB " + px.R + " "+px.G+" "+px.B);
+
+                popup.HorizontalOffset = x - (int)Left + 80;
+                popup.VerticalOffset = y - (int)Top + 20;
+                poptext.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)(px.GetHue()), (int)(px.GetSaturation()*100), (int)(px.GetBrightness()*100));
             }
+            else
+                popup.IsOpen = false;
         }
 
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
@@ -267,21 +277,12 @@ namespace Binjyo
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
-            if (lockmode == 0)
-            {
-                button.Opacity = 0.7;
-                //resizer.Opacity = 0.5;
-            }
         }
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
             //isdrag = false;
-            if (lockmode == 0)
-            {
-                button.Opacity = 0.1;
-                //resizer.Opacity = 0.1;
-            }
+            popup.IsOpen = false;
         }
 
         private void button_Click(object sender, RoutedEventArgs e)
@@ -294,7 +295,6 @@ namespace Binjyo
                 case 0:
                     lockmode = 1;
                     //image.Opacity = 0;
-                    //resizer.Opacity = 0;
                     button.Opacity = 1;
                     button.Content = FindResource("lockon");
                     break;
@@ -304,24 +304,10 @@ namespace Binjyo
             }
         }
 
-        /*
-        private void resizer_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            isresize = true;
-            e.Handled = true;
-            startdx = Left + Width - System.Windows.Forms.Control.MousePosition.X;
-            startdy = Top + Height - System.Windows.Forms.Control.MousePosition.Y;
-        }
-
-        private void resizer_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            isresize = false;
-        }*/
-
         private void Window_Deactivated(object sender, EventArgs e)
         {
             isdrag = false;
-            //isresize = false;
+            popup.IsOpen = false;
         }
 
         private void button_MouseDown(object sender, MouseButtonEventArgs e)
@@ -351,6 +337,24 @@ namespace Binjyo
         private void button_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             e.Handled = true;
+        }
+
+        private void Button_MouseEnter(object sender, MouseEventArgs e)
+        {
+            isOverButton = true;
+            if (lockmode == 0)
+            {
+                button.Opacity = 1;
+            }
+        }
+
+        private void Button_MouseLeave(object sender, MouseEventArgs e)
+        {
+            isOverButton = false;
+            if (lockmode == 0)
+            {
+                button.Opacity = 0.005;
+            }
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

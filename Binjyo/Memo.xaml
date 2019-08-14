@@ -35,19 +35,16 @@
                 BorderThickness="0"
                 Click="button_Click" PreviewMouseDown="Window_MouseDown"
                 PreviewMouseDoubleClick="button_PreviewMouseDoubleClick"
+                MouseEnter="Button_MouseEnter" MouseLeave="Button_MouseLeave"
                 >
             <DynamicResource ResourceKey="lockoff"/>
-            
+
         </Button>
-        <!--<Polygon Name="resizer" Points="10,0 0,10 10,10" Fill="Black" 
-                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Opacity="0.1"
-                 Cursor="SizeNWSE" 
-                 MouseDown="resizer_MouseDown" MouseUp="resizer_MouseUp">
-            
-        </Polygon>-->
-        <!--<Popup Name="popup" IsOpen="True" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}"
-               HorizontalOffset="-100" VerticalOffset="100">
-            <Button Name="popbutton" Width="20" Height="20"></Button>
-        </Popup>-->
+        <Popup Name="popup" IsOpen="True" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
+            <Grid>
+                <TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>
+
+            </Grid>
+        </Popup>
     </Grid>
 </Window>
