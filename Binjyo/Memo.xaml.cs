@@ -256,9 +256,23 @@ namespace Binjyo
                     return;
                 var px = bitmap.GetPixel(x - (int)Left, y - (int)Top);
 
-                popup.HorizontalOffset = x - (int)Left + 80;
-                popup.VerticalOffset = y - (int)Top + 20;
-                poptext.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)(px.GetHue()), (int)(px.GetSaturation()*100), (int)(px.GetBrightness()*100));
+                popup.HorizontalOffset = x - (int)Left + 180;
+                popup.VerticalOffset = y - (int)Top + 30;
+
+                float hue = px.GetHue();
+                HSV_SV.Hue = hue;
+                var radius = HSVWheel.Width / 2 - HSVWheel.StrokeThickness / 2;
+                var angle = (hue + 210) / 180 * Math.PI;
+                var xc = HSVWheel.Width / 2 + Math.Cos(angle) * radius;
+                var yc = HSVWheel.Height / 2 + Math.Sin(angle) * radius;
+                HueMark.Margin = new Thickness(xc-HueMark.Width/2, yc-HueMark.Height/2, 0, 0);
+
+                var v = (double)Math.Max(Math.Max(px.R, px.G), px.B)/255;
+                SVMark.Margin = new Thickness(
+                    HSVWheel.Width/2-HSVRect.Width/2 + px.GetSaturation() * HSVRect.Width - SVMark.Width/2, 
+                    HSVWheel.Height/2+HSVRect.Height/2 - v * HSVRect.Height - SVMark.Height/2, 0, 0);
+
+                //poptext.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)(px.GetHue()), (int)(px.GetSaturation()*100), (int)(px.GetBrightness()*100));
             }
             else
                 popup.IsOpen = false;

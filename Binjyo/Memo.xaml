@@ -41,9 +41,27 @@
 
         </Button>
         <Popup Name="popup" IsOpen="True" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
-            <Grid>
-                <TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>
-
+            <Grid x:Name="HSVpicker" Background="#66000000">
+                <!--<TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>-->
+                <Ellipse x:Name="HSVWheel" Fill="Transparent" Stroke="Black" StrokeThickness="10" 
+                 HorizontalAlignment="Center" VerticalAlignment="Center" Width="170" Height="170">
+                    <Ellipse.Effect>
+                        <local:HueWheelEffect x:Name="HSV_H"/>
+                    </Ellipse.Effect>
+                </Ellipse>
+                <Rectangle x:Name="HSVRect" Fill="Black" 
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Width="100" Height="100">
+                    <Rectangle.Effect>
+                        <local:SaturationValueEffect x:Name="HSV_SV"/>
+                    </Rectangle.Effect>
+                </Rectangle>
+                <Ellipse x:Name="HueMark" Fill="Transparent" Stroke="Black" StrokeThickness="2"
+                         Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
+                </Ellipse>
+                <Ellipse x:Name="SVMark" Fill="Transparent" Stroke="Black" StrokeThickness="2"
+                        Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
+                </Ellipse>
             </Grid>
         </Popup>
     </Grid>
