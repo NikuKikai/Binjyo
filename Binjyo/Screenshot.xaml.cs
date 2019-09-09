@@ -25,7 +25,9 @@ namespace Binjyo
         private bool isshot = false;
         private bool isdrag = false;
         private double startx, starty;
-        
+        private double dpiFactor = 1;
+
+
         private int w, h, l, t;
 
         private Line linew, lineh;
@@ -71,25 +73,29 @@ namespace Binjyo
 
         public void Shot()
         {
-            w = (int)SystemParameters.VirtualScreenWidth;
-            h = (int)SystemParameters.VirtualScreenHeight;
-            l = (int)SystemParameters.VirtualScreenLeft;
-            t = (int)SystemParameters.VirtualScreenTop;
+            Width = (int)SystemParameters.VirtualScreenWidth;
+            Height = (int)SystemParameters.VirtualScreenHeight;
+            Left = (int)SystemParameters.VirtualScreenLeft;
+            Top = (int)SystemParameters.VirtualScreenTop;
+            dpiFactor = System.Windows.PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M11;
             WindowState = WindowState.Normal;
-            Width = w; Height = h; Left = l; Top = t;
+            w = (int)(dpiFactor * Width);
+            h = (int)(dpiFactor * Height);
+            l = (int)(dpiFactor * Left);
+            t = (int)(dpiFactor * Top);
 
-            
+            Console.WriteLine(dpiFactor);
+
             bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             Graphics g = Graphics.FromImage(bitmap);
             g.CopyFromScreen(l, t, 0, 0, bitmap.Size);
             g.Dispose();
-            /*
+            
             IntPtr hbitmap = bitmap.GetHbitmap();
             BitmapSource bs = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             DeleteObject(hbitmap);
             canvas.Background = new ImageBrush(bs);
-            */
-
+            
             _Show();
         }
 
@@ -162,24 +168,31 @@ namespace Binjyo
             if (isdrag)
             {
                 linew.Opacity = 0; lineh.Opacity = 0;
-                rect.Width = x > startx ? x - startx + 2 : startx - x + 2;
-                rect.Height = y > starty ? y - starty + 2 : starty - y + 2;
-                Canvas.SetLeft(rect, x > startx ? startx-1 : x-1);
-                Canvas.SetTop(rect, y > starty ? starty-1 : y-1);
+                _SetRect(x > startx ? x - startx + 2 : startx - x + 2,
+                        y > starty ? y - starty + 2 : starty - y + 2,
+                        x > startx ? startx - 1 : x - 1,
+                        y > starty ? starty - 1 : y - 1);
                 rect.Opacity = 1;
 
-                popup.HorizontalOffset = x + 40;
-                popup.VerticalOffset = y + 11;
-                poptext.Text = String.Format("{0}x{1}", (int)rect.Width, (int)rect.Height);
+                popup.HorizontalOffset = (x + 40)/dpiFactor;
+                popup.VerticalOffset = (y + 11)/dpiFactor;
+                poptext.Text = String.Format("{0}x{1}", (int)(rect.Width*dpiFactor), (int)(rect.Height*dpiFactor));
                 popup.IsOpen = true;
             }
             else
             {
                 // draw cross
                 rect.Opacity = 0; popup.IsOpen = false;
-                linew.X1 = x; linew.X2 = x; linew.Opacity = 1;
-                lineh.Y1 = y; lineh.Y2 = y; lineh.Opacity = 1;
+                linew.X1 = x / dpiFactor; linew.X2 = x / dpiFactor; linew.Opacity = 1;
+                lineh.Y1 = y / dpiFactor; lineh.Y2 = y / dpiFactor; lineh.Opacity = 1;
             }
+        }
+        private void _SetRect(double w, double h, double l, double t)
+        {
+            rect.Width = w / dpiFactor;
+            rect.Height = h / dpiFactor;
+            Canvas.SetLeft(rect, l / dpiFactor);
+            Canvas.SetTop(rect, t / dpiFactor);
         }
 
         private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -195,22 +208,22 @@ namespace Binjyo
                 g.Dispose();*/
 
                 // Crop bitmap with rect
-                var croppedImage = new Bitmap((int)rect.Width, (int)rect.Height);
+                var croppedImage = new Bitmap((int)(rect.Width*dpiFactor),
+                                            (int)(rect.Height*dpiFactor));
                 using (var graphics = Graphics.FromImage(croppedImage))
                 {
-
                     var srcrect = new System.Drawing.Rectangle(
-                        (int)Canvas.GetLeft(rect) + 1,
-                        (int)Canvas.GetTop(rect) + 1,
-                        (int)rect.Width - 2,
-                        (int)rect.Height - 2);
+                        (int)((Canvas.GetLeft(rect) + 1) * dpiFactor),
+                        (int)((Canvas.GetTop(rect) + 1) * dpiFactor),
+                        (int)((rect.Width - 2) * dpiFactor),
+                        (int)((rect.Height - 2) * dpiFactor) );
                     graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
                 }
                 //bitmap.Dispose();
 
                 // Create Memo from cropped bitmap
-                Memo memo = new Memo();
-                memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect) + 1 + l, (int)Canvas.GetTop(rect) + 1 + t);
+                Memo memo = new Memo(dpiFactor);
+                memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect) + 1 + Left, (int)Canvas.GetTop(rect) + 1 + Top);
                 memo = null;
             }
             _Hide();

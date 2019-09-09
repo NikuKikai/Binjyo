@@ -25,6 +25,7 @@ namespace Binjyo
     public partial class Memo : Window
     {
         private bool isdrag = false;
+        private double dpiFactor = 1;
 
         private double lastx, lasty;
 
@@ -36,9 +37,10 @@ namespace Binjyo
 
         private bool isOverButton = false;
 
-        public Memo()
+        public Memo(double dpi=1)
         {
             InitializeComponent();
+            dpiFactor = dpi;
         }
 
         public void Set_Bitmap(BitmapSource bs, double x, double y)
@@ -55,7 +57,7 @@ namespace Binjyo
         public void Set_Bitmap(Bitmap bmp, double x, double y)
         {
             Left = x; Top = y;
-            Width = bmp.Width; Height = bmp.Height;
+            Width = bmp.Width/dpiFactor; Height = bmp.Height/dpiFactor;
             bitmap = bmp;
 
             IntPtr hbitmap = bmp.GetHbitmap();
