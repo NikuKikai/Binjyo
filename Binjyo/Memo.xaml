@@ -40,7 +40,7 @@
             <DynamicResource ResourceKey="lockoff"/>
 
         </Button>
-        <Popup Name="popup" IsOpen="True" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
+        <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
             <Grid x:Name="HSVpicker" Background="#66000000">
                 <!--<TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>-->
                 <Ellipse x:Name="HSVWheel" Fill="Transparent" Stroke="Black" StrokeThickness="10" 
