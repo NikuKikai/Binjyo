@@ -215,8 +215,7 @@ namespace Binjyo
                     var srcrect = new System.Drawing.Rectangle(
                         (int)((Canvas.GetLeft(rect) + 1) * dpiFactor),
                         (int)((Canvas.GetTop(rect) + 1) * dpiFactor),
-                        (int)((rect.Width - 2) * dpiFactor),
-                        (int)((rect.Height - 2) * dpiFactor) );
+                        croppedImage.Width, croppedImage.Height );
                     graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
                 }
                 //bitmap.Dispose();

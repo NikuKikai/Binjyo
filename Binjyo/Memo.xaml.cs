@@ -43,17 +43,6 @@ namespace Binjyo
             dpiFactor = dpi;
         }
 
-        public void Set_Bitmap(BitmapSource bs, double x, double y)
-        {
-            Left = x; Top = y;
-            Width = bs.Width; Height = bs.Height;
-
-            bitmpasource = bs;
-            image.Source = bs;
-
-            Show();
-            InitializeTimer();
-        }
         public void Set_Bitmap(Bitmap bmp, double x, double y)
         {
             Left = x; Top = y;
@@ -114,8 +103,8 @@ namespace Binjyo
                             isdrag = false;
                         double xx = System.Windows.Forms.Control.MousePosition.X;
                         double yy = System.Windows.Forms.Control.MousePosition.Y;
-                        Left += xx - lastx;
-                        Top += yy - lasty;
+                        Left += (xx - lastx)/dpiFactor;
+                        Top += (yy - lasty)/dpiFactor;
                         lastx = xx;
                         lasty = yy;
                     }
@@ -186,7 +175,7 @@ namespace Binjyo
             dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
             if (dlg.ShowDialog() == true)
             {
-                var encoder = new PngBitmapEncoder(); // Or PngBitmapEncoder, or whichever encoder you want
+                var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(bitmpasource));
                 using (var stream = dlg.OpenFile())
                 {
