@@ -258,12 +258,13 @@ namespace Binjyo
                 var yc = HSVWheel.Height / 2 + Math.Sin(angle) * radius;
                 HueMark.Margin = new Thickness(xc-HueMark.Width/2, yc-HueMark.Height/2, 0, 0);
 
-                var v = (double)Math.Max(Math.Max(px.R, px.G), px.B)/255;
+                var v = (double)Math.Max(Math.Max(px.R, px.G), px.B) / 255;
                 var s = (double)Math.Min(Math.Min(px.R, px.G), px.B) / 255;
-                s = (v - s) / v; // S of HSV is different from px.GetSaturation(), which is S of HSL(?)
+                if (v == 0) s = 1;
+                else s = (v - s) / v; // S of HSV is different from px.GetSaturation(), which is S of HSL(?)
                 SVMark.Margin = new Thickness(
-                    HSVWheel.Width/2-HSVRect.Width/2 + s * HSVRect.Width - SVMark.Width/2, 
-                    HSVWheel.Height/2+HSVRect.Height/2 - v * HSVRect.Height - SVMark.Height/2, 0, 0);
+                    HSVWheel.Width / 2 - HSVRect.Width / 2 + s * HSVRect.Width - SVMark.Width / 2, 
+                    HSVWheel.Height / 2 + HSVRect.Height / 2 - v * HSVRect.Height - SVMark.Height / 2, 0, 0);
 
                 //poptext.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)(px.GetHue()), (int)(px.GetSaturation()*100), (int)(px.GetBrightness()*100));
             }
