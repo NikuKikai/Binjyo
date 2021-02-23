@@ -367,7 +367,7 @@ namespace Binjyo
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            int command = wParam.ToInt32() & 0xfff0;
+            long command = wParam.ToInt64() & 0xfff0;
             switch (msg)
             {
                 case WM_SYSCOMMAND:
