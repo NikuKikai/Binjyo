@@ -35,41 +35,17 @@ namespace Binjyo
 
         private Bitmap bitmap;
 
+        private SolidColorBrush defaultBG;
+
         public Screenshot()
         {
             InitializeComponent();
             Show();
             Create_Objects();
-            canvas.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
+            this.defaultBG = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0));
+            this.canvas.Background = this.defaultBG;
+
         }
-
-        /*
-        public void Shot(System.Windows.Forms.Screen scr)
-        {
-            Top = scr.WorkingArea.Top; Left = scr.WorkingArea.Left;
-            WindowState = WindowState.Maximized;
-            Console.Write(Top);
-            Console.WriteLine(scr.WorkingArea.Top);
-
-            w = scr.Bounds.Width; h = scr.Bounds.Height;
-            bitmap = new Bitmap(w, h);
-            Graphics g = Graphics.FromImage(bitmap);
-            g.CopyFromScreen(scr.Bounds.X, scr.Bounds.Y, 0, 0, bitmap.Size);
-            g.Dispose();
-            
-            IntPtr hbitmap = bitmap.GetHbitmap();
-            BitmapSource bs = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            DeleteObject(hbitmap);
-            canvas.Background = new ImageBrush(bs);
-            Create_Objects();
-
-            double x = System.Windows.Forms.Control.MousePosition.X;
-            double y = System.Windows.Forms.Control.MousePosition.Y;
-            linew.X1 = x + offset; linew.X2 = x + offset; linew.Opacity = 1.0;
-            lineh.Y1 = y + offset; lineh.Y2 = y + offset; lineh.Opacity = 1.0;
-            Show();
-            Activate();
-        }*/
 
         public void Shot()
         {
@@ -84,18 +60,18 @@ namespace Binjyo
             l = (int)(dpiFactor * Left);
             t = (int)(dpiFactor * Top);
 
-            Console.WriteLine(dpiFactor);
+            //Console.WriteLine(GC.GetTotalMemory(true));
 
-            bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            Graphics g = Graphics.FromImage(bitmap);
-            g.CopyFromScreen(l, t, 0, 0, bitmap.Size);
+            this.bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            Graphics g = Graphics.FromImage(this.bitmap);
+            g.CopyFromScreen(l, t, 0, 0, this.bitmap.Size);
             g.Dispose();
-            
-            IntPtr hbitmap = bitmap.GetHbitmap();
+
+            IntPtr hbitmap = this.bitmap.GetHbitmap();
             BitmapSource bs = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             DeleteObject(hbitmap);
             canvas.Background = new ImageBrush(bs);
-            
+
             _Show();
         }
 
@@ -119,13 +95,20 @@ namespace Binjyo
             {
                 //Hide();
                 Opacity = 0;
-                isshot = false;
-                isdrag = false;
                 rect.Opacity = 0;
                 popup.IsOpen = false;
                 linew.Opacity = 0; lineh.Opacity = 0;
-                bitmap.Dispose();
+                Width = 10; Height = 10;
+
+                this.bitmap.Dispose();
+                this.bitmap = null;
+                this.canvas.Background = this.defaultBG;
+
                 isshot = false;
+                isdrag = false;
+                isshot = false;
+
+                GC.Collect();
             }
         }
 
@@ -216,14 +199,13 @@ namespace Binjyo
                         (int)((Canvas.GetLeft(rect) + 1) * dpiFactor),
                         (int)((Canvas.GetTop(rect) + 1) * dpiFactor),
                         croppedImage.Width, croppedImage.Height );
-                    graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
+                    graphics.DrawImage(this.bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
                 }
                 //bitmap.Dispose();
 
                 // Create Memo from cropped bitmap
                 Memo memo = new Memo(dpiFactor);
                 memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect) + 1 + Left, (int)Canvas.GetTop(rect) + 1 + Top);
-                memo = null;
             }
             _Hide();
 
