@@ -38,24 +38,34 @@ namespace Binjyo
         private bool isOverButton = false;
         private Timer timer = null;
 
-        public Memo(double dpi=1)
+        public Memo(double dpi, Bitmap bmp, double left, double top)
         {
             InitializeComponent();
-            dpiFactor = dpi;
+            this.dpiFactor = dpi;
             InitializeTimer();
+
+            this.SetBitmap(bmp, left, top);
         }
 
-        public void Set_Bitmap(Bitmap bmp, double x, double y)
+        protected void _Close()
         {
-            Left = x; Top = y;
-            Width = bmp.Width/dpiFactor; Height = bmp.Height/dpiFactor;
+            if (this.bitmap != null) this.bitmap.Dispose();
+            if (this.timer != null) this.timer.Stop();
+            this.Close();
+            GC.Collect();
+        }
+
+        protected void SetBitmap(Bitmap bmp, double left, double top)
+        {
+            Left = left; Top = top;
+            Width = bmp.Width / dpiFactor; Height = bmp.Height / dpiFactor;
             bitmap = bmp;
 
             IntPtr hbitmap = bmp.GetHbitmap();
             bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             DeleteObject(hbitmap);
 
-            image.Source = bitmpasource;
+            this.image.Source = bitmpasource;
 
             Show();
         }
@@ -63,17 +73,17 @@ namespace Binjyo
         private void InitializeTimer()
         {
             this.timer = new Timer(interval: 0.1);
-            this.timer.Elapsed += new ElapsedEventHandler(_tm_Elapsed);
+            this.timer.Elapsed += new ElapsedEventHandler(TimerElapsed);
             this.timer.Enabled = true;
         }
         private delegate void TimerDelegate();
-        private void _tm_Elapsed(object sender, ElapsedEventArgs e)
+        private void TimerElapsed(object sender, ElapsedEventArgs e)
         {
             this.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new TimerDelegate(TimerHandler));
         }
         private void TimerHandler()
         {
-            switch(lockmode)
+            switch (lockmode)
             {
                 case 1:
                     double x = System.Windows.Forms.Control.MousePosition.X;
@@ -98,8 +108,8 @@ namespace Binjyo
                             isdrag = false;
                         double xx = System.Windows.Forms.Control.MousePosition.X;
                         double yy = System.Windows.Forms.Control.MousePosition.Y;
-                        Left += (xx - lastx)/dpiFactor;
-                        Top += (yy - lasty)/dpiFactor;
+                        Left += (xx - lastx) / dpiFactor;
+                        Top += (yy - lasty) / dpiFactor;
                         lastx = xx;
                         lasty = yy;
                     }
@@ -128,31 +138,21 @@ namespace Binjyo
         }
         public void Resize(double s)
         {
-            if (!isdrag)// && !isresize)
+            if (!isdrag)
             {
                 scale = s;
-                double right = Left + Width;
-                //Opacity = 0.001;
-                Width = bitmpasource.Width * s; Height = bitmpasource.Height * s;
-                //Left = right - Width;
-                //Opacity = 1;
+                Width = bitmpasource.Width * s;
+                Height = bitmpasource.Height * s;
             }
         }
-        public void Sizeup()
+        public void ResizeDelta(double ds)
         {
-            scale += 0.2;
-            if (scale <= 0 || scale >= 3 || 
-                bitmpasource.Width * scale < 30 || bitmpasource.Height * scale < 30)
-                scale -= 0.2;
-            else
-                Resize(scale);
-        }
-        public void Sizedown()
-        {
-            scale -= 0.2;
-            if (scale <= 0 || scale >= 3 ||
-                bitmpasource.Width * scale < 30 || bitmpasource.Height * scale < 30)
-                scale += 0.2;
+            scale += ds;
+            if (scale <= 0 || scale >= 10 ||
+                bitmpasource.Width * scale < 25 || bitmpasource.Height * scale < 25 ||
+                bitmpasource.Width * scale > SystemParameters.VirtualScreenWidth || bitmpasource.Height * scale > SystemParameters.VirtualScreenHeight
+            )
+                scale -= ds;
             else
                 Resize(scale);
         }
@@ -179,17 +179,17 @@ namespace Binjyo
             }
         }
 
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr hObject);
 
 
-        #region Event
+        #region ========== EVENT ========== 
+
+        // ========== BUTTON ==========
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             switch(e.Key)
             {
                 case Key.Escape:
-                    Close();
+                    this._Close();
                     e.Handled = true;
                     break;
                 case Key.S:
@@ -203,18 +203,17 @@ namespace Binjyo
                     if (Keyboard.IsKeyDown(Key.LeftCtrl))
                     {
                         Clipboard.SetImage(bitmpasource);
-                        Close();
-                        this.timer.Stop();
+                        this._Close();
                     }
                     break;
                 case Key.R:
                     ResetSize();
                     break;
                 case Key.D:
-                    Sizedown();
+                    ResizeDelta(-0.2);
                     break;
                 case Key.F:
-                    Sizeup();
+                    ResizeDelta(0.2);
                     break;
                 default:
                     break;
@@ -276,8 +275,7 @@ namespace Binjyo
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             Clipboard.SetImage(bitmpasource);
-            Close();
-            this.timer.Stop();
+            this._Close();
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
@@ -290,7 +288,29 @@ namespace Binjyo
             popup.IsOpen = false;
         }
 
-        private void button_Click(object sender, RoutedEventArgs e)
+        private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.IsKeyDown(Key.LeftCtrl))
+            {
+                if (e.Delta > 0) ResizeDelta(0.1);
+                else ResizeDelta(-0.1);
+            }
+        }
+
+        private void Window_Deactivated(object sender, EventArgs e)
+        {
+            isdrag = false;
+            popup.IsOpen = false;
+        }
+
+        private void Window_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+        }
+
+
+        // ========== BUTTON ==========
+
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
             switch (lockmode)
             {
@@ -309,37 +329,11 @@ namespace Binjyo
             }
         }
 
-        private void Window_Deactivated(object sender, EventArgs e)
+        private void Button_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            isdrag = false;
-            popup.IsOpen = false;
         }
 
-        private void button_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-
-        }
-
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            base.OnSourceInitialized(e);
-            var hwnd = new WindowInteropHelper(this).Handle;
-            //WinService.SetWindowExTransparent(hwnd);
-            WindowInteropHelper helper = new WindowInteropHelper(this);
-
-            HwndSource source = HwndSource.FromHwnd(hwnd);
-            source.AddHook(WndProc);
-        }
-        const int WM_SYSCOMMAND = 0x0112;
-        const int SC_MINIMIZE = 0xF020;
-        const int SC_MAXIMIZE = 0xF030;
-
-        private void Window_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-
-        }
-
-        private void button_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private void Button_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             e.Handled = true;
         }
@@ -362,6 +356,26 @@ namespace Binjyo
             }
         }
 
+        #endregion
+
+
+        #region UTIL
+        // ==================================
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            var hwnd = new WindowInteropHelper(this).Handle;
+            //WinService.SetWindowExTransparent(hwnd);
+            WindowInteropHelper helper = new WindowInteropHelper(this);
+
+            HwndSource source = HwndSource.FromHwnd(hwnd);
+            source.AddHook(WndProc);
+        }
+
+        const int WM_SYSCOMMAND = 0x0112;
+        const int SC_MINIMIZE = 0xF020;
+        const int SC_MAXIMIZE = 0xF030;
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             long command = wParam.ToInt64() & 0xfff0;
@@ -376,7 +390,11 @@ namespace Binjyo
             }
             return IntPtr.Zero;
         }
-        #endregion
 
+
+        [DllImport("gdi32.dll")]
+        public static extern bool DeleteObject(IntPtr hObject);
+
+        #endregion
     }
 }

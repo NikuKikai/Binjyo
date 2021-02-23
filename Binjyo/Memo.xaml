@@ -21,6 +21,7 @@
         MouseUp="Window_MouseUp"
         MouseDoubleClick="Window_MouseDoubleClick"
         PreviewMouseDoubleClick="Window_PreviewMouseDoubleClick"
+        MouseWheel="Window_MouseWheel"
         Deactivated="Window_Deactivated"
         >
     <Window.Resources>
@@ -33,8 +34,8 @@
         <Button Name="button" Margin="0,0,0,0" Width="18" Height="18" 
                 HorizontalAlignment="Left" VerticalAlignment="Top" Opacity="0"
                 BorderThickness="0"
-                Click="button_Click" PreviewMouseDown="Window_MouseDown"
-                PreviewMouseDoubleClick="button_PreviewMouseDoubleClick"
+                Click="Button_Click" PreviewMouseDown="Window_MouseDown"
+                PreviewMouseDoubleClick="Button_PreviewMouseDoubleClick"
                 MouseEnter="Button_MouseEnter" MouseLeave="Button_MouseLeave"
                 >
             <DynamicResource ResourceKey="lockoff"/>

@@ -183,13 +183,6 @@ namespace Binjyo
             rect.Opacity = 0; popup.IsOpen = false; linew.Opacity = 0; lineh.Opacity = 0;
             if (rect.Width > 20 && rect.Height > 20)
             {
-                /*linew.Opacity = 0; lineh.Opacity = 0; Thread.Sleep(10);
-                // Get bitmap from screen
-                Bitmap bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-                Graphics g = Graphics.FromImage(bitmap);
-                g.CopyFromScreen(l, t, 0, 0, bitmap.Size);
-                g.Dispose();*/
-
                 // Crop bitmap with rect
                 var croppedImage = new Bitmap((int)(rect.Width*dpiFactor),
                                             (int)(rect.Height*dpiFactor));
@@ -201,14 +194,16 @@ namespace Binjyo
                         croppedImage.Width, croppedImage.Height );
                     graphics.DrawImage(this.bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
                 }
-                //bitmap.Dispose();
 
                 // Create Memo from cropped bitmap
-                Memo memo = new Memo(dpiFactor);
-                memo.Set_Bitmap(croppedImage, (int)Canvas.GetLeft(rect) + 1 + Left, (int)Canvas.GetTop(rect) + 1 + Top);
+                new Memo(
+                    dpiFactor,
+                    croppedImage,
+                    (int)Canvas.GetLeft(rect) + 1 + Left,
+                    (int)Canvas.GetTop(rect) + 1 + Top
+                );
             }
             _Hide();
-
         }
 
         private void Window_Deactivated(object sender, EventArgs e)
