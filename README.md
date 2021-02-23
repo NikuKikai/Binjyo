@@ -3,27 +3,34 @@
 A simple screenshot tool inspired by SETUNA2.
 Suitable for illustrators.
 
-## Dependency
-
-- .NET 4.6.1
-- WPF
-
 ## Usage
 
-- Ctrl+Alt+A or Ctrl+Win+A to screenshot
+On everywhere
 
-On a memo
+Operation | Shortkey | Mouse
+--- | --- | ---
+take screenshot | `Ctrl+Alt+A`  or `Ctrl+Win+A`|
 
-- Double click to copy and close
-- Ctrl+C and Ctrl+X is abled
-- Esc to close
-- D to size down
-- F to size up      (min of 30 pixels or 20%)
-- R to reset size
-- S to save png
+On a focused memo
 
-click the button on top-left corner to switch mode:
+Operation | Shortkey | Mouse
+--- | --- | ---
+copy & close | `Ctrl+x` | `Double click`
+copy | `Ctrl+c`
+close | `Esc`
+size down | `d` | `wheel down`
+size up | `f` | `wheel up`
+size reset | `r`
+save png | `s`
 
+> `resize` is limited to min of 25 pixels and max of `screen width`
+
+Click the button on top-left corner to switch mode. (Maybe removed in future)
 - normal
 - locked
 - minimized
+
+## Dependency(for Developer)
+
+- .NET 4.6.1
+- WPF
