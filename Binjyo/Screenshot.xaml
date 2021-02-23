@@ -24,7 +24,8 @@
         ResizeMode="NoResize"
         >
     <Grid Margin="0,0,0,0">
-        <Canvas Name="canvas" Margin="0,0,0,0" Background="Transparent"></Canvas>
+        <Canvas Name="canvasMask" Margin="0,0,0,0" Background="Transparent"></Canvas>
+        <Canvas Name="canvas" Margin="0,0,0,0" Background="Black"></Canvas>
         <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=canvas}">
             <Grid>
                 <TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>
