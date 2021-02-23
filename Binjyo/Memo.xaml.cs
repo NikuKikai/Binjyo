@@ -36,11 +36,13 @@ namespace Binjyo
         private double scale = 1;
 
         private bool isOverButton = false;
+        private Timer timer = null;
 
         public Memo(double dpi=1)
         {
             InitializeComponent();
             dpiFactor = dpi;
+            InitializeTimer();
         }
 
         public void Set_Bitmap(Bitmap bmp, double x, double y)
@@ -56,20 +58,13 @@ namespace Binjyo
             image.Source = bitmpasource;
 
             Show();
-            InitializeTimer();
         }
 
         private void InitializeTimer()
         {
-            /*System.Windows.Threading.DispatcherTimer dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
-            dispatcherTimer.Tick += dispatcherTimer_Tick;
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, 50);
-            dispatcherTimer.Start();*/
-            
-            var _tm = new Timer();
-            _tm.Interval = 0.1;
-            _tm.Elapsed += new ElapsedEventHandler(_tm_Elapsed);
-            _tm.Enabled = true;
+            this.timer = new Timer(interval: 0.1);
+            this.timer.Elapsed += new ElapsedEventHandler(_tm_Elapsed);
+            this.timer.Enabled = true;
         }
         private delegate void TimerDelegate();
         private void _tm_Elapsed(object sender, ElapsedEventArgs e)
@@ -209,6 +204,7 @@ namespace Binjyo
                     {
                         Clipboard.SetImage(bitmpasource);
                         Close();
+                        this.timer.Stop();
                     }
                     break;
                 case Key.R:
@@ -281,6 +277,7 @@ namespace Binjyo
         {
             Clipboard.SetImage(bitmpasource);
             Close();
+            this.timer.Stop();
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
