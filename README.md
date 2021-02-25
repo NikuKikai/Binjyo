@@ -18,10 +18,11 @@ Operation | Shortkey | Mouse
 copy & close | `Ctrl+x` | `Double click`
 copy | `Ctrl+c`
 close | `Esc`
-size down | `d` | `wheel down`
-size up | `f` | `wheel up`
+size down | `d` | `Ctrl+wheel down`
+size up | `f` | `Ctrl+wheel up`
 size reset | `r`
 save png | `s`
+show color wheel | `shift`
 
 > `resize` is limited to min of 25 pixels and max of `screen width`
 
