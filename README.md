@@ -3,6 +3,11 @@
 A simple screenshot tool inspired by SETUNA2.
 Suitable for illustrators.
 
+## Setup
+
+1. Download binjyo.exe from [here](https://github.com/NikuKikai/Binjyo/releases).
+2. Just click binjyo.exe. Nothing but an icon will appear in task tray. (打开什么都不会发生，只会在托盘里出现一个图标)
+
 ## Usage
 
 On everywhere
