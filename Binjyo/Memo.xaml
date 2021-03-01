@@ -57,10 +57,10 @@
                         <local:SaturationValueEffect x:Name="HSV_SV"/>
                     </Rectangle.Effect>
                 </Rectangle>
-                <Ellipse x:Name="HueMark" Fill="Transparent" Stroke="Black" StrokeThickness="2"
+                <Ellipse x:Name="HueMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
                          Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
                 </Ellipse>
-                <Ellipse x:Name="SVMark" Fill="Transparent" Stroke="Black" StrokeThickness="2"
+                <Ellipse x:Name="SVMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
                         Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
                 </Ellipse>
             </Grid>

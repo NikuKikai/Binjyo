@@ -16,6 +16,8 @@ using System.Windows.Interop;
 //using System.Threading;
 using System.Timers;
 using System.Runtime.InteropServices;
+using System.Drawing.Imaging;
+
 
 namespace Binjyo
 {
@@ -24,18 +26,23 @@ namespace Binjyo
     /// </summary>
     public partial class Memo : Window
     {
-        private bool isdrag = false;
         private double dpiFactor = 1;
 
-        private double lastx, lasty;
-
-        private Bitmap bitmap;
         private BitmapSource bitmpasource;
+        private Bitmap bitmap;
+        private Bitmap bitmapGreyscale = null;
+
+        private bool isShowingOriginal = true;
+        private bool isShowingGreyscale = false;
+
+        private double lastx, lasty;
+        private bool isdrag = false;
+
         private int lockmode = 0;
+        private bool isOverButton = false;
 
         private double scale = 1;
 
-        private bool isOverButton = false;
         private Timer timer = null;
 
         public Memo(double dpi, Bitmap bmp, double left, double top)
@@ -44,7 +51,11 @@ namespace Binjyo
             this.dpiFactor = dpi;
             InitializeTimer();
 
-            this.SetBitmap(bmp, left, top);
+            this.bitmap = bmp;
+            Left = left; Top = top;
+            Width = bmp.Width / dpiFactor; Height = bmp.Height / dpiFactor;
+
+            this.ShowBitmap(bmp);
         }
 
         protected void _Close()
@@ -55,18 +66,13 @@ namespace Binjyo
             GC.Collect();
         }
 
-        protected void SetBitmap(Bitmap bmp, double left, double top)
+        protected void ShowBitmap(Bitmap bmp)
         {
-            Left = left; Top = top;
-            Width = bmp.Width / dpiFactor; Height = bmp.Height / dpiFactor;
-            bitmap = bmp;
-
             IntPtr hbitmap = bmp.GetHbitmap();
             bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             DeleteObject(hbitmap);
 
             this.image.Source = bitmpasource;
-
             Show();
         }
 
@@ -141,16 +147,16 @@ namespace Binjyo
             if (!isdrag)
             {
                 scale = s;
-                Width = bitmpasource.Width * s;
-                Height = bitmpasource.Height * s;
+                Width = this.bitmap.Width * s;
+                Height = this.bitmap.Height * s;
             }
         }
         public void ResizeDelta(double ds)
         {
             scale += ds;
             if (scale <= 0 || scale >= 10 ||
-                bitmpasource.Width * scale < 25 || bitmpasource.Height * scale < 25 ||
-                bitmpasource.Width * scale > SystemParameters.VirtualScreenWidth || bitmpasource.Height * scale > SystemParameters.VirtualScreenHeight
+                this.bitmap.Width * scale < 25 || this.bitmap.Height * scale < 25 ||
+                this.bitmap.Width * scale > SystemParameters.VirtualScreenWidth || this.bitmap.Height * scale > SystemParameters.VirtualScreenHeight
             )
                 scale -= ds;
             else
@@ -179,7 +185,24 @@ namespace Binjyo
             }
         }
 
-
+        public void SwitchGreyscale()
+        {
+            if (!this.isShowingGreyscale)
+            {
+                this.bitmapGreyscale = MakeGrayscale3(this.bitmap);
+                this.ShowBitmap(this.bitmapGreyscale);
+                this.isShowingOriginal = false;
+                this.isShowingGreyscale = true;
+            }
+            else
+            {
+                this.ShowBitmap(this.bitmap);
+                this.bitmapGreyscale.Dispose(); // TODO
+                this.bitmapGreyscale = null;
+                this.isShowingOriginal = true;
+                this.isShowingGreyscale = false;
+            }
+        }
 
         #region ========== EVENT ========== 
 
@@ -215,6 +238,9 @@ namespace Binjyo
                 case Key.F:
                     ResizeDelta(0.2);
                     break;
+                case Key.G:
+                    SwitchGreyscale();
+                    break;
                 default:
                     break;
             }
@@ -233,18 +259,19 @@ namespace Binjyo
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            var x = System.Windows.Forms.Control.MousePosition.X;
-            var y = System.Windows.Forms.Control.MousePosition.Y;
+            double x = System.Windows.Forms.Control.MousePosition.X - Left;
+            double y = System.Windows.Forms.Control.MousePosition.Y - Top;
             if (!isdrag && Keyboard.IsKeyDown(Key.LeftShift) && !isOverButton)
             {
                 popup.IsOpen = true;
-                if (x - (int)Left < 0 || x - (int)Left >= bitmap.Width || y - (int)Top < 0 || y - (int)Top >= bitmap.Height)
+                if (x < 0 || x >= Width || y < 0 || y >= Height)
                     return;
-                var px = bitmap.GetPixel(x - (int)Left, y - (int)Top);
+                var px = bitmap.GetPixel( (int)(x/scale), (int)(y/scale) );
 
-                popup.HorizontalOffset = x - (int)Left + 180;
-                popup.VerticalOffset = y - (int)Top + 30;
+                popup.HorizontalOffset = x + 180;
+                popup.VerticalOffset = y + 30;
 
+                //  Update Hue marker
                 float hue = px.GetHue();
                 HSV_SV.Hue = hue;
                 var radius = HSVWheel.Width / 2 - HSVWheel.StrokeThickness / 2;
@@ -253,10 +280,15 @@ namespace Binjyo
                 var yc = HSVWheel.Height / 2 + Math.Sin(angle) * radius;
                 HueMark.Margin = new Thickness(xc-HueMark.Width/2, yc-HueMark.Height/2, 0, 0);
 
+                //  Update SV marker
                 var v = (double)Math.Max(Math.Max(px.R, px.G), px.B) / 255;
                 var s = (double)Math.Min(Math.Min(px.R, px.G), px.B) / 255;
                 if (v == 0) s = 1;
                 else s = (v - s) / v; // S of HSV is different from px.GetSaturation(), which is S of HSL(?)
+
+                if (v < 0.5) SVMark.Stroke = new SolidColorBrush(Colors.White);
+                else SVMark.Stroke = new SolidColorBrush(Colors.Black);
+
                 SVMark.Margin = new Thickness(
                     HSVWheel.Width / 2 - HSVRect.Width / 2 + s * HSVRect.Width - SVMark.Width / 2, 
                     HSVWheel.Height / 2 + HSVRect.Height / 2 - v * HSVRect.Height - SVMark.Height / 2, 0, 0);
@@ -361,6 +393,44 @@ namespace Binjyo
 
         #region UTIL
         // ==================================
+
+        public static Bitmap MakeGrayscale3(Bitmap original)
+        {
+            // https://stackoverflow.com/questions/2265910/convert-an-image-to-grayscale
+            //create a blank bitmap the same size as original
+            Bitmap newBitmap = new Bitmap(original.Width, original.Height);
+
+            //get a graphics object from the new image
+            using (Graphics g = Graphics.FromImage(newBitmap))
+            {
+
+                //create the grayscale ColorMatrix
+                ColorMatrix colorMatrix = new ColorMatrix(
+                    new float[][]
+                    {
+                        new float[] {.3f, .3f, .3f, 0, 0},
+                        new float[] {.59f, .59f, .59f, 0, 0},
+                        new float[] {.11f, .11f, .11f, 0, 0},
+                        new float[] {0, 0, 0, 1, 0},
+                        new float[] {0, 0, 0, 0, 1}
+                    });
+
+                //create some image attributes
+                using (ImageAttributes attributes = new ImageAttributes())
+                {
+
+                    //set the color matrix attribute
+                    attributes.SetColorMatrix(colorMatrix);
+
+                    //draw the original image on the new image
+                    //using the grayscale color matrix
+                    g.DrawImage(original, new System.Drawing.Rectangle(0, 0, original.Width, original.Height),
+                                0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
+                }
+            }
+            return newBitmap;
+        }
+
 
         protected override void OnSourceInitialized(EventArgs e)
         {
