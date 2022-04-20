@@ -49,5 +49,5 @@ Click the button on top-left corner to switch mode. (Maybe removed in future)
 
 ## Dependency(for Developer)
 
-- .NET 4.6.1
+- .NET 4.7.2
 - WPF
