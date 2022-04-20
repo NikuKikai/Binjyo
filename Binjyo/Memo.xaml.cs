@@ -26,6 +26,8 @@ namespace Binjyo
     /// </summary>
     public partial class Memo : Window
     {
+        private Timer timer = null;
+
         private double dpiFactor = 1;
 
         private BitmapSource bitmpasource;
@@ -35,26 +37,43 @@ namespace Binjyo
         private bool isShowingOriginal = true;
         private bool isShowingGreyscale = false;
 
+        // effect
+        private double scale = 1;
+        private bool isEffectGrey = false;
+        private int isEffectThreshold = 0;
+
         private double lastx, lasty;
         private bool isdrag = false;
-
-        private int lockmode = 0;
         private bool isOverButton = false;
 
-        private double scale = 1;
+        private int lockmode = 0;
 
-        private Timer timer = null;
 
-        public Memo(double dpi, Bitmap bmp, double left, double top)
+        public Memo(Bitmap bmp, int left, int top)    // Physical coordinates
         {
             InitializeComponent();
-            this.dpiFactor = dpi;
             InitializeTimer();
 
-            this.bitmap = bmp;
-            Left = left; Top = top;
+            int w = bmp.Width;
+            int h = bmp.Height;  // Physical pixel
+
+            var centerx = left + w / 2;
+            var centery = top + h / 2;
+
+            //var scr = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
+            var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(centerx, centery));
+
+            var dpi = scr.GetDpi(DpiType.Effective);
+            dpiFactor = (double)dpi.X / 96.0;
+            Console.WriteLine(dpiFactor);
+
+
+            //this.dpiFactor = VisualTreeHelper.GetDpi(this as Visual).DpiScaleX;
+            //Console.WriteLine("Memo init  " + dpiFactor.ToString());
+            Left = left / dpiFactor; Top = top / dpiFactor;
             Width = bmp.Width / dpiFactor; Height = bmp.Height / dpiFactor;
 
+            this.bitmap = bmp;
             this.ShowBitmap(bmp);
         }
 
@@ -114,10 +133,12 @@ namespace Binjyo
                             isdrag = false;
                         double xx = System.Windows.Forms.Control.MousePosition.X;
                         double yy = System.Windows.Forms.Control.MousePosition.Y;
+                        //var dx = (xx - lastx) / dpiFactor;
                         Left += (xx - lastx) / dpiFactor;
                         Top += (yy - lasty) / dpiFactor;
                         lastx = xx;
                         lasty = yy;
+                        //Console.WriteLine(xx.ToString()+" "+dx.ToString()+ " " + Left.ToString());
                     }
                     break;
 
@@ -125,6 +146,9 @@ namespace Binjyo
                     break;
             }
         }
+
+
+        // ========== Operations ==========
 
         public void Minimize()
         {
@@ -204,7 +228,56 @@ namespace Binjyo
             }
         }
 
+        public void UpdateHSVWheel()
+        {
+            popup.IsOpen = true;
+
+            double x = System.Windows.Forms.Control.MousePosition.X - Left;
+            double y = System.Windows.Forms.Control.MousePosition.Y - Top;
+            if (x < 0 || x >= Width || y < 0 || y >= Height)
+                return;
+            var px = bitmap.GetPixel((int)(x / scale), (int)(y / scale));
+
+            popup.HorizontalOffset = x + 180;
+            popup.VerticalOffset = y + 30;
+
+            //  Update Hue marker
+            float hue = px.GetHue();
+            HSV_SV.Hue = hue;
+            var radius = HSVWheel.Width / 2 - HSVWheel.StrokeThickness / 2;
+            var angle = (hue + 210) / 180 * Math.PI;
+            var xc = HSVWheel.Width / 2 + Math.Cos(angle) * radius;
+            var yc = HSVWheel.Height / 2 + Math.Sin(angle) * radius;
+            HueMark.Margin = new Thickness(xc - HueMark.Width / 2, yc - HueMark.Height / 2, 0, 0);
+
+            //  Update SV marker
+            var v = (double)Math.Max(Math.Max(px.R, px.G), px.B) / 255;
+            var s = (double)Math.Min(Math.Min(px.R, px.G), px.B) / 255;
+            if (v == 0) s = 1;
+            else s = (v - s) / v; // S of HSV is different from px.GetSaturation(), which is S of HSL(?)
+
+            if (v < 0.5) SVMark.Stroke = new SolidColorBrush(Colors.White);
+            else SVMark.Stroke = new SolidColorBrush(Colors.Black);
+
+            SVMark.Margin = new Thickness(
+                HSVWheel.Width / 2 - HSVRect.Width / 2 + s * HSVRect.Width - SVMark.Width / 2,
+                HSVWheel.Height / 2 + HSVRect.Height / 2 - v * HSVRect.Height - SVMark.Height / 2, 0, 0);
+
+            // Show text
+            HSVText.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)px.GetHue(), (int)(px.GetSaturation() * 100), (int)(px.GetBrightness() * 100));
+        }
+
+
         #region ========== EVENT ========== 
+
+        protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+        {
+            dpiFactor = newDpi.DpiScaleX;
+            Console.WriteLine("DPI Changed");
+            Console.WriteLine(newDpi.DpiScaleX);
+            Console.WriteLine(Left);
+        }
+
 
         // ========== BUTTON ==========
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -241,6 +314,9 @@ namespace Binjyo
                 case Key.G:
                     SwitchGreyscale();
                     break;
+                case Key.LeftShift:
+                    this.UpdateHSVWheel();
+                    break;
                 default:
                     break;
             }
@@ -259,42 +335,9 @@ namespace Binjyo
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            double x = System.Windows.Forms.Control.MousePosition.X - Left;
-            double y = System.Windows.Forms.Control.MousePosition.Y - Top;
+            // Show HSV
             if (!isdrag && Keyboard.IsKeyDown(Key.LeftShift) && !isOverButton)
-            {
-                popup.IsOpen = true;
-                if (x < 0 || x >= Width || y < 0 || y >= Height)
-                    return;
-                var px = bitmap.GetPixel( (int)(x/scale), (int)(y/scale) );
-
-                popup.HorizontalOffset = x + 180;
-                popup.VerticalOffset = y + 30;
-
-                //  Update Hue marker
-                float hue = px.GetHue();
-                HSV_SV.Hue = hue;
-                var radius = HSVWheel.Width / 2 - HSVWheel.StrokeThickness / 2;
-                var angle = (hue + 210) / 180 * Math.PI;
-                var xc = HSVWheel.Width / 2 + Math.Cos(angle) * radius;
-                var yc = HSVWheel.Height / 2 + Math.Sin(angle) * radius;
-                HueMark.Margin = new Thickness(xc-HueMark.Width/2, yc-HueMark.Height/2, 0, 0);
-
-                //  Update SV marker
-                var v = (double)Math.Max(Math.Max(px.R, px.G), px.B) / 255;
-                var s = (double)Math.Min(Math.Min(px.R, px.G), px.B) / 255;
-                if (v == 0) s = 1;
-                else s = (v - s) / v; // S of HSV is different from px.GetSaturation(), which is S of HSL(?)
-
-                if (v < 0.5) SVMark.Stroke = new SolidColorBrush(Colors.White);
-                else SVMark.Stroke = new SolidColorBrush(Colors.Black);
-
-                SVMark.Margin = new Thickness(
-                    HSVWheel.Width / 2 - HSVRect.Width / 2 + s * HSVRect.Width - SVMark.Width / 2, 
-                    HSVWheel.Height / 2 + HSVRect.Height / 2 - v * HSVRect.Height - SVMark.Height / 2, 0, 0);
-
-                //poptext.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)(px.GetHue()), (int)(px.GetSaturation()*100), (int)(px.GetBrightness()*100));
-            }
+                this.UpdateHSVWheel();
             else
                 popup.IsOpen = false;
         }

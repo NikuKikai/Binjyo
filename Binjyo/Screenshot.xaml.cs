@@ -14,21 +14,50 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Runtime.InteropServices;
+
 
 namespace Binjyo
 {
+    public enum DpiType
+    {
+        Effective = 0,
+        Angular = 1,
+        Raw = 2,
+    }
+    public static class ScreenExtensions
+    {
+        public static System.Drawing.Point GetDpi(this System.Windows.Forms.Screen screen, DpiType dpiType=DpiType.Effective)
+        {
+            uint x, y;
+            var pnt = new System.Drawing.Point(screen.Bounds.Left + 1, screen.Bounds.Top + 1);
+            var mon = MonitorFromPoint(pnt, 2/*MONITOR_DEFAULTTONEAREST*/);
+            GetDpiForMonitor(mon, dpiType, out x, out y);
+            return new System.Drawing.Point((int)x, (int)y);
+        }
+
+        //https://msdn.microsoft.com/en-us/library/windows/desktop/dd145062(v=vs.85).aspx
+        [DllImport("User32.dll")]
+        private static extern IntPtr MonitorFromPoint([In]System.Drawing.Point pt, [In]uint dwFlags);
+
+        //https://msdn.microsoft.com/en-us/library/windows/desktop/dn280510(v=vs.85).aspx
+        [DllImport("Shcore.dll")]
+        private static extern IntPtr GetDpiForMonitor([In]IntPtr hmonitor, [In]DpiType dpiType, [Out]out uint dpiX, [Out]out uint dpiY);
+    }
+
     /// <summary>
     /// Interaction logic for Screenshot.xaml
     /// </summary>
     public partial class Screenshot : Window
     {
-        private bool isshot = false;
-        private bool isdrag = false;
-        private int startx, starty;
         private double dpiFactor = 1;
 
+        private bool isshot = false;
+        private bool isdrag = false;
 
-        private int w, h, l, t;
+        private int w, h, l, t;  // Physical Pixel
+        private int startx, starty;  // Physical Pixel
+        private int selectedLeft, selectedTop, selectedWidth, selectedHeight;  // Physical Pixel
 
         private Line linew, lineh;
         private System.Windows.Shapes.Rectangle rectBitmap, rectMask;
@@ -39,23 +68,32 @@ namespace Binjyo
         {
             InitializeComponent();
             Show();
-            Create_Objects();
+            _CreateObjects();
         }
 
         public void Shot()
         {
-            Width = (int)SystemParameters.VirtualScreenWidth;
-            Height = (int)SystemParameters.VirtualScreenHeight;
-            Left = (int)SystemParameters.VirtualScreenLeft;
-            Top = (int)SystemParameters.VirtualScreenTop;
-            dpiFactor = System.Windows.PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M11;
-            WindowState = WindowState.Normal;
-            w = (int)(dpiFactor * Width);
-            h = (int)(dpiFactor * Height);
-            l = (int)(dpiFactor * Left);
-            t = (int)(dpiFactor * Top);
+            w = (int)SystemParameters.VirtualScreenWidth;
+            h = (int)SystemParameters.VirtualScreenHeight;
+            l = (int)SystemParameters.VirtualScreenLeft;
+            t = (int)SystemParameters.VirtualScreenTop;
 
-            //Console.WriteLine(GC.GetTotalMemory(true));
+            WindowState = WindowState.Normal;
+
+            var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)l + 1, (int)t + 1));
+
+            var dpi = scr.GetDpi(DpiType.Effective);
+            dpiFactor = (double)dpi.X / 96.0;
+
+            var curr_dpiFactor = VisualTreeHelper.GetDpi(this).DpiScaleX; // Only works under per-monitor DPI mode > https://github.com/microsoft/WPF-Samples/tree/master/
+            Console.WriteLine("dpi scale = " + dpiFactor.ToString() + " curr " + curr_dpiFactor);
+
+            Width = w / dpiFactor;
+            Height = h / dpiFactor;
+            Left = l / dpiFactor;
+            Top = t / dpiFactor;
+            Console.WriteLine("Left " + Left + " Top " + Top);
+            //Console.WriteLine(SystemParameters.VirtualScreenLeft.ToString() + " " + SystemParameters.VirtualScreenTop.ToString());
 
             this.bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             using (var g = Graphics.FromImage(this.bitmap))
@@ -71,50 +109,14 @@ namespace Binjyo
             this.rectBitmap.Fill = new ImageBrush(bs);
             this.rectBitmap.Width = Width;
             this.rectBitmap.Height = Height;
-            Canvas.SetLeft(this.rectBitmap, Left);
-            Canvas.SetTop(this.rectBitmap, Top);
+            Canvas.SetLeft(this.rectBitmap, 0);
+            Canvas.SetTop(this.rectBitmap, 0);
 
             _Show();
         }
 
-        private void _Show()
-        {
-            //Show();
-            Opacity = 1;
-            Thread.Sleep(10);
-            //canvas.Opacity = 1;
 
-            double x = System.Windows.Forms.Control.MousePosition.X - l;
-            double y = System.Windows.Forms.Control.MousePosition.Y - t;
-            linew.X1 = x; linew.X2 = x; linew.Y2 = h; linew.Opacity = 1.0;
-            lineh.Y1 = y; lineh.Y2 = y; lineh.X2 = w; lineh.Opacity = 1.0;
-            Activate();
-            isshot = true;
-        }
-        private void _Hide()
-        {
-            if (isshot)
-            {
-                //Hide();
-                Opacity = 0;
-                this.rectMask.Opacity = 0;
-                popup.IsOpen = false;
-                linew.Opacity = 0; lineh.Opacity = 0;
-                Width = 10; Height = 10;
-
-                this.rectBitmap.Fill = null;
-                this.bitmap.Dispose();
-                this.bitmap = null;
-
-                isshot = false;
-                isdrag = false;
-                isshot = false;
-
-                GC.Collect();
-            }
-        }
-
-        private void Create_Objects()
+        private void _CreateObjects()
         {
             // Set up canvas Mask
             this.canvasMask.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 0, 0, 0));
@@ -131,7 +133,8 @@ namespace Binjyo
 
 
             // rect to render image
-            this.rectBitmap = new System.Windows.Shapes.Rectangle{
+            this.rectBitmap = new System.Windows.Shapes.Rectangle
+            {
                 OpacityMask = maskBrush
             };
             RenderOptions.SetEdgeMode(this.rectBitmap, EdgeMode.Aliased);
@@ -146,16 +149,130 @@ namespace Binjyo
                 StrokeThickness = 1,
                 Y1 = 0
             };
-            canvas.Children.Add(linew);
+            this.canvas.Children.Add(linew);
             lineh = new Line
             {
                 Stroke = System.Windows.Media.Brushes.White,
                 StrokeThickness = 1,
                 X1 = 0
             };
-            canvas.Children.Add(lineh);
+            this.canvas.Children.Add(lineh);
 
         }
+
+
+        private void _Show()
+        {
+            //Show();
+            Opacity = 1;
+            Thread.Sleep(10);
+            //canvas.Opacity = 1;
+
+            _UpdateCross();
+            Activate();
+            isshot = true;
+        }
+
+        private void _Hide()
+        {
+            if (isshot)
+            {
+                //Hide();
+                Opacity = 0;
+                _HideCross();
+                _HideSelectionRect();
+                _HideSelectionPopup();
+                Width = 10; Height = 10;
+
+                this.rectBitmap.Fill = null;
+                this.bitmap.Dispose();
+                this.bitmap = null;
+
+                isshot = false;
+                isdrag = false;
+                isshot = false;
+
+                GC.Collect();
+            }
+        }
+
+        private void _UpdateCross()
+        {
+            double x = System.Windows.Forms.Control.MousePosition.X - l;
+            double y = System.Windows.Forms.Control.MousePosition.Y - t;
+            x /= dpiFactor; y /= dpiFactor;
+
+            linew.X1 = x; linew.X2 = x; linew.Y1 = y - 200; linew.Y2 = y + 200; linew.Opacity = 0.7;
+            lineh.Y1 = y; lineh.Y2 = y; lineh.X1 = x - 200; lineh.X2 = x + 200; lineh.Opacity = 0.7;
+        }
+        private void _HideCross()
+        {
+            linew.Opacity = 0; lineh.Opacity = 0;
+        }
+
+        
+        private void _UpdateSelectionRect()
+        {
+            int x = System.Windows.Forms.Control.MousePosition.X - l;
+            int y = System.Windows.Forms.Control.MousePosition.Y - t;
+
+            this.selectedWidth = x > startx ? x - startx + 2 : startx - x + 2;
+            this.selectedHeight = y > starty ? y - starty + 2 : starty - y + 2;
+            this.selectedLeft = x > startx ? startx - 1 : x - 1;
+            this.selectedTop = y > starty ? starty - 1 : y - 1;
+            
+            this.rectMask.Width = (int)(selectedWidth / dpiFactor);
+            this.rectMask.Height = (int)(selectedHeight / dpiFactor);
+            Canvas.SetLeft(this.rectMask, selectedLeft / dpiFactor);
+            Canvas.SetTop(this.rectMask, selectedTop / dpiFactor);
+
+            this.rectMask.Opacity = 1;
+        }
+
+        private void _HideSelectionRect()
+        {
+            this.rectMask.Opacity = 0;
+        }
+
+
+        private void _UpdateSelectionPopup()
+        {
+            int x = System.Windows.Forms.Control.MousePosition.X - l;
+            int y = System.Windows.Forms.Control.MousePosition.Y - t;
+
+            popup.HorizontalOffset = (x + 40) / dpiFactor;
+            popup.VerticalOffset = (y + 11) / dpiFactor;
+            poptext.Text = String.Format("{0}x{1}", (int)(this.rectMask.Width * dpiFactor), (int)(this.rectMask.Height * dpiFactor));
+            popup.IsOpen = true;
+        }
+
+        private void _HideSelectionPopup()
+        {
+            popup.IsOpen = false;
+        }
+
+
+        private void _CreateMemo()
+        {
+            if (this.rectMask.Width > 20 && this.rectMask.Height > 20)
+            {
+                // Crop bitmap with rect
+                var croppedImage = new Bitmap(this.selectedWidth, this.selectedHeight);
+                using (var graphics = Graphics.FromImage(croppedImage))
+                {
+                    var srcrect = new System.Drawing.Rectangle(
+                        this.selectedLeft + 1, this.selectedTop + 1,
+                        croppedImage.Width, croppedImage.Height);
+                    graphics.DrawImage(this.bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
+                }
+
+                // Create Memo from cropped bitmap
+                new Memo(croppedImage, this.selectedLeft + 1 + l, this.selectedTop + 1 + t);    // Physical coordinates
+            }
+        }
+
+
+        #region ======== Event Callbacks ========
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -166,64 +283,29 @@ namespace Binjyo
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            int x = System.Windows.Forms.Control.MousePosition.X - l;
-            int y = System.Windows.Forms.Control.MousePosition.Y - t;
-            
+
             if (isdrag)
             {
-                linew.Opacity = 0; lineh.Opacity = 0;
-                _SetRect(x > startx ? x - startx + 2 : startx - x + 2,
-                        y > starty ? y - starty + 2 : starty - y + 2,
-                        x > startx ? startx - 1 : x - 1,
-                        y > starty ? starty - 1 : y - 1);
-                this.rectMask.Opacity = 1;
-
-                popup.HorizontalOffset = (x + 40)/dpiFactor;
-                popup.VerticalOffset = (y + 11)/dpiFactor;
-                poptext.Text = String.Format("{0}x{1}", (int)(this.rectMask.Width*dpiFactor), (int)(this.rectMask.Height*dpiFactor));
-                popup.IsOpen = true;
+                _HideCross();
+                _UpdateSelectionRect();
+                _UpdateSelectionPopup();
             }
             else
             {
-                // draw cross
-                this.rectMask.Opacity = 0; popup.IsOpen = false;
-                linew.X1 = x / dpiFactor; linew.X2 = x / dpiFactor; linew.Opacity = 0.7;
-                lineh.Y1 = y / dpiFactor; lineh.Y2 = y / dpiFactor; lineh.Opacity = 0.7;
+                _HideSelectionRect();
+                _HideSelectionPopup();
+                _UpdateCross();
             }
-        }
-        private void _SetRect(int w, int h, int l, int t)
-        {
-            this.rectMask.Width = (int)(w / dpiFactor);
-            this.rectMask.Height = (int)(h / dpiFactor);
-            Canvas.SetLeft(this.rectMask, l / dpiFactor);
-            Canvas.SetTop(this.rectMask, t / dpiFactor);
         }
 
         private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            this.rectMask.Opacity = 0; popup.IsOpen = false; linew.Opacity = 0; lineh.Opacity = 0;
-            if (this.rectMask.Width > 20 && this.rectMask.Height > 20)
-            {
-                // Crop bitmap with rect
-                var croppedImage = new Bitmap((int)(this.rectMask.Width*dpiFactor),
-                                            (int)(this.rectMask.Height*dpiFactor));
-                using (var graphics = Graphics.FromImage(croppedImage))
-                {
-                    var srcrect = new System.Drawing.Rectangle(
-                        (int)((Canvas.GetLeft(this.rectMask) + 1) * dpiFactor),
-                        (int)((Canvas.GetTop(this.rectMask) + 1) * dpiFactor),
-                        croppedImage.Width, croppedImage.Height );
-                    graphics.DrawImage(this.bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
-                }
+            _HideSelectionRect();
+            _HideSelectionPopup();
+            _HideCross();
 
-                // Create Memo from cropped bitmap
-                new Memo(
-                    dpiFactor,
-                    croppedImage,
-                    (int)Canvas.GetLeft(this.rectMask) + 1 + Left,
-                    (int)Canvas.GetTop(this.rectMask) + 1 + Top
-                );
-            }
+            _CreateMemo();
+
             _Hide();
         }
 
@@ -257,6 +339,9 @@ namespace Binjyo
             _Hide();
             e.Handled = true;
         }
+
+        #endregion
+
 
         [System.Runtime.InteropServices.DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);

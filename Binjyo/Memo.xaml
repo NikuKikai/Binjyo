@@ -42,27 +42,32 @@
 
         </Button>
         <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
-            <Grid x:Name="HSVpicker" Background="#66000000">
-                <!--<TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>-->
-                <Ellipse x:Name="HSVWheel" Fill="Transparent" Stroke="Black" StrokeThickness="10" 
-                 HorizontalAlignment="Center" VerticalAlignment="Center" Width="170" Height="170">
-                    <Ellipse.Effect>
-                        <local:HueWheelEffect x:Name="HSV_H"/>
-                    </Ellipse.Effect>
-                </Ellipse>
-                <Rectangle x:Name="HSVRect" Fill="Black" 
-                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Width="100" Height="100">
-                    <Rectangle.Effect>
-                        <local:SaturationValueEffect x:Name="HSV_SV"/>
-                    </Rectangle.Effect>
-                </Rectangle>
-                <Ellipse x:Name="HueMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
-                         Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
-                </Ellipse>
-                <Ellipse x:Name="SVMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
-                        Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
-                </Ellipse>
+            <Grid>
+                <Grid x:Name="HSVpicker" Background="#66000000" Width="170" Height="170">
+                    <Ellipse x:Name="HSVWheel" Fill="Transparent" Stroke="Black" StrokeThickness="10"
+                             HorizontalAlignment="Center" VerticalAlignment="Center" Width="170" Height="170">
+                        <Ellipse.Effect>
+                            <local:HueWheelEffect x:Name="HSV_H"/>
+                        </Ellipse.Effect>
+                    </Ellipse>
+                    <Rectangle x:Name="HSVRect" Fill="Black" 
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Width="100" Height="100">
+                        <Rectangle.Effect>
+                            <local:SaturationValueEffect x:Name="HSV_SV"/>
+                        </Rectangle.Effect>
+                    </Rectangle>
+                    <Ellipse x:Name="HueMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
+                             Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    </Ellipse>
+                    <Ellipse x:Name="SVMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
+                            Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    </Ellipse>
+                
+                </Grid>
+                <Grid Margin="0,190,0,0" Height="20">
+                    <TextBlock Name="HSVText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
+                </Grid>
             </Grid>
         </Popup>
     </Grid>
