@@ -17,6 +17,8 @@ using System.Windows.Interop;
 using System.Timers;
 using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 
 
 namespace Binjyo
@@ -24,7 +26,7 @@ namespace Binjyo
     /// <summary>
     /// Memo.xaml の相互作用ロジック
     /// </summary>
-    public partial class Memo : Window
+    public partial class Memo : System.Windows.Window
     {
         private Timer timer = null;
 
@@ -32,15 +34,12 @@ namespace Binjyo
 
         private BitmapSource bitmpasource;
         private Bitmap bitmap;
-        private Bitmap bitmapGreyscale = null;
-
-        private bool isShowingOriginal = true;
-        private bool isShowingGreyscale = false;
+        private Bitmap bitmapTransformed = null;
 
         // effect
         private double scale = 1;
-        private bool isEffectGrey = false;
-        private int isEffectThreshold = 0;
+        private bool isEffectGray = false;
+        private int thrEffectBinarize = 0;
 
         private double lastx, lasty;
         private bool isdrag = false;
@@ -67,14 +66,14 @@ namespace Binjyo
             dpiFactor = (double)dpi.X / 96.0;
             Console.WriteLine(dpiFactor);
 
-
             //this.dpiFactor = VisualTreeHelper.GetDpi(this as Visual).DpiScaleX;
             //Console.WriteLine("Memo init  " + dpiFactor.ToString());
             Left = left / dpiFactor; Top = top / dpiFactor;
             Width = bmp.Width / dpiFactor; Height = bmp.Height / dpiFactor;
 
             this.bitmap = bmp;
-            this.ShowBitmap(bmp);
+            this.bitmapTransformed = (Bitmap)this.bitmap.Clone();
+            this._ShowBitmap(bmp);
         }
 
         protected void _Close()
@@ -85,16 +84,35 @@ namespace Binjyo
             GC.Collect();
         }
 
-        protected void ShowBitmap(Bitmap bmp)
+        private void _ShowBitmap(Bitmap bmp)
         {
             IntPtr hbitmap = bmp.GetHbitmap();
-            bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            this.bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             DeleteObject(hbitmap);
 
-            this.image.Source = bitmpasource;
+            this.image.Source = this.bitmpasource;
             Show();
         }
 
+        private Bitmap _GetBitmapAfterEffect()
+        {
+            Bitmap res = this.bitmapTransformed;
+            if (thrEffectBinarize > 0)
+                res = CvBinarize(res, thrEffectBinarize);
+            else if (isEffectGray)
+                res = CvGray(res);
+
+            return res;
+        }
+
+        protected void UpdateBitmap()
+        {
+            var res = _GetBitmapAfterEffect();
+            _ShowBitmap(res);
+        }
+
+
+        #region ======== Timer ========
         private void InitializeTimer()
         {
             this.timer = new Timer(interval: 0.1);
@@ -147,8 +165,10 @@ namespace Binjyo
             }
         }
 
+        #endregion
 
-        // ========== Operations ==========
+
+        #region  ========== Operations ==========
 
         public void Minimize()
         {
@@ -209,26 +229,10 @@ namespace Binjyo
             }
         }
 
-        public void SwitchGreyscale()
-        {
-            if (!this.isShowingGreyscale)
-            {
-                this.bitmapGreyscale = MakeGrayscale3(this.bitmap);
-                this.ShowBitmap(this.bitmapGreyscale);
-                this.isShowingOriginal = false;
-                this.isShowingGreyscale = true;
-            }
-            else
-            {
-                this.ShowBitmap(this.bitmap);
-                this.bitmapGreyscale.Dispose(); // TODO
-                this.bitmapGreyscale = null;
-                this.isShowingOriginal = true;
-                this.isShowingGreyscale = false;
-            }
-        }
+        #endregion
 
-        public void UpdateHSVWheel()
+
+        private void _UpdateHSVWheel()
         {
             popup.IsOpen = true;
 
@@ -267,8 +271,11 @@ namespace Binjyo
             HSVText.Text = String.Format("H{0: 000}° S{1: 000} L{2: 000}", (int)px.GetHue(), (int)(px.GetSaturation() * 100), (int)(px.GetBrightness() * 100));
         }
 
+        private void _HideHSVWheel()
+        {
+            popup.IsOpen = false;
+        }
 
-        #region ========== EVENT ========== 
 
         protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
         {
@@ -279,7 +286,7 @@ namespace Binjyo
         }
 
 
-        // ========== BUTTON ==========
+        #region ========== Key events ==========
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             switch(e.Key)
@@ -312,10 +319,24 @@ namespace Binjyo
                     ResizeDelta(0.2);
                     break;
                 case Key.G:
-                    SwitchGreyscale();
+                    this.isEffectGray = !this.isEffectGray;
+                    UpdateBitmap();
                     break;
                 case Key.LeftShift:
-                    this.UpdateHSVWheel();
+                    this._UpdateHSVWheel();
+                    break;
+                case Key.H:
+                    this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                    UpdateBitmap();
+                    break;
+                case Key.V:
+                    this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                    UpdateBitmap();
+                    break;
+                case Key.B:
+                    thrEffectBinarize += 51;
+                    thrEffectBinarize %= 255;
+                    UpdateBitmap();
                     break;
                 default:
                     break;
@@ -337,9 +358,9 @@ namespace Binjyo
         {
             // Show HSV
             if (!isdrag && Keyboard.IsKeyDown(Key.LeftShift) && !isOverButton)
-                this.UpdateHSVWheel();
+                this._UpdateHSVWheel();
             else
-                popup.IsOpen = false;
+                this._HideHSVWheel();
         }
 
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
@@ -381,9 +402,10 @@ namespace Binjyo
         private void Window_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
         }
+        #endregion
 
 
-        // ========== BUTTON ==========
+        #region ========== BUTTON ==========
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
@@ -434,8 +456,7 @@ namespace Binjyo
         #endregion
 
 
-        #region UTIL
-        // ==================================
+        #region ======== UTIL ========
 
         public static Bitmap MakeGrayscale3(Bitmap original)
         {
@@ -474,6 +495,20 @@ namespace Binjyo
             return newBitmap;
         }
 
+        public static Bitmap CvGray(Bitmap src)
+        {
+            var mat = BitmapConverter.ToMat(src);
+            var mat_gray = mat.CvtColor(ColorConversionCodes.BGR2GRAY);
+            return BitmapConverter.ToBitmap(mat_gray);
+        }
+
+        public static Bitmap CvBinarize(Bitmap src, int threshold)
+        {
+            var mat = BitmapConverter.ToMat(src);
+            var mat_gray = mat.CvtColor(ColorConversionCodes.BGR2GRAY);
+            var mat_thr = mat_gray.Threshold(threshold, 255, ThresholdTypes.Binary);
+            return BitmapConverter.ToBitmap(mat_thr);
+        }
 
         protected override void OnSourceInitialized(EventArgs e)
         {
