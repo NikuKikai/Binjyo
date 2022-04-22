@@ -19,10 +19,32 @@ using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using System.IO;
 
 
 namespace Binjyo
 {
+    public static class BitmapExt
+    {
+        // https://stackoverflow.com/a/30729291
+        public static BitmapSource ToBitmapSource(this System.Drawing.Bitmap bitmap)
+        {
+            var bitmapData = bitmap.LockBits(
+                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+
+            var bitmapSource = BitmapSource.Create(
+                bitmapData.Width, bitmapData.Height,
+                bitmap.HorizontalResolution, bitmap.VerticalResolution,
+                PixelFormats.Bgra32, null,
+                bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
+
+            bitmap.UnlockBits(bitmapData);
+
+            return bitmapSource;
+        }
+    }
+
     /// <summary>
     /// Memo.xaml の相互作用ロジック
     /// </summary>
@@ -87,9 +109,26 @@ namespace Binjyo
 
         private void _ShowBitmap(Bitmap bmp)
         {
-            IntPtr hbitmap = bmp.GetHbitmap();
-            this.bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            DeleteObject(hbitmap);
+            // NOTES: Using BitmapImage https://stackoverflow.com/a/1069509
+            // BitmapImage bitmapImage = new BitmapImage();
+            // using(MemoryStream memory = new MemoryStream())
+            // {
+            //     bmp.Save(memory, ImageFormat.Png);
+            //     memory.Position = 0;
+            //     bitmapImage.BeginInit();
+            //     bitmapImage.StreamSource = memory;
+            //     bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            //     bitmapImage.EndInit();
+            // }
+            // this.rectBitmap.Fill = new ImageBrush(bitmapImage);
+
+            // NOTES: transparent pixels will be whitened
+            // IntPtr hbitmap = bmp.GetHbitmap();
+            // this.bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            // DeleteObject(hbitmap);
+
+            // NOTES: correct transparent rendering, and quicker
+            this.bitmpasource = bmp.ToBitmapSource();
 
             this.image.Source = this.bitmpasource;
             Show();
@@ -195,8 +234,8 @@ namespace Binjyo
             if (!isdrag)
             {
                 scale = s;
-                Width = this.bitmap.Width * s;
-                Height = this.bitmap.Height * s;
+                Width = this.bitmap.Width / dpiFactor * s;
+                Height = this.bitmap.Height / dpiFactor * s;
             }
         }
         public void ResizeDelta(double ds)

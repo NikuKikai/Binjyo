@@ -101,9 +101,7 @@ namespace Binjyo
                 g.CopyFromScreen(l, t, 0, 0, this.bitmap.Size);
             }
 
-            IntPtr hbitmap = this.bitmap.GetHbitmap();
-            BitmapSource bs = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            DeleteObject(hbitmap);
+            BitmapSource bs = this.bitmap.ToBitmapSource();
 
             //canvas.Background = new ImageBrush(bs);
             this.rectBitmap.Fill = new ImageBrush(bs);
