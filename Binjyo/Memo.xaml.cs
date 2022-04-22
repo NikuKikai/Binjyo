@@ -27,7 +27,7 @@ namespace Binjyo
     public static class BitmapExt
     {
         // https://stackoverflow.com/a/30729291
-        public static BitmapSource ToBitmapSource(this System.Drawing.Bitmap bitmap)
+        public static BitmapSource ToBitmapSource(this Bitmap bitmap, System.Windows.Media.PixelFormat pixelFormat)
         {
             var bitmapData = bitmap.LockBits(
                 new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
@@ -36,7 +36,7 @@ namespace Binjyo
             var bitmapSource = BitmapSource.Create(
                 bitmapData.Width, bitmapData.Height,
                 bitmap.HorizontalResolution, bitmap.VerticalResolution,
-                PixelFormats.Bgra32, null,
+                pixelFormat, null,
                 bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
 
             bitmap.UnlockBits(bitmapData);
@@ -128,7 +128,7 @@ namespace Binjyo
             // DeleteObject(hbitmap);
 
             // NOTES: correct transparent rendering, and quicker
-            this.bitmpasource = bmp.ToBitmapSource();
+            this.bitmpasource = bmp.ToBitmapSource(PixelFormats.Bgra32);
 
             this.image.Source = this.bitmpasource;
             Show();

@@ -101,7 +101,7 @@ namespace Binjyo
                 g.CopyFromScreen(l, t, 0, 0, this.bitmap.Size);
             }
 
-            BitmapSource bs = this.bitmap.ToBitmapSource();
+            BitmapSource bs = this.bitmap.ToBitmapSource(PixelFormats.Bgr24);
 
             //canvas.Background = new ImageBrush(bs);
             this.rectBitmap.Fill = new ImageBrush(bs);
