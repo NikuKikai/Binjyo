@@ -13,6 +13,7 @@
         ShowInTaskbar="False"
         ResizeMode="NoResize"
         KeyDown="Window_KeyDown"
+        KeyUp="Window_KeyUp"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
         MouseDown="Window_MouseDown"

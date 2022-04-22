@@ -39,7 +39,8 @@ namespace Binjyo
         // effect
         private double scale = 1;
         private bool isEffectGray = false;
-        private int thrEffectBinarize = 0;
+        private int effectBinarize = 0;
+        private int effectTransparent = 0;
 
         private double lastx, lasty;
         private bool isdrag = false;
@@ -97,10 +98,13 @@ namespace Binjyo
         private Bitmap _GetBitmapAfterEffect()
         {
             Bitmap res = this.bitmapTransformed;
-            if (thrEffectBinarize > 0)
-                res = CvBinarize(res, thrEffectBinarize);
+            if (effectBinarize > 0)
+                res = CvBinarize(res, effectBinarize);
             else if (isEffectGray)
                 res = CvGray(res);
+
+            if (effectTransparent > 0)
+                res = CvTransparent(res, effectTransparent);
 
             return res;
         }
@@ -334,9 +338,24 @@ namespace Binjyo
                     UpdateBitmap();
                     break;
                 case Key.B:
-                    thrEffectBinarize += 51;
-                    thrEffectBinarize %= 255;
+                    effectBinarize += 51;
+                    effectBinarize %= 255;
                     UpdateBitmap();
+                    break;
+                case Key.O:
+                    effectTransparent += 51;
+                    effectTransparent %= 255;
+                    UpdateBitmap();
+                    break;
+                default:
+                    break;
+            }
+        }
+        private void Window_KeyUp(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.B:
                     break;
                 default:
                     break;
@@ -497,17 +516,32 @@ namespace Binjyo
 
         public static Bitmap CvGray(Bitmap src)
         {
-            var mat = BitmapConverter.ToMat(src);
+            var mat = src.ToMat();
             var mat_gray = mat.CvtColor(ColorConversionCodes.BGR2GRAY);
-            return BitmapConverter.ToBitmap(mat_gray);
+            mat_gray = mat_gray.CvtColor(ColorConversionCodes.GRAY2BGRA);
+            return mat_gray.ToBitmap();
         }
 
         public static Bitmap CvBinarize(Bitmap src, int threshold)
         {
-            var mat = BitmapConverter.ToMat(src);
+            var mat = src.ToMat();
             var mat_gray = mat.CvtColor(ColorConversionCodes.BGR2GRAY);
             var mat_thr = mat_gray.Threshold(threshold, 255, ThresholdTypes.Binary);
-            return BitmapConverter.ToBitmap(mat_thr);
+            mat_thr = mat_thr.CvtColor(ColorConversionCodes.GRAY2BGRA);
+            return mat_thr.ToBitmap();
+        }
+
+        public static Bitmap CvTransparent(Bitmap src, int transparent)
+        {
+            var mat = src.ToMat();
+            var channels = mat.Split();
+            var alpha = channels[3];
+            alpha.ConvertTo(alpha, MatType.CV_16UC1);
+            alpha = alpha * (255-transparent) / 255;
+            alpha.ConvertTo(alpha, MatType.CV_8UC1);
+            channels[3] = alpha;
+            Cv2.Merge(channels, mat);
+            return mat.ToBitmap();
         }
 
         protected override void OnSourceInitialized(EventArgs e)
