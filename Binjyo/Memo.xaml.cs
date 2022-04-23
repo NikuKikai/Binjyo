@@ -293,8 +293,6 @@ namespace Binjyo
 
         private void _UpdateHSVWheel()
         {
-            popup.IsOpen = true;
-
             double x = System.Windows.Forms.Control.MousePosition.X - Left;
             double y = System.Windows.Forms.Control.MousePosition.Y - Top;
 
@@ -302,8 +300,9 @@ namespace Binjyo
                 return;
             var px = bitmapTransformed.GetPixel((int)(x / scale), (int)(y / scale));
 
-            popup.HorizontalOffset = x / dpiFactor + 180;
-            popup.VerticalOffset = y / dpiFactor + 30;
+            popup.IsOpen = true;
+            popup.HorizontalOffset = x / dpiFactor + 20;
+            popup.VerticalOffset = y / dpiFactor + 10;
 
             //  Update Hue marker
             float hue = px.GetHue();
