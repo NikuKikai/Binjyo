@@ -10,29 +10,38 @@ Suitable for illustrators.
 
 ## Usage
 
-On everywhere
+### On everywhere
 
 Operation | Shortkey | Mouse
 --- | --- | ---
 take screenshot | `Ctrl+Alt+A`  or `Ctrl+Win+A`|
 
-On a focused memo
+### On a focused memo
 
 Operation | Shortkey | Mouse
 --- | --- | ---
 copy & close | `Ctrl+x` | `Double click`
 copy | `Ctrl+c`
+save png | `s`
 close | `Esc`
 size down | `d` | `Ctrl+wheel down`
 size up | `f` | `Ctrl+wheel up`
-size reset | `r`
+size reset | ` ` `
+rotate | `r`
+flip horizontally | `h`
+flip vertically | `v`
+grayscale | `g`
+binarization on/off | `b`
+binarization change threshold | `b + wheel`
+quantization on/off <br>(not coexit with binarization) | `q`
+quantization change number  | `b + wheel`
+hue map | `c`
 switch to greyscale | `g`
-save png | `s`
-show color wheel | `shift`
+show color wheel | `shift` with mouse hovering on image
 
 > `resize` is limited to min of 25 pixels and max of `screen width`
 
-> When greyscale showing, save, cut or copy applies to the greyscale image. 
+> `Save`, `cut` or `copy` applies to the displaying image with effects (expect scaling). 
 
 Click the button on top-left corner to switch mode. (Maybe removed in future)
 - normal
@@ -41,7 +50,7 @@ Click the button on top-left corner to switch mode. (Maybe removed in future)
 
 ## TODO
 
-- Binarization (maybe binding to `b`)
+- Drawing
 - Save, cut or copy scaled image (maybe binding to `Ctrl+...`)
 - Keymaps, About in menu
 - Quick save/ save all button in menu.
