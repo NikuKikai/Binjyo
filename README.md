@@ -35,6 +35,8 @@ binarization on/off | `b`
 binarization change threshold | `b + wheel`
 quantization on/off <br>(not coexit with binarization) | `q`
 quantization change number  | `b + wheel`
+opacity on/off | `o`
+opacity adjust | `o + wheel`
 hue map | `c`
 switch to greyscale | `g`
 show color wheel | `shift` with mouse hovering on image
