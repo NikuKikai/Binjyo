@@ -200,8 +200,8 @@ namespace Binjyo
             double y = System.Windows.Forms.Control.MousePosition.Y - t;
             x /= dpiFactor; y /= dpiFactor;
 
-            linew.X1 = x; linew.X2 = x; linew.Y1 = y - 200; linew.Y2 = y + 200; linew.Opacity = 0.7;
-            lineh.Y1 = y; lineh.Y2 = y; lineh.X1 = x - 200; lineh.X2 = x + 200; lineh.Opacity = 0.7;
+            linew.X1 = x; linew.X2 = x; linew.Y1 = 0; linew.Y2 = Height; linew.Opacity = 0.7;
+            lineh.Y1 = y; lineh.Y2 = y; lineh.X1 = 0; lineh.X2 = Width; lineh.Opacity = 0.7;
         }
         private void _HideCross()
         {
@@ -211,13 +211,15 @@ namespace Binjyo
         
         private void _UpdateSelectionRect()
         {
-            int x = System.Windows.Forms.Control.MousePosition.X - l;
-            int y = System.Windows.Forms.Control.MousePosition.Y - t;
+            double x = System.Windows.Forms.Control.MousePosition.X - l;
+            double y = System.Windows.Forms.Control.MousePosition.Y - t;
+            x /= dpiFactor; y /= dpiFactor;
+            int xint = (int)(x+0.499); int yint = (int)(y+0.499);
 
-            this.selectedWidth = x > startx ? x - startx + 2 : startx - x + 2;
-            this.selectedHeight = y > starty ? y - starty + 2 : starty - y + 2;
-            this.selectedLeft = x > startx ? startx - 1 : x - 1;
-            this.selectedTop = y > starty ? starty - 1 : y - 1;
+            this.selectedWidth = xint > startx ? xint - startx + 2 : startx - xint + 2;
+            this.selectedHeight = yint > starty ? yint - starty + 2 : starty - yint + 2;
+            this.selectedLeft = xint > startx ? startx - 1 : xint - 1;
+            this.selectedTop = yint > starty ? starty - 1 : yint - 1;
             
             this.rectMask.Width = (int)(selectedWidth / dpiFactor);
             this.rectMask.Height = (int)(selectedHeight / dpiFactor);
@@ -235,12 +237,12 @@ namespace Binjyo
 
         private void _UpdateSelectionPopup()
         {
-            int x = System.Windows.Forms.Control.MousePosition.X - l;
-            int y = System.Windows.Forms.Control.MousePosition.Y - t;
+            double x = System.Windows.Forms.Control.MousePosition.X - l;
+            double y = System.Windows.Forms.Control.MousePosition.Y - t;
 
             popup.HorizontalOffset = (x + 40) / dpiFactor;
             popup.VerticalOffset = (y + 11) / dpiFactor;
-            poptext.Text = String.Format("{0}x{1}", (int)(this.rectMask.Width * dpiFactor), (int)(this.rectMask.Height * dpiFactor));
+            poptext.Text = String.Format("{0}x{1}", this.selectedWidth, this.selectedHeight);
             popup.IsOpen = true;
         }
 

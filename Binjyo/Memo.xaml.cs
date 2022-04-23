@@ -17,9 +17,10 @@ using System.Windows.Interop;
 using System.Timers;
 using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
-using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using System.IO;
+// using OpenCvSharp;
+// using OpenCvSharp.Extensions;
+
+using Rect = System.Drawing.Rectangle;
 
 
 namespace Binjyo
@@ -30,7 +31,7 @@ namespace Binjyo
         public static BitmapSource ToBitmapSource(this Bitmap bitmap, System.Windows.Media.PixelFormat pixelFormat)
         {
             var bitmapData = bitmap.LockBits(
-                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                new Rect(0, 0, bitmap.Width, bitmap.Height),
                 System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
 
             var bitmapSource = BitmapSource.Create(
@@ -64,7 +65,7 @@ namespace Binjyo
         private int effectBinarize = 0;
         private int effectTransparent = 0;
 
-        private double lastx, lasty;
+        private double lastx, lasty;    // Physical pixel
         private bool isdrag = false;
         private bool isOverButton = false;
 
@@ -92,7 +93,6 @@ namespace Binjyo
             //this.dpiFactor = VisualTreeHelper.GetDpi(this as Visual).DpiScaleX;
             //Console.WriteLine("Memo init  " + dpiFactor.ToString());
             Left = left / dpiFactor; Top = top / dpiFactor;
-            Width = bmp.Width / dpiFactor; Height = bmp.Height / dpiFactor;
 
             this.bitmap = bmp;
             this.bitmapTransformed = (Bitmap)this.bitmap.Clone();
@@ -130,22 +130,27 @@ namespace Binjyo
             // NOTES: correct transparent rendering, and quicker
             this.bitmpasource = bmp.ToBitmapSource(PixelFormats.Bgra32);
 
+            Resize(scale);
+
             this.image.Source = this.bitmpasource;
             Show();
         }
 
         private Bitmap _GetBitmapAfterEffect()
         {
-            Bitmap res = this.bitmapTransformed;
+            Bitmap bmp = this.bitmapTransformed;
+            bmp = bmp.Clone(new Rect(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            if (isEffectGray)
+                EffectGray(bmp);
+
             if (effectBinarize > 0)
-                res = CvBinarize(res, effectBinarize);
-            else if (isEffectGray)
-                res = CvGray(res);
+                EffectBinarize(bmp, effectBinarize);
 
             if (effectTransparent > 0)
-                res = CvTransparent(res, effectTransparent);
+                EffectTransparent(bmp, effectTransparent);
 
-            return res;
+            return bmp;
         }
 
         protected void UpdateBitmap()
@@ -234,16 +239,16 @@ namespace Binjyo
             if (!isdrag)
             {
                 scale = s;
-                Width = this.bitmap.Width / dpiFactor * s;
-                Height = this.bitmap.Height / dpiFactor * s;
+                Width = this.bitmapTransformed.Width / dpiFactor * s;
+                Height = this.bitmapTransformed.Height / dpiFactor * s;
             }
         }
         public void ResizeDelta(double ds)
         {
             scale += ds;
             if (scale <= 0 || scale >= 10 ||
-                this.bitmap.Width * scale < 25 || this.bitmap.Height * scale < 25 ||
-                this.bitmap.Width * scale > SystemParameters.VirtualScreenWidth || this.bitmap.Height * scale > SystemParameters.VirtualScreenHeight
+                this.bitmapTransformed.Width * scale < 25 || this.bitmapTransformed.Height * scale < 25 ||
+                this.bitmapTransformed.Width * scale > SystemParameters.VirtualScreenWidth || this.bitmapTransformed.Height * scale > SystemParameters.VirtualScreenHeight
             )
                 scale -= ds;
             else
@@ -281,12 +286,13 @@ namespace Binjyo
 
             double x = System.Windows.Forms.Control.MousePosition.X - Left;
             double y = System.Windows.Forms.Control.MousePosition.Y - Top;
+
             if (x < 0 || x >= Width || y < 0 || y >= Height)
                 return;
-            var px = bitmap.GetPixel((int)(x / scale), (int)(y / scale));
+            var px = bitmapTransformed.GetPixel((int)(x / scale), (int)(y / scale));
 
-            popup.HorizontalOffset = x + 180;
-            popup.VerticalOffset = y + 30;
+            popup.HorizontalOffset = x / dpiFactor + 180;
+            popup.VerticalOffset = y / dpiFactor + 30;
 
             //  Update Hue marker
             float hue = px.GetHue();
@@ -376,15 +382,25 @@ namespace Binjyo
                     this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     UpdateBitmap();
                     break;
-                case Key.B:
-                    effectBinarize += 51;
-                    effectBinarize %= 255;
+                case Key.W:
+                    this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     UpdateBitmap();
                     break;
+                case Key.B:
+                    if (!e.IsRepeat)
+                    {
+                        effectBinarize += 51;
+                        effectBinarize %= 255;
+                        UpdateBitmap();
+                    }
+                    break;
                 case Key.O:
-                    effectTransparent += 51;
-                    effectTransparent %= 255;
-                    UpdateBitmap();
+                    if (!e.IsRepeat)
+                    {
+                        effectTransparent += 51;
+                        effectTransparent %= 255;
+                        UpdateBitmap();
+                    }
                     break;
                 default:
                     break;
@@ -516,14 +532,14 @@ namespace Binjyo
 
         #region ======== UTIL ========
 
-        public static Bitmap MakeGrayscale3(Bitmap original)
+        public static void EffectGray(Bitmap src)
         {
             // https://stackoverflow.com/questions/2265910/convert-an-image-to-grayscale
             //create a blank bitmap the same size as original
-            Bitmap newBitmap = new Bitmap(original.Width, original.Height);
+            // Bitmap newBitmap = new Bitmap(src.Width, src.Height);
 
             //get a graphics object from the new image
-            using (Graphics g = Graphics.FromImage(newBitmap))
+            using (Graphics g = Graphics.FromImage(src))
             {
 
                 //create the grayscale ColorMatrix
@@ -546,13 +562,82 @@ namespace Binjyo
 
                     //draw the original image on the new image
                     //using the grayscale color matrix
-                    g.DrawImage(original, new System.Drawing.Rectangle(0, 0, original.Width, original.Height),
-                                0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
+                    g.DrawImage(src, new Rect(0, 0, src.Width, src.Height),
+                                0, 0, src.Width, src.Height, GraphicsUnit.Pixel, attributes);
                 }
             }
-            return newBitmap;
+            // return newBitmap;
         }
 
+        public static void EffectBinarize(Bitmap src, int threshold)
+        {
+            if (src.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb)
+                src = src.Clone(new Rect(0, 0, src.Width, src.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            // Lock the bitmap's bits.  
+            Rect rect = new Rect(0, 0, src.Width, src.Height);
+            System.Drawing.Imaging.BitmapData bmpData =
+                src.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+                src.PixelFormat);
+
+            // Get the address of the first line.
+            IntPtr ptr = bmpData.Scan0;
+
+            // Declare an array to hold the bytes of the bitmap.
+            int bytes  = Math.Abs(bmpData.Stride) * src.Height;
+            byte[] rgbValues = new byte[bytes];
+
+            // Copy the RGB values into the array.
+            System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
+
+            // Set every alpha value. The order is B, G, R, A
+            for (int i = 0; i < rgbValues.Length; i += 1)
+                if (i % 4 != 3)
+                    rgbValues[i] = rgbValues[i] > threshold? (byte)255 : (byte)0;
+
+            // Copy the RGB values back to the bitmap
+            System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
+
+            // Unlock the bits.
+            src.UnlockBits(bmpData);;
+        }
+
+        public static void EffectTransparent(Bitmap src, int transparency)
+        {
+            // Processing bytes using LockBits is faster than SetPixel/GetPixel
+            // https://docs.microsoft.com/ja-jp/dotnet/api/system.drawing.bitmap.lockbits?view=dotnet-plat-ext-6.0
+            
+            if (src.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb)
+                src = src.Clone(new Rect(0, 0, src.Width, src.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            // Lock the bitmap's bits.  
+            Rect rect = new Rect(0, 0, src.Width, src.Height);
+            System.Drawing.Imaging.BitmapData bmpData =
+                src.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite,
+                src.PixelFormat);
+
+            // Get the address of the first line.
+            IntPtr ptr = bmpData.Scan0;
+
+            // Declare an array to hold the bytes of the bitmap.
+            int bytes  = Math.Abs(bmpData.Stride) * src.Height;
+            byte[] rgbValues = new byte[bytes];
+
+            // Copy the RGB values into the array.
+            System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
+
+            // Set every alpha value. The order is B, G, R, A
+            for (int i = 3; i < rgbValues.Length; i += 4)
+                rgbValues[i] = (byte)((int)rgbValues[i] * (255-transparency) / 255);
+
+            // Copy the RGB values back to the bitmap
+            System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
+
+            // Unlock the bits.
+            src.UnlockBits(bmpData);;
+        }
+
+        /* // Cv2's dll is too large
         public static Bitmap CvGray(Bitmap src)
         {
             var mat = src.ToMat();
@@ -582,6 +667,7 @@ namespace Binjyo
             Cv2.Merge(channels, mat);
             return mat.ToBitmap();
         }
+        */        
 
         protected override void OnSourceInitialized(EventArgs e)
         {
