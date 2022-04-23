@@ -62,8 +62,10 @@ namespace Binjyo
         // effect
         private double scale = 1;
         private bool isEffectGray = false;
-        private int effectBinarize = 0;
-        private int effectTransparent = 0;
+        private bool isEffectBinarize = false;
+        private int pEffectBinarize = 0;
+        private bool isEffectTransparent = false;
+        private int pEffectTransparent = 128;
 
         private double lastx, lasty;    // Physical pixel
         private bool isdrag = false;
@@ -144,11 +146,11 @@ namespace Binjyo
             if (isEffectGray)
                 EffectGray(bmp);
 
-            if (effectBinarize > 0)
-                EffectBinarize(bmp, effectBinarize);
+            if (isEffectBinarize && pEffectBinarize > 0)
+                EffectBinarize(bmp, pEffectBinarize);
 
-            if (effectTransparent > 0)
-                EffectTransparent(bmp, effectTransparent);
+            if (isEffectTransparent && pEffectTransparent > 0)
+                EffectTransparent(bmp, pEffectTransparent);
 
             return bmp;
         }
@@ -336,6 +338,8 @@ namespace Binjyo
 
 
         #region ========== Key events ==========
+        private bool isEditedDuringKeyB = false;
+        private bool isEditedDuringKeyO = false;
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             switch(e.Key)
@@ -358,7 +362,7 @@ namespace Binjyo
                         this._Close();
                     }
                     break;
-                case Key.R:
+                case Key.OemTilde:
                     ResetSize();
                     break;
                 case Key.D:
@@ -382,25 +386,17 @@ namespace Binjyo
                     this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     UpdateBitmap();
                     break;
-                case Key.W:
+                case Key.R:
                     this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     UpdateBitmap();
                     break;
                 case Key.B:
                     if (!e.IsRepeat)
-                    {
-                        effectBinarize += 51;
-                        effectBinarize %= 255;
-                        UpdateBitmap();
-                    }
+                        isEditedDuringKeyB = false;
                     break;
                 case Key.O:
                     if (!e.IsRepeat)
-                    {
-                        effectTransparent += 51;
-                        effectTransparent %= 255;
-                        UpdateBitmap();
-                    }
+                        isEditedDuringKeyO = false;
                     break;
                 default:
                     break;
@@ -411,6 +407,18 @@ namespace Binjyo
             switch (e.Key)
             {
                 case Key.B:
+                    if (!isEditedDuringKeyB)
+                    {
+                        isEffectBinarize = !isEffectBinarize;
+                    }
+                    UpdateBitmap();
+                    break;
+                case Key.O:
+                    if (!isEditedDuringKeyO)
+                    {
+                        isEffectTransparent = !isEffectTransparent;
+                    }
+                    UpdateBitmap();
                     break;
                 default:
                     break;
@@ -464,6 +472,20 @@ namespace Binjyo
             {
                 if (e.Delta > 0) ResizeDelta(0.1);
                 else ResizeDelta(-0.1);
+            }
+            else if (Keyboard.IsKeyDown(Key.B))
+            {
+                isEditedDuringKeyB = true;
+                isEffectBinarize = true;
+                pEffectBinarize = Math.Max(Math.Min(pEffectBinarize + 15 * Math.Sign(e.Delta), 250), 5);
+                UpdateBitmap();
+            }
+            else if (Keyboard.IsKeyDown(Key.O))
+            {
+                isEditedDuringKeyO = true;
+                isEffectTransparent = true;
+                pEffectTransparent = Math.Max(Math.Min(pEffectTransparent + 15 * Math.Sign(e.Delta), 245), 10);
+                UpdateBitmap();
             }
         }
 
