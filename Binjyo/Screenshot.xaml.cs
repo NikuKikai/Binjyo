@@ -107,7 +107,6 @@ namespace Binjyo
             Left = l / dpiFactor;
             Top = t / dpiFactor;
             Console.WriteLine("Left " + Left + " Top " + Top + " W " + Width + " H " + Height);
-            //Console.WriteLine(SystemParameters.VirtualScreenLeft.ToString() + " " + SystemParameters.VirtualScreenTop.ToString());
 
             // Get Screen bitmap
             this.bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
