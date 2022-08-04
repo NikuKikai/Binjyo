@@ -83,7 +83,7 @@ namespace Binjyo
             // var lv = (int)SystemParameters.VirtualScreenLeft;
             // var tv = (int)SystemParameters.VirtualScreenTop;
 
-            // Get physical resolutions
+            // Get physical resolutions (https://stackoverflow.com/a/1317252)
             var rect = new System.Drawing.Rectangle(int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
             foreach (Screen screen in Screen.AllScreens)
                 rect = System.Drawing.Rectangle.Union(rect, screen.Bounds);
