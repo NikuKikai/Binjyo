@@ -69,6 +69,9 @@
                 <Grid Margin="0,190,0,0" Height="20">
                     <TextBlock Name="HSVText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
                 </Grid>
+                <Grid Margin="0,230,0,0" Height="20">
+                    <TextBlock Name="RGBText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
+                </Grid>
             </Grid>
         </Popup>
     </Grid>
