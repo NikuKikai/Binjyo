@@ -15,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Runtime.InteropServices;
+using Screen = System.Windows.Forms.Screen;
 
 
 namespace Binjyo
@@ -27,7 +28,7 @@ namespace Binjyo
     }
     public static class ScreenExtensions
     {
-        public static System.Drawing.Point GetDpi(this System.Windows.Forms.Screen screen, DpiType dpiType=DpiType.Effective)
+        public static System.Drawing.Point GetDpi(this Screen screen, DpiType dpiType=DpiType.Effective)
         {
             uint x, y;
             var pnt = new System.Drawing.Point(screen.Bounds.Left + 1, screen.Bounds.Top + 1);
@@ -73,28 +74,42 @@ namespace Binjyo
 
         public void Shot()
         {
-            w = (int)SystemParameters.VirtualScreenWidth;
-            h = (int)SystemParameters.VirtualScreenHeight;
-            l = (int)SystemParameters.VirtualScreenLeft;
-            t = (int)SystemParameters.VirtualScreenTop;
-
             WindowState = WindowState.Normal;
 
-            var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)l + 1, (int)t + 1));
+            // Scaled screen size
+            // BUG: If the app start with dpi ratio X, and then changed to Y < X, following vars does not change.
+            // var wv = (int)SystemParameters.VirtualScreenWidth;
+            // var hv = (int)SystemParameters.VirtualScreenHeight;
+            // var lv = (int)SystemParameters.VirtualScreenLeft;
+            // var tv = (int)SystemParameters.VirtualScreenTop;
 
+            // Get physical resolutions
+            var rect = new System.Drawing.Rectangle(int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
+            foreach (Screen screen in Screen.AllScreens)
+                rect = System.Drawing.Rectangle.Union(rect, screen.Bounds);
+            w = rect.Width;
+            h = rect.Height;
+            l = rect.Left;
+            t = rect.Top;
+
+            // Get DPI
+            var scr = Screen.FromPoint(new System.Drawing.Point(l + 1, t + 1));
             var dpi = scr.GetDpi(DpiType.Effective);
-            dpiFactor = (double)dpi.X / 96.0;
+            dpiFactor = dpi.X / 96.0;
 
-            var curr_dpiFactor = VisualTreeHelper.GetDpi(this).DpiScaleX; // Only works under per-monitor DPI mode > https://github.com/microsoft/WPF-Samples/tree/master/
-            Console.WriteLine("dpi scale = " + dpiFactor.ToString() + " curr " + curr_dpiFactor);
+            // Get DPI another method
+            // var curr_dpiFactor = VisualTreeHelper.GetDpi(this).DpiScaleX; // Only works under per-monitor DPI mode > https://github.com/microsoft/WPF-Samples/tree/master/
+            // Console.WriteLine("dpi scale = " + dpiFactor.ToString() + " curr " + curr_dpiFactor);
 
+            // Resize window to cover all screen
             Width = w / dpiFactor;
             Height = h / dpiFactor;
             Left = l / dpiFactor;
             Top = t / dpiFactor;
-            Console.WriteLine("Left " + Left + " Top " + Top);
+            Console.WriteLine("Left " + Left + " Top " + Top + " W " + Width + " H " + Height);
             //Console.WriteLine(SystemParameters.VirtualScreenLeft.ToString() + " " + SystemParameters.VirtualScreenTop.ToString());
 
+            // Get Screen bitmap
             this.bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             using (var g = Graphics.FromImage(this.bitmap))
             {
