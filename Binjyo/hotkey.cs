@@ -60,7 +60,7 @@ namespace Binjyo
 
             _dictHotKeyToCalBackProc.Add(Id, this);
 
-            Debug.Print(result.ToString() + ", " + Id + ", " + virtualKeyCode);
+            Console.WriteLine(result.ToString() + ", " + Id + ", " + virtualKeyCode);
             return result;
         }
 
@@ -71,6 +71,7 @@ namespace Binjyo
             if (_dictHotKeyToCalBackProc.TryGetValue(Id, out hotKey))
             {
                 UnregisterHotKey(IntPtr.Zero, Id);
+                _dictHotKeyToCalBackProc.Remove(Id);
             }
         }
 

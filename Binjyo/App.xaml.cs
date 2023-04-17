@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Windows.Input;
 using System.Threading;
 
+
 namespace Binjyo
 {
     /// <summary>
@@ -23,7 +24,8 @@ namespace Binjyo
         // single-instance
         static Mutex mutex = new Mutex(true, "{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}");
         private MainWindow mainWindow;
-        
+        private Settings settings;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             
@@ -38,13 +40,10 @@ namespace Binjyo
 
             base.OnStartup(e);
 
+            InitShotcut();
+
             mainWindow = new MainWindow();
             mainWindow.Closing += MainWindow_Closing;
-
-            // bind global hotkey
-            _hotKey = new HotKey(Key.A, KeyModifier.Ctrl | KeyModifier.Alt, OnHotKeyHandler);
-            _hotKey = new HotKey(Key.A, KeyModifier.Ctrl | KeyModifier.Win, OnHotKeyHandler);
-
 
             _notifyIcon = new System.Windows.Forms.NotifyIcon();
             //_notifyIcon.DoubleClick += (s, args) => ShowMainWindow();
@@ -52,14 +51,33 @@ namespace Binjyo
             _notifyIcon.Visible = true;
 
             CreateContextMenu();
-            
+        }
+
+        private void InitShotcut()
+        {
+            var keyScreenshot = (Key)Binjyo.Properties.Settings.Default.KeyScreenshot;
+            var modifierScreenshot = (ModifierKeys)Binjyo.Properties.Settings.Default.ModifierScreenshot;
+            if (keyScreenshot == Key.None)
+            {
+                keyScreenshot = Key.A;
+                modifierScreenshot = ModifierKeys.Control | ModifierKeys.Alt;
+                Binjyo.Properties.Settings.Default.KeyScreenshot = (int)keyScreenshot;
+                Binjyo.Properties.Settings.Default.ModifierScreenshot = (int)modifierScreenshot;
+                Binjyo.Properties.Settings.Default.Save();
+            }
+            OnSettingsScreenshotKeySet(keyScreenshot, modifierScreenshot);
+        }
+
+        private void OnSettingsScreenshotKeySet(Key key, ModifierKeys modifier)
+        {
+            if (_hotKey != null) _hotKey.Unregister();
+            _hotKey = new HotKey(key, (Binjyo.KeyModifier)modifier, OnHotKeyHandler);
         }
 
         private void OnHotKeyHandler(HotKey hotKey)
         {
             //ShowMainWindow();
             mainWindow.Shot();
-            
         }
 
         private void CreateContextMenu()
@@ -70,7 +88,17 @@ namespace Binjyo
             _notifyIcon.ContextMenuStrip.Items.Add("Minimize All").Click += (s, e) => MinimizeAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Expand/Unlock All").Click += (s, e) => ExpandAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Close All").Click += (s, e) => CloseAll();
+            _notifyIcon.ContextMenuStrip.Items.Add("Settings...").Click += (s, e) => OpenSettings();
             _notifyIcon.ContextMenuStrip.Items.Add("Exit").Click += (s, e) => ExitApplication();
+        }
+        private void OpenSettings()
+        {
+            if (settings == null)
+            {
+                settings = new Settings(OnSettingsScreenshotKeySet);
+                settings.Closed += (s, e) => settings = null;
+            }
+            settings.Show();
         }
         private void MinimizeAll()
         {
