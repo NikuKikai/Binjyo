@@ -30,7 +30,7 @@
                      Grid.Column="1" HorizontalAlignment="Right" MinWidth="40" Margin="0,0,15,0"
                      PreviewMouseDown="KeyBoxSreenshot_PreviewMouseDown"
                      PreviewKeyDown="KeyBoxSreenshot_PreviewKeyDown"
-                     PreviewKeyUp="KeyBoxSreenshot_PreviewKeyUp" />
+                     PreviewKeyUp="KeyBoxSreenshot_PreviewKeyUp" Background="#FF3C3C3C" Foreground="#FFF3F3F3" />
         </Grid>
     </StackPanel>
 
