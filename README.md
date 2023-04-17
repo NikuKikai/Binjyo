@@ -10,11 +10,11 @@ Suitable for illustrators.
 
 ## Usage
 
-### On everywhere
+### Global
 
 Operation | Shortkey | Mouse
 --- | --- | ---
-take screenshot | `Ctrl+Alt+A`  or `Ctrl+Win+A`|
+take screenshot | `Ctrl+Alt+A`(default, you can change in settings...)|
 
 ### On a focused memo
 
