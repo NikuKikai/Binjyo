@@ -133,6 +133,7 @@ namespace Binjyo
 
         protected void _Close()
         {
+            SaveToHistory();
             if (this.bitmap != null) this.bitmap.Dispose();
             if (this.bitmapTransformed != null) this.bitmapTransformed.Dispose();
             this.image.Source = null;
@@ -141,6 +142,14 @@ namespace Binjyo
             if (Mouse.Captured == this) Mouse.Capture(null);
             this.Close();
             GC.Collect();
+        }
+
+        private void SaveToHistory()
+        {
+            if (bitmpasource == null)
+                return;
+
+            HistoryStore.Save(bitmpasource, Left, Top, Width, Height);
         }
 
         private void _ShowBitmap(Bitmap bmp, bool disposeBitmapAfterRender = false)
@@ -275,6 +284,19 @@ namespace Binjyo
         public void ResetSize()
         {
             Resize(1);
+        }
+
+        public new void RestoreBounds(double left, double top, double width, double height)
+        {
+            double baseWidth = GetBaseWidth();
+            if (baseWidth <= 0.0001)
+                return;
+
+            Left = left;
+            Top = top;
+            scale = ClampScale(width / baseWidth);
+            Width = GetBaseWidth() * scale;
+            Height = GetBaseHeight() * scale;
         }
 
         private double GetMinimumScale()

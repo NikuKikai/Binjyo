@@ -26,6 +26,7 @@ namespace Binjyo
         private MainWindow mainWindow;
         private Settings settings;
         private ShortcutHelp shortcutHelp;
+        private HistoryWindow historyWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -92,9 +93,21 @@ namespace Binjyo
             _notifyIcon.ContextMenuStrip.Items.Add("Minimize All").Click += (s, e) => MinimizeAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Expand/Unlock All").Click += (s, e) => ExpandAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Close All").Click += (s, e) => CloseAll();
+            _notifyIcon.ContextMenuStrip.Items.Add("History...").Click += (s, e) => OpenHistory();
             _notifyIcon.ContextMenuStrip.Items.Add("Shortcut Help").Click += (s, e) => OpenShortcutHelp();
             _notifyIcon.ContextMenuStrip.Items.Add("Settings...").Click += (s, e) => OpenSettings();
             _notifyIcon.ContextMenuStrip.Items.Add("Exit").Click += (s, e) => ExitApplication();
+        }
+        private void OpenHistory()
+        {
+            if (historyWindow == null)
+            {
+                historyWindow = new HistoryWindow();
+                historyWindow.Closed += (s, e) => historyWindow = null;
+            }
+            historyWindow.ReloadEntries();
+            historyWindow.Show();
+            historyWindow.Activate();
         }
         private void OpenShortcutHelp()
         {

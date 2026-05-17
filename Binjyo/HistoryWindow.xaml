@@ -1,0 +1,83 @@
+<Window x:Class="Binjyo.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="History"
+        Width="920"
+        Height="700"
+        MinWidth="640"
+        MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel Margin="12">
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Text="History"/>
+            <Button Grid.Column="1"
+                    Padding="12,6"
+                    Click="ClearButton_Click"
+                    Content="Clear"/>
+        </Grid>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl Name="GroupsControl">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,0,0,18">
+                            <TextBlock Margin="0,0,0,8"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding Key}"/>
+                            <ItemsControl ItemsSource="{Binding Items}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,12,12"
+                                                Padding="8"
+                                                BorderBrush="#FFD0D0D0"
+                                                BorderThickness="1"
+                                                Background="#FFF7F7F7"
+                                                MouseLeftButtonDown="EntryBorder_MouseLeftButtonDown">
+                                            <StackPanel Width="180">
+                                                <Border Width="164"
+                                                        Height="120"
+                                                        Background="#FF202020"
+                                                        BorderBrush="#FFB0B0B0"
+                                                        BorderThickness="1">
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="Uniform"
+                                                           Width="164"
+                                                           Height="120"/>
+                                                </Border>
+                                                <TextBlock Margin="0,8,0,0"
+                                                           FontWeight="SemiBold"
+                                                           Text="{Binding CreatedAtText}"/>
+                                                <TextBlock Margin="0,4,0,0"
+                                                           Foreground="#FF505050"
+                                                           Text="{Binding SizeText}"/>
+                                                <TextBlock Margin="0,2,0,0"
+                                                           Foreground="#FF505050"
+                                                           Text="{Binding PositionText}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
