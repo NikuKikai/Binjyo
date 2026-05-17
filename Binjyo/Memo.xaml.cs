@@ -751,13 +751,18 @@ namespace Binjyo
         private bool IsResizeSnapEnabled()
         {
             bool isDefaultEnabled = Properties.Settings.Default.SnapMemo;
-            bool isAltDown = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
-            return isAltDown ? !isDefaultEnabled : isDefaultEnabled;
+            return IsSnapToggleModifierDown() ? !isDefaultEnabled : isDefaultEnabled;
         }
 
         private bool IsMoveSnapEnabled()
         {
-            return Properties.Settings.Default.SnapMemo;
+            bool isDefaultEnabled = Properties.Settings.Default.SnapMemo;
+            return IsSnapToggleModifierDown() ? !isDefaultEnabled : isDefaultEnabled;
+        }
+
+        private bool IsSnapToggleModifierDown()
+        {
+            return Keyboard.IsKeyDown(Key.Space);
         }
 
         private bool IsMoveGroupModifierDown()
