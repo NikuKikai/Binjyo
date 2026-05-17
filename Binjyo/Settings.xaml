@@ -32,6 +32,16 @@
                      PreviewKeyDown="KeyBoxSreenshot_PreviewKeyDown"
                      PreviewKeyUp="KeyBoxSreenshot_PreviewKeyUp" Background="#FF3C3C3C" Foreground="#FFF3F3F3" />
         </Grid>
+
+        <Grid Margin="10,18,10,0">
+            <Label Content="Memo dragging" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
+        </Grid>
+        <CheckBox Name="CheckSnapMemo"
+                  Margin="35,0,15,0"
+                  Foreground="#FFD6D6D6"
+                  Content="Enable snapping to screen edges and other memos"
+                  Checked="CheckSnapMemo_Changed"
+                  Unchecked="CheckSnapMemo_Changed"/>
     </StackPanel>
 
 </Window>

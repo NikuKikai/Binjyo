@@ -23,15 +23,13 @@ namespace Binjyo
     /// </summary>
     public partial class MainWindow : Window
     {
-        readonly Screenshot ss;
+        private Screenshot ss;
         public MainWindow()
         {
             InitializeComponent();
             //this.SourceInitialized += new EventHandler(OnSourceInitialized);
-            ss = new Screenshot();
 
             Show();
-            ss.Owner = this;
             Hide();
         }
 
@@ -43,7 +41,13 @@ namespace Binjyo
                 ss.Shot(scr);
             }*/
 
-            
+            if (ss == null)
+            {
+                ss = new Screenshot();
+                ss.Owner = this;
+                ss.Closed += (sender, e) => ss = null;
+            }
+
             ss.Shot();
         }
         

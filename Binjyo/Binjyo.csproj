@@ -92,6 +92,9 @@
     <Compile Include="Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ShortcutHelp.xaml.cs">
+      <DependentUpon>ShortcutHelp.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
     </Compile>
@@ -118,6 +121,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Screenshot.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ShortcutHelp.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

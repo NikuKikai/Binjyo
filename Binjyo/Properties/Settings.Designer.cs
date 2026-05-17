@@ -46,5 +46,17 @@ namespace Binjyo.Properties {
                 this["ModifierScreenshot"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SnapMemo {
+            get {
+                return ((bool)(this["SnapMemo"]));
+            }
+            set {
+                this["SnapMemo"] = value;
+            }
+        }
     }
 }

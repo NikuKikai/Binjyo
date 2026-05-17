@@ -25,6 +25,7 @@ namespace Binjyo
         static Mutex mutex = new Mutex(true, "{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}");
         private MainWindow mainWindow;
         private Settings settings;
+        private ShortcutHelp shortcutHelp;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -72,6 +73,9 @@ namespace Binjyo
         {
             if (_hotKey != null) _hotKey.Unregister();
             _hotKey = new HotKey(key, (Binjyo.KeyModifier)modifier, OnHotKeyHandler);
+
+            if (shortcutHelp != null)
+                shortcutHelp.UpdateGlobalShortcut(key, modifier);
         }
 
         private void OnHotKeyHandler(HotKey hotKey)
@@ -88,8 +92,19 @@ namespace Binjyo
             _notifyIcon.ContextMenuStrip.Items.Add("Minimize All").Click += (s, e) => MinimizeAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Expand/Unlock All").Click += (s, e) => ExpandAll();
             _notifyIcon.ContextMenuStrip.Items.Add("Close All").Click += (s, e) => CloseAll();
+            _notifyIcon.ContextMenuStrip.Items.Add("Shortcut Help").Click += (s, e) => OpenShortcutHelp();
             _notifyIcon.ContextMenuStrip.Items.Add("Settings...").Click += (s, e) => OpenSettings();
             _notifyIcon.ContextMenuStrip.Items.Add("Exit").Click += (s, e) => ExitApplication();
+        }
+        private void OpenShortcutHelp()
+        {
+            if (shortcutHelp == null)
+            {
+                shortcutHelp = new ShortcutHelp();
+                shortcutHelp.Closed += (s, e) => shortcutHelp = null;
+            }
+            shortcutHelp.Show();
+            shortcutHelp.Activate();
         }
         private void OpenSettings()
         {

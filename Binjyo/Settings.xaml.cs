@@ -34,6 +34,7 @@ namespace Binjyo
             keyScreenshot = (Key)Properties.Settings.Default.KeyScreenshot;
             modifierScreenshot = (ModifierKeys)Properties.Settings.Default.ModifierScreenshot;
             KeyBoxSreenshot.Text = keyScreenshot.ToString();
+            CheckSnapMemo.IsChecked = Properties.Settings.Default.SnapMemo;
             switch (modifierScreenshot)
             {
                 case ModifierKeys.Control | ModifierKeys.Alt:
@@ -119,6 +120,18 @@ namespace Binjyo
                 }
             }
             UpdateScreenshotKey();
+        }
+
+        private void CheckSnapMemo_Changed(object sender, RoutedEventArgs e)
+        {
+            if (CheckSnapMemo == null || CheckSnapMemo.IsChecked == null)
+                return;
+
+            if (Properties.Settings.Default.SnapMemo == CheckSnapMemo.IsChecked.Value)
+                return;
+
+            Properties.Settings.Default.SnapMemo = CheckSnapMemo.IsChecked.Value;
+            Properties.Settings.Default.Save();
         }
     }
 }

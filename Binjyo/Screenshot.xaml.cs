@@ -61,14 +61,16 @@ namespace Binjyo
         private int selectedLeft, selectedTop, selectedWidth, selectedHeight;  // Physical Pixel
 
         private Line linew, lineh;
-        private System.Windows.Shapes.Rectangle rectBitmap, rectMask;
+        private System.Windows.Shapes.Rectangle rectBitmap;
+        private System.Windows.Shapes.Rectangle maskTop, maskLeft, maskRight, maskBottom;
 
         private Bitmap bitmap;
+        private BitmapSource screenshotSource;
+        private ImageBrush screenshotBrush;
 
         public Screenshot()
         {
             InitializeComponent();
-            Show();
             _CreateObjects();
         }
 
@@ -108,6 +110,8 @@ namespace Binjyo
             Top = t / dpiFactor;
             Console.WriteLine("Left " + Left + " Top " + Top + " W " + Width + " H " + Height);
 
+            ReleaseScreenshotResources();
+
             // Get Screen bitmap
             this.bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             using (var g = Graphics.FromImage(this.bitmap))
@@ -115,14 +119,22 @@ namespace Binjyo
                 g.CopyFromScreen(l, t, 0, 0, this.bitmap.Size);
             }
 
-            BitmapSource bs = this.bitmap.ToBitmapSource(PixelFormats.Bgr24);
+            screenshotSource = this.bitmap.ToBitmapSource(PixelFormats.Bgr24);
+            screenshotSource.Freeze();
+            screenshotBrush = new ImageBrush(screenshotSource)
+            {
+                Stretch = Stretch.Fill,
+                AlignmentX = AlignmentX.Left,
+                AlignmentY = AlignmentY.Top
+            };
 
             //canvas.Background = new ImageBrush(bs);
-            this.rectBitmap.Fill = new ImageBrush(bs);
+            this.rectBitmap.Fill = screenshotBrush;
             this.rectBitmap.Width = Width;
             this.rectBitmap.Height = Height;
             Canvas.SetLeft(this.rectBitmap, 0);
             Canvas.SetTop(this.rectBitmap, 0);
+            _HideSelectionRect();
 
             _Show();
         }
@@ -130,28 +142,27 @@ namespace Binjyo
 
         private void _CreateObjects()
         {
-            // Set up canvas Mask
-            this.canvasMask.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 0, 0, 0));
+            // Set up canvas mask with four rectangles to avoid large opacity-mask surfaces.
+            this.canvasMask.Background = System.Windows.Media.Brushes.Transparent;
             RenderOptions.SetEdgeMode(this.canvasMask, EdgeMode.Aliased);
-
-            rectMask = new System.Windows.Shapes.Rectangle
-            {
-                Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 0, 0, 0))
-            };
-            this.canvasMask.Children.Add(rectMask);
-
-            var maskBrush = new VisualBrush();
-            maskBrush.Visual = this.canvasMask;
 
 
             // rect to render image
-            this.rectBitmap = new System.Windows.Shapes.Rectangle
-            {
-                OpacityMask = maskBrush
-            };
+            this.rectBitmap = new System.Windows.Shapes.Rectangle();
             RenderOptions.SetEdgeMode(this.rectBitmap, EdgeMode.Aliased);
             this.rectBitmap.SnapsToDevicePixels = true;
             this.canvas.Children.Add(this.rectBitmap);
+
+            var overlayFill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 0, 0, 0));
+            maskTop = CreateMaskRectangle(overlayFill);
+            maskLeft = CreateMaskRectangle(overlayFill);
+            maskRight = CreateMaskRectangle(overlayFill);
+            maskBottom = CreateMaskRectangle(overlayFill);
+
+            this.canvasMask.Children.Add(maskTop);
+            this.canvasMask.Children.Add(maskLeft);
+            this.canvasMask.Children.Add(maskRight);
+            this.canvasMask.Children.Add(maskBottom);
 
 
             // lines
@@ -172,10 +183,19 @@ namespace Binjyo
 
         }
 
+        private System.Windows.Shapes.Rectangle CreateMaskRectangle(System.Windows.Media.Brush fill)
+        {
+            return new System.Windows.Shapes.Rectangle
+            {
+                Fill = fill
+            };
+        }
+
 
         private void _Show()
         {
-            //Show();
+            if (!IsVisible)
+                Show();
             Opacity = 1;
             Thread.Sleep(10);
             //canvas.Opacity = 1;
@@ -189,22 +209,42 @@ namespace Binjyo
         {
             if (isshot)
             {
-                //Hide();
                 Opacity = 0;
                 _HideCross();
                 _HideSelectionRect();
                 _HideSelectionPopup();
                 Width = 10; Height = 10;
 
-                this.rectBitmap.Fill = null;
-                this.bitmap.Dispose();
-                this.bitmap = null;
+                ReleaseScreenshotResources();
+                _HideSelectionRect();
 
                 isshot = false;
                 isdrag = false;
                 isshot = false;
 
                 GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                Close();
+            }
+        }
+
+        private void ReleaseScreenshotResources()
+        {
+            this.rectBitmap.Fill = null;
+
+            if (screenshotBrush != null)
+            {
+                screenshotBrush.ImageSource = null;
+                screenshotBrush = null;
+            }
+
+            screenshotSource = null;
+
+            if (this.bitmap != null)
+            {
+                this.bitmap.Dispose();
+                this.bitmap = null;
             }
         }
 
@@ -235,17 +275,45 @@ namespace Binjyo
             this.selectedLeft = xint > startx ? startx - 1 : xint - 1;
             this.selectedTop = yint > starty ? starty - 1 : yint - 1;
             
-            this.rectMask.Width = (int)(selectedWidth / dpiFactor);
-            this.rectMask.Height = (int)(selectedHeight / dpiFactor);
-            Canvas.SetLeft(this.rectMask, selectedLeft / dpiFactor);
-            Canvas.SetTop(this.rectMask, selectedTop / dpiFactor);
+            double selectionLeft = selectedLeft / dpiFactor;
+            double selectionTop = selectedTop / dpiFactor;
+            double selectionWidth = selectedWidth / dpiFactor;
+            double selectionHeight = selectedHeight / dpiFactor;
 
-            this.rectMask.Opacity = 1;
+            maskTop.Width = Width;
+            maskTop.Height = Math.Max(0, selectionTop);
+            Canvas.SetLeft(maskTop, 0);
+            Canvas.SetTop(maskTop, 0);
+
+            maskLeft.Width = Math.Max(0, selectionLeft);
+            maskLeft.Height = Math.Max(0, selectionHeight);
+            Canvas.SetLeft(maskLeft, 0);
+            Canvas.SetTop(maskLeft, selectionTop);
+
+            maskRight.Width = Math.Max(0, Width - (selectionLeft + selectionWidth));
+            maskRight.Height = Math.Max(0, selectionHeight);
+            Canvas.SetLeft(maskRight, selectionLeft + selectionWidth);
+            Canvas.SetTop(maskRight, selectionTop);
+
+            maskBottom.Width = Width;
+            maskBottom.Height = Math.Max(0, Height - (selectionTop + selectionHeight));
+            Canvas.SetLeft(maskBottom, 0);
+            Canvas.SetTop(maskBottom, selectionTop + selectionHeight);
         }
 
         private void _HideSelectionRect()
         {
-            this.rectMask.Opacity = 0;
+            maskTop.Width = Width;
+            maskTop.Height = Height;
+            Canvas.SetLeft(maskTop, 0);
+            Canvas.SetTop(maskTop, 0);
+
+            maskLeft.Width = 0;
+            maskLeft.Height = 0;
+            maskRight.Width = 0;
+            maskRight.Height = 0;
+            maskBottom.Width = 0;
+            maskBottom.Height = 0;
         }
 
 
@@ -268,7 +336,7 @@ namespace Binjyo
 
         private void _CreateMemo()
         {
-            if (this.rectMask.Width > 20 && this.rectMask.Height > 20)
+            if (this.selectedWidth > 20 && this.selectedHeight > 20)
             {
                 // Crop bitmap with rect
                 var croppedImage = new Bitmap(this.selectedWidth, this.selectedHeight);

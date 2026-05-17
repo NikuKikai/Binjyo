@@ -70,10 +70,12 @@ namespace Binjyo
         private int pEffectTransparent = 128;
         private bool isEffectHuemap = false;
 
-        private double lastx, lasty;    // Physical pixel
+        private double dragStartMouseX, dragStartMouseY;
+        private double dragStartLeft, dragStartTop;
         private bool isdrag = false;
         private bool isOverButton = false;
         private bool isSaving = false;
+        private const double SnapDistance = 12;
 
         private int lockmode = 0;
 
@@ -108,38 +110,32 @@ namespace Binjyo
         protected void _Close()
         {
             if (this.bitmap != null) this.bitmap.Dispose();
+            if (this.bitmapTransformed != null) this.bitmapTransformed.Dispose();
+            this.image.Source = null;
+            this.bitmpasource = null;
             if (this.timer != null) this.timer.Stop();
             this.Close();
             GC.Collect();
         }
 
-        private void _ShowBitmap(Bitmap bmp)
+        private void _ShowBitmap(Bitmap bmp, bool disposeBitmapAfterRender = false)
         {
-            // NOTES: Using BitmapImage https://stackoverflow.com/a/1069509
-            // BitmapImage bitmapImage = new BitmapImage();
-            // using(MemoryStream memory = new MemoryStream())
-            // {
-            //     bmp.Save(memory, ImageFormat.Png);
-            //     memory.Position = 0;
-            //     bitmapImage.BeginInit();
-            //     bitmapImage.StreamSource = memory;
-            //     bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            //     bitmapImage.EndInit();
-            // }
-            // this.rectBitmap.Fill = new ImageBrush(bitmapImage);
+            try
+            {
+                // NOTES: correct transparent rendering, and quicker
+                this.bitmpasource = bmp.ToBitmapSource(PixelFormats.Bgra32);
+                this.bitmpasource.Freeze();
 
-            // NOTES: transparent pixels will be whitened
-            // IntPtr hbitmap = bmp.GetHbitmap();
-            // this.bitmpasource = Imaging.CreateBitmapSourceFromHBitmap(hbitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            // DeleteObject(hbitmap);
+                Resize(scale);
 
-            // NOTES: correct transparent rendering, and quicker
-            this.bitmpasource = bmp.ToBitmapSource(PixelFormats.Bgra32);
-
-            Resize(scale);
-
-            this.image.Source = this.bitmpasource;
-            Show();
+                this.image.Source = this.bitmpasource;
+                Show();
+            }
+            finally
+            {
+                if (disposeBitmapAfterRender && bmp != null)
+                    bmp.Dispose();
+            }
         }
 
         private Bitmap _GetBitmapAfterEffect()
@@ -168,7 +164,7 @@ namespace Binjyo
         protected void UpdateBitmap()
         {
             var res = _GetBitmapAfterEffect();
-            _ShowBitmap(res);
+            _ShowBitmap(res, true);
         }
 
 
@@ -211,12 +207,13 @@ namespace Binjyo
                             isdrag = false;
                         double xx = System.Windows.Forms.Control.MousePosition.X;
                         double yy = System.Windows.Forms.Control.MousePosition.Y;
-                        //var dx = (xx - lastx) / dpiFactor;
-                        Left += (xx - lastx) / dpiFactor;
-                        Top += (yy - lasty) / dpiFactor;
-                        lastx = xx;
-                        lasty = yy;
-                        //Console.WriteLine(xx.ToString()+" "+dx.ToString()+ " " + Left.ToString());
+                        double rawLeft = dragStartLeft + (xx - dragStartMouseX) / dpiFactor;
+                        double rawTop = dragStartTop + (yy - dragStartMouseY) / dpiFactor;
+                        double nextLeft = rawLeft;
+                        double nextTop = rawTop;
+                        ApplySnap(ref nextLeft, ref nextTop);
+                        Left = nextLeft;
+                        Top = nextTop;
                     }
                     break;
 
@@ -348,6 +345,89 @@ namespace Binjyo
             popup.IsOpen = false;
         }
 
+        private void ApplySnap(ref double nextLeft, ref double nextTop)
+        {
+            if (!IsSnapEnabled())
+                return;
+
+            double snappedLeft = nextLeft;
+            double snappedTop = nextTop;
+            double bestDistanceX = SnapDistance + 1;
+            double bestDistanceY = SnapDistance + 1;
+            double width = Width;
+            double height = Height;
+
+            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+            {
+                double screenLeft = screen.Bounds.Left / dpiFactor;
+                double screenTop = screen.Bounds.Top / dpiFactor;
+                double screenRight = screen.Bounds.Right / dpiFactor;
+                double screenBottom = screen.Bounds.Bottom / dpiFactor;
+
+                TrySnapValue(nextLeft, screenLeft, ref snappedLeft, ref bestDistanceX);
+                TrySnapValue(nextLeft, screenRight - width, ref snappedLeft, ref bestDistanceX);
+                TrySnapValue(nextTop, screenTop, ref snappedTop, ref bestDistanceY);
+                TrySnapValue(nextTop, screenBottom - height, ref snappedTop, ref bestDistanceY);
+            }
+
+            foreach (Window item in Application.Current.Windows)
+            {
+                if (item == this || item.Title != "Memo" || !item.IsVisible)
+                    continue;
+
+                double otherLeft = item.Left;
+                double otherTop = item.Top;
+                double otherRight = item.Left + item.Width;
+                double otherBottom = item.Top + item.Height;
+                double nextRight = nextLeft + width;
+                double nextBottom = nextTop + height;
+
+                bool canSnapX = IntervalsOverlapOrTouch(nextTop, nextBottom, otherTop, otherBottom);
+                bool canSnapY = IntervalsOverlapOrTouch(nextLeft, nextRight, otherLeft, otherRight);
+
+                if (canSnapX)
+                {
+                    TrySnapValue(nextLeft, otherLeft, ref snappedLeft, ref bestDistanceX);
+                    TrySnapValue(nextLeft, otherRight, ref snappedLeft, ref bestDistanceX);
+                    TrySnapValue(nextLeft, otherLeft - width, ref snappedLeft, ref bestDistanceX);
+                    TrySnapValue(nextLeft, otherRight - width, ref snappedLeft, ref bestDistanceX);
+                }
+
+                if (canSnapY)
+                {
+                    TrySnapValue(nextTop, otherTop, ref snappedTop, ref bestDistanceY);
+                    TrySnapValue(nextTop, otherBottom, ref snappedTop, ref bestDistanceY);
+                    TrySnapValue(nextTop, otherTop - height, ref snappedTop, ref bestDistanceY);
+                    TrySnapValue(nextTop, otherBottom - height, ref snappedTop, ref bestDistanceY);
+                }
+            }
+
+            nextLeft = snappedLeft;
+            nextTop = snappedTop;
+        }
+
+        private bool IsSnapEnabled()
+        {
+            bool isDefaultEnabled = Properties.Settings.Default.SnapMemo;
+            bool isAltDown = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
+            return isAltDown ? !isDefaultEnabled : isDefaultEnabled;
+        }
+
+        private static void TrySnapValue(double nextValue, double targetValue, ref double snappedValue, ref double bestDistance)
+        {
+            double distance = Math.Abs(nextValue - targetValue);
+            if (distance <= SnapDistance && distance < bestDistance)
+            {
+                snappedValue = targetValue;
+                bestDistance = distance;
+            }
+        }
+
+        private static bool IntervalsOverlapOrTouch(double startA, double endA, double startB, double endB)
+        {
+            return endA >= startB && endB >= startA;
+        }
+
 
         protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
         {
@@ -472,8 +552,10 @@ namespace Binjyo
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             isdrag = true;
-            lastx = System.Windows.Forms.Control.MousePosition.X;
-            lasty = System.Windows.Forms.Control.MousePosition.Y;
+            dragStartMouseX = System.Windows.Forms.Control.MousePosition.X;
+            dragStartMouseY = System.Windows.Forms.Control.MousePosition.Y;
+            dragStartLeft = Left;
+            dragStartTop = Top;
         }
 
         private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
