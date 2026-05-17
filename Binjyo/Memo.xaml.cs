@@ -73,6 +73,7 @@ namespace Binjyo
         private double lastx, lasty;    // Physical pixel
         private bool isdrag = false;
         private bool isOverButton = false;
+        private bool isSaving = false;
 
         private int lockmode = 0;
 
@@ -272,19 +273,30 @@ namespace Binjyo
 
         public void Save()
         {
-            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
-            var time = DateTime.Now;
-            string formattedTime = time.ToString("yyyy-MM-dd-hh-mm-ss");
-            dlg.FileName = formattedTime;
-            dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
-            if (dlg.ShowDialog() == true)
+            if (isSaving)
+                return;
+
+            isSaving = true;
+            try
             {
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bitmpasource));
-                using (var stream = dlg.OpenFile())
+                Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+                var time = DateTime.Now;
+                string formattedTime = time.ToString("yyyy-MM-dd-hh-mm-ss");
+                dlg.FileName = formattedTime;
+                dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
+                if (dlg.ShowDialog() == true)
                 {
-                    encoder.Save(stream);
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmpasource));
+                    using (var stream = dlg.OpenFile())
+                    {
+                        encoder.Save(stream);
+                    }
                 }
+            }
+            finally
+            {
+                isSaving = false;
             }
         }
 
@@ -359,7 +371,11 @@ namespace Binjyo
                     e.Handled = true;
                     break;
                 case Key.S:
-                    Save();
+                    if (!e.IsRepeat)
+                    {
+                        Save();
+                    }
+                    e.Handled = true;
                     break;
                 case Key.C:
                     if(Keyboard.IsKeyDown(Key.LeftCtrl))
