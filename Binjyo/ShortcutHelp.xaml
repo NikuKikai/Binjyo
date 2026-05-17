@@ -77,6 +77,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold" Text="Action"/>
@@ -146,6 +148,14 @@
                             <TextBlock Grid.Row="18" Grid.Column="0" Margin="0,6,0,0" Text="Jump to next snap"/>
                             <TextBlock Grid.Row="18" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Ctrl + Arrow keys"/>
                             <TextBlock Grid.Row="18" Grid.Column="2" Margin="0,6,0,0" Text="Jumps to the next snappable position in that direction." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="19" Grid.Column="0" Margin="0,6,0,0" Text="Resize mode"/>
+                            <TextBlock Grid.Row="19" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="T"/>
+                            <TextBlock Grid.Row="19" Grid.Column="2" Margin="0,6,0,0" Text="Shows corner resize markers and enables drag resizing from the corners." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="20" Grid.Column="0" Margin="0,6,0,0" Text="Resize snapping"/>
+                            <TextBlock Grid.Row="20" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Alt + drag"/>
+                            <TextBlock Grid.Row="20" Grid.Column="2" Margin="0,6,0,0" Text="While resizing, snapping follows the memo snap setting. Hold Alt to temporarily invert it." TextWrapping="Wrap"/>
                         </Grid>
                     </StackPanel>
                 </Border>
