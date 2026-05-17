@@ -16,6 +16,7 @@ using System.Windows.Interop;
 //using System.Threading;
 using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 // using OpenCvSharp;
 // using OpenCvSharp.Extensions;
@@ -60,6 +61,7 @@ namespace Binjyo
     /// </summary>
     public partial class Memo : System.Windows.Window
     {
+        private static long focusSequence = 0;
         private DispatcherTimer timer = null;
 
         private double dpiFactor = 1;
@@ -102,6 +104,7 @@ namespace Binjyo
         private double resizeStartTop = 0;
         private double resizeStartRight = 0;
         private double resizeStartBottom = 0;
+        private long lastFocusOrder = 0;
 
         private int lockmode = 0;
 
@@ -1091,6 +1094,11 @@ namespace Binjyo
                     MoveByKeyboard(actualKey, e.IsRepeat);
                     e.Handled = true;
                     break;
+                case Key.Tab:
+                    if (!e.IsRepeat)
+                        FocusMemoFromMousePosition();
+                    e.Handled = true;
+                    break;
                 case Key.B:
                     if (!e.IsRepeat)
                         isEditedDuringKeyB = false;
@@ -1155,6 +1163,91 @@ namespace Binjyo
         private static Key GetActualKey(KeyEventArgs e)
         {
             return e.Key == Key.System ? e.SystemKey : e.Key;
+        }
+
+        private void FocusMemoFromMousePosition()
+        {
+            List<Memo> allMemos = GetVisibleMemos();
+            List<Memo> candidates = GetMemosUnderMouse(allMemos);
+            if (candidates.Count == 0)
+                candidates = allMemos;
+
+            if (candidates.Count == 0)
+                return;
+
+            Memo target = GetNextFocusTarget(allMemos, candidates);
+            if (target == null)
+                return;
+
+            target.BringIntoMemoFocus();
+        }
+
+        private Memo GetNextFocusTarget(List<Memo> allMemos, List<Memo> candidates)
+        {
+            if (allMemos == null || candidates == null || candidates.Count == 0)
+                return null;
+
+            HashSet<Memo> candidateSet = new HashSet<Memo>(candidates);
+            List<Memo> orderedCandidates = allMemos
+                .Where(memo => candidateSet.Contains(memo))
+                .ToList();
+            Memo activeMemo = orderedCandidates.FirstOrDefault(memo => memo.IsActive);
+            if (activeMemo == null)
+                return orderedCandidates[0];
+
+            if (orderedCandidates.Count == 1)
+                return activeMemo;
+
+            int currentIndex = orderedCandidates.IndexOf(activeMemo);
+            return orderedCandidates[(currentIndex + 1) % orderedCandidates.Count];
+        }
+
+        private List<Memo> GetMemosUnderMouse(List<Memo> allMemos)
+        {
+            double mouseX = System.Windows.Forms.Control.MousePosition.X;
+            double mouseY = System.Windows.Forms.Control.MousePosition.Y;
+
+            return allMemos
+                .Where(memo => memo.ContainsScreenPoint(mouseX, mouseY))
+                .ToList();
+        }
+
+        private bool ContainsScreenPoint(double screenX, double screenY)
+        {
+            double localX = screenX / dpiFactor - Left;
+            double localY = screenY / dpiFactor - Top;
+            return localX >= 0 && localX < Width && localY >= 0 && localY < Height;
+        }
+
+        private void BringIntoMemoFocus()
+        {
+            if (!IsActive)
+            {
+                Activate();
+                Focus();
+                return;
+            }
+
+            Focus();
+            MarkAsFocused();
+            FlashFocusCue();
+        }
+
+        private void MarkAsFocused()
+        {
+            lastFocusOrder = ++focusSequence;
+        }
+
+        private void FlashFocusCue()
+        {
+            if (focusFlashOverlay == null)
+                return;
+
+            var animation = new DoubleAnimationUsingKeyFrames();
+            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0.5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70))));
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180))));
+            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
         }
 
         private void MoveByKeyboard(Key key, bool isRepeat)
@@ -1614,6 +1707,12 @@ namespace Binjyo
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
             popup.IsOpen = false;
+        }
+
+        private void Window_Activated(object sender, EventArgs e)
+        {
+            MarkAsFocused();
+            FlashFocusCue();
         }
 
         private void Window_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)

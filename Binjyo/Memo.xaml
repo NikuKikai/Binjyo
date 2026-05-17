@@ -23,6 +23,7 @@
         MouseDoubleClick="Window_MouseDoubleClick"
         PreviewMouseDoubleClick="Window_PreviewMouseDoubleClick"
         MouseWheel="Window_MouseWheel"
+        Activated="Window_Activated"
         Deactivated="Window_Deactivated"
         >
     <Window.Resources>
@@ -32,6 +33,10 @@
     </Window.Resources>
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
+        <Rectangle Name="focusFlashOverlay"
+                   IsHitTestVisible="False"
+                   Fill="#FF00C800"
+                   Opacity="0"/>
         <Grid Name="resizeOverlay" IsHitTestVisible="False" Visibility="Collapsed">
             <Grid Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,2,0,0" Opacity="0.65">
                 <Path Data="M0,12 L0,0 L12,0" Stroke="Black" StrokeThickness="6" StrokeStartLineCap="Square" StrokeEndLineCap="Square"/>

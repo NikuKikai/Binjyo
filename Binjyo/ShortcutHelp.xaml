@@ -81,6 +81,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold" Text="Action"/>
@@ -159,9 +160,13 @@
                             <TextBlock Grid.Row="20" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="T"/>
                             <TextBlock Grid.Row="20" Grid.Column="2" Margin="0,6,0,0" Text="Shows corner resize markers and enables drag resizing from the corners." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="21" Grid.Column="0" Margin="0,6,0,0" Text="Resize snapping"/>
-                            <TextBlock Grid.Row="21" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Alt + drag"/>
-                            <TextBlock Grid.Row="21" Grid.Column="2" Margin="0,6,0,0" Text="In resize mode, snapping follows the memo snap setting. Hold Alt to temporarily invert it." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="21" Grid.Column="0" Margin="0,6,0,0" Text="Focus memo under mouse"/>
+                            <TextBlock Grid.Row="21" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Tab"/>
+                            <TextBlock Grid.Row="21" Grid.Column="2" Margin="0,6,0,0" Text="Focuses the memo under the mouse, cycles through overlapping memos, or cycles all memos if the mouse is outside them." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="22" Grid.Column="0" Margin="0,6,0,0" Text="Resize snapping"/>
+                            <TextBlock Grid.Row="22" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Alt + drag"/>
+                            <TextBlock Grid.Row="22" Grid.Column="2" Margin="0,6,0,0" Text="In resize mode, snapping follows the memo snap setting. Hold Alt to temporarily invert it." TextWrapping="Wrap"/>
                         </Grid>
                     </StackPanel>
                 </Border>
