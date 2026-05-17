@@ -87,12 +87,15 @@ namespace Binjyo
         private bool isOverButton = false;
         private bool isSaving = false;
         private const double SnapDistance = 12;
+        private const double MinVisiblePixels = 2;
         private const double ResizeHandleSize = 14;
         private const double ResizeHandleInset = 2;
         private int leftArrowRepeatCount = 0;
         private int rightArrowRepeatCount = 0;
         private int upArrowRepeatCount = 0;
         private int downArrowRepeatCount = 0;
+        private bool dragMovesConnectedGroup = false;
+        private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
         private ResizeHandle activeResizeHandle = ResizeHandle.None;
         private double resizeStartScale = 1;
         private double resizeStartLeft = 0;
@@ -527,7 +530,7 @@ namespace Binjyo
 
         private double ApplyResizeSnap(double rawScale)
         {
-            if (!IsSnapEnabled() || !IsResizeHandle(activeResizeHandle))
+            if (!IsResizeSnapEnabled() || !IsResizeHandle(activeResizeHandle))
                 return rawScale;
 
             ApplyScaleToBounds(rawScale, out double rawLeft, out double rawTop, out double rawWidth, out double rawHeight);
@@ -736,15 +739,137 @@ namespace Binjyo
 
         private void ApplySnap(ref double nextLeft, ref double nextTop)
         {
-            if (!IsSnapEnabled())
+            var movingMemos = new List<Memo> { this };
+            GetMoveSnapAdjustment(movingMemos, nextLeft, nextTop, Width, Height, out double offsetX, out double offsetY);
+            nextLeft += offsetX;
+            nextTop += offsetY;
+        }
+
+        private bool IsResizeSnapEnabled()
+        {
+            bool isDefaultEnabled = Properties.Settings.Default.SnapMemo;
+            bool isAltDown = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
+            return isAltDown ? !isDefaultEnabled : isDefaultEnabled;
+        }
+
+        private bool IsMoveSnapEnabled()
+        {
+            return Properties.Settings.Default.SnapMemo;
+        }
+
+        private bool IsMoveGroupModifierDown()
+        {
+            return Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
+        }
+
+        private List<Memo> GetVisibleMemos()
+        {
+            return Application.Current.Windows
+                .OfType<Window>()
+                .Where(item => item.Title == "Memo" && item.IsVisible)
+                .Cast<Memo>()
+                .ToList();
+        }
+
+        private static bool AreRectsConnected(System.Windows.Rect a, System.Windows.Rect b)
+        {
+            return a.Right >= b.Left && b.Right >= a.Left &&
+                   a.Bottom >= b.Top && b.Bottom >= a.Top;
+        }
+
+        private System.Windows.Rect GetMemoBounds(Memo memo)
+        {
+            return new System.Windows.Rect(memo.Left, memo.Top, memo.Width, memo.Height);
+        }
+
+        private List<Memo> GetConnectedMemoGroup()
+        {
+            var allMemos = GetVisibleMemos();
+            var result = new List<Memo>();
+            var queue = new Queue<Memo>();
+            var visited = new HashSet<Memo>();
+            queue.Enqueue(this);
+            visited.Add(this);
+
+            while (queue.Count > 0)
+            {
+                Memo current = queue.Dequeue();
+                result.Add(current);
+                System.Windows.Rect currentBounds = GetMemoBounds(current);
+
+                foreach (Memo candidate in allMemos)
+                {
+                    if (visited.Contains(candidate))
+                        continue;
+
+                    if (AreRectsConnected(currentBounds, GetMemoBounds(candidate)))
+                    {
+                        visited.Add(candidate);
+                        queue.Enqueue(candidate);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private System.Windows.Rect GetBoundingBox(IEnumerable<Memo> memos)
+        {
+            double left = double.PositiveInfinity;
+            double top = double.PositiveInfinity;
+            double right = double.NegativeInfinity;
+            double bottom = double.NegativeInfinity;
+
+            foreach (Memo memo in memos)
+            {
+                left = Math.Min(left, memo.Left);
+                top = Math.Min(top, memo.Top);
+                right = Math.Max(right, memo.Left + memo.Width);
+                bottom = Math.Max(bottom, memo.Top + memo.Height);
+            }
+
+            if (double.IsInfinity(left) || double.IsInfinity(top))
+                return new System.Windows.Rect(0, 0, 0, 0);
+
+            return new System.Windows.Rect(left, top, right - left, bottom - top);
+        }
+
+        private System.Windows.Rect GetBoundingBox(IDictionary<Memo, System.Windows.Point> positions)
+        {
+            double left = double.PositiveInfinity;
+            double top = double.PositiveInfinity;
+            double right = double.NegativeInfinity;
+            double bottom = double.NegativeInfinity;
+
+            foreach (var item in positions)
+            {
+                left = Math.Min(left, item.Value.X);
+                top = Math.Min(top, item.Value.Y);
+                right = Math.Max(right, item.Value.X + item.Key.Width);
+                bottom = Math.Max(bottom, item.Value.Y + item.Key.Height);
+            }
+
+            if (double.IsInfinity(left) || double.IsInfinity(top))
+                return new System.Windows.Rect(0, 0, 0, 0);
+
+            return new System.Windows.Rect(left, top, right - left, bottom - top);
+        }
+
+        private void GetMoveSnapAdjustment(ICollection<Memo> movingMemos, double nextLeft, double nextTop, double width, double height, out double offsetX, out double offsetY)
+        {
+            offsetX = 0;
+            offsetY = 0;
+
+            if (!IsMoveSnapEnabled())
                 return;
 
             double snappedLeft = nextLeft;
             double snappedTop = nextTop;
             double bestDistanceX = SnapDistance + 1;
             double bestDistanceY = SnapDistance + 1;
-            double width = Width;
-            double height = Height;
+            double nextRight = nextLeft + width;
+            double nextBottom = nextTop + height;
+            var movingSet = new HashSet<Memo>(movingMemos);
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
@@ -759,17 +884,15 @@ namespace Binjyo
                 TrySnapValue(nextTop, screenBottom - height, ref snappedTop, ref bestDistanceY);
             }
 
-            foreach (Window item in Application.Current.Windows)
+            foreach (Memo item in GetVisibleMemos())
             {
-                if (item == this || item.Title != "Memo" || !item.IsVisible)
+                if (movingSet.Contains(item))
                     continue;
 
                 double otherLeft = item.Left;
                 double otherTop = item.Top;
                 double otherRight = item.Left + item.Width;
                 double otherBottom = item.Top + item.Height;
-                double nextRight = nextLeft + width;
-                double nextBottom = nextTop + height;
 
                 bool canSnapX = IntervalsOverlapOrTouch(nextTop, nextBottom, otherTop, otherBottom);
                 bool canSnapY = IntervalsOverlapOrTouch(nextLeft, nextRight, otherLeft, otherRight);
@@ -791,15 +914,80 @@ namespace Binjyo
                 }
             }
 
-            nextLeft = snappedLeft;
-            nextTop = snappedTop;
+            offsetX = snappedLeft - nextLeft;
+            offsetY = snappedTop - nextTop;
         }
 
-        private bool IsSnapEnabled()
+        private void EnsureRectStaysReachable(ref double left, ref double top, double width, double height)
         {
-            bool isDefaultEnabled = Properties.Settings.Default.SnapMemo;
-            bool isAltDown = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
-            return isAltDown ? !isDefaultEnabled : isDefaultEnabled;
+            var rect = new System.Windows.Rect(left, top, width, height);
+            if (HasMinimumVisibleArea(rect))
+                return;
+
+            var nearestScreen = System.Windows.Forms.Screen.AllScreens
+                .OrderBy(screen => GetDistanceSquaredToScreen(rect, screen))
+                .FirstOrDefault();
+
+            if (nearestScreen == null)
+                return;
+
+            double screenLeft = nearestScreen.Bounds.Left / dpiFactor;
+            double screenTop = nearestScreen.Bounds.Top / dpiFactor;
+            double screenRight = nearestScreen.Bounds.Right / dpiFactor;
+            double screenBottom = nearestScreen.Bounds.Bottom / dpiFactor;
+
+            left = Clamp(left, screenLeft - width + MinVisiblePixels, screenRight - MinVisiblePixels);
+            top = Clamp(top, screenTop - height + MinVisiblePixels, screenBottom - MinVisiblePixels);
+        }
+
+        private bool HasMinimumVisibleArea(System.Windows.Rect rect)
+        {
+            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+            {
+                var screenRect = new System.Windows.Rect(
+                    screen.Bounds.Left / dpiFactor,
+                    screen.Bounds.Top / dpiFactor,
+                    screen.Bounds.Width / dpiFactor,
+                    screen.Bounds.Height / dpiFactor);
+                var intersection = System.Windows.Rect.Intersect(rect, screenRect);
+                if (!intersection.IsEmpty &&
+                    ((intersection.Width >= MinVisiblePixels && intersection.Height > 0) ||
+                     (intersection.Height >= MinVisiblePixels && intersection.Width > 0)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private double GetDistanceSquaredToScreen(System.Windows.Rect rect, System.Windows.Forms.Screen screen)
+        {
+            double screenLeft = screen.Bounds.Left / dpiFactor;
+            double screenTop = screen.Bounds.Top / dpiFactor;
+            double screenRight = screen.Bounds.Right / dpiFactor;
+            double screenBottom = screen.Bounds.Bottom / dpiFactor;
+
+            double dx = 0;
+            if (rect.Right < screenLeft)
+                dx = screenLeft - rect.Right;
+            else if (rect.Left > screenRight)
+                dx = rect.Left - screenRight;
+
+            double dy = 0;
+            if (rect.Bottom < screenTop)
+                dy = screenTop - rect.Bottom;
+            else if (rect.Top > screenBottom)
+                dy = rect.Top - screenBottom;
+
+            return dx * dx + dy * dy;
+        }
+
+        private static double Clamp(double value, double minimum, double maximum)
+        {
+            if (maximum < minimum)
+                return minimum;
+            return Math.Max(minimum, Math.Min(maximum, value));
         }
 
         private static void TrySnapValue(double nextValue, double targetValue, ref double snappedValue, ref double bestDistance)
@@ -833,7 +1021,8 @@ namespace Binjyo
         private bool isEditedDuringKeyO = false;
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            switch(e.Key)
+            Key actualKey = GetActualKey(e);
+            switch(actualKey)
             {
                 case Key.Escape:
                     this._Close();
@@ -899,7 +1088,7 @@ namespace Binjyo
                 case Key.Right:
                 case Key.Up:
                 case Key.Down:
-                    MoveByKeyboard(e.Key, e.IsRepeat);
+                    MoveByKeyboard(actualKey, e.IsRepeat);
                     e.Handled = true;
                     break;
                 case Key.B:
@@ -920,7 +1109,8 @@ namespace Binjyo
         }
         private void Window_KeyUp(object sender, KeyEventArgs e)
         {
-            switch (e.Key)
+            Key actualKey = GetActualKey(e);
+            switch (actualKey)
             {
                 case Key.B:
                     if (!isEditedDuringKeyB)
@@ -962,35 +1152,47 @@ namespace Binjyo
             }
         }
 
+        private static Key GetActualKey(KeyEventArgs e)
+        {
+            return e.Key == Key.System ? e.SystemKey : e.Key;
+        }
+
         private void MoveByKeyboard(Key key, bool isRepeat)
         {
+            bool moveConnectedGroup = IsMoveGroupModifierDown();
+            List<Memo> movingMemos = moveConnectedGroup ? GetConnectedMemoGroup() : new List<Memo> { this };
+
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
-                MoveToNextSnap(key);
+                MoveToNextSnap(key, movingMemos);
                 return;
             }
 
             int repeatCount = UpdateArrowRepeatCount(key, isRepeat);
             double multiplier = (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) ? 10 : 1;
             double acceleratedStep = multiplier * (1 + repeatCount / 4);
+            double deltaX = 0;
+            double deltaY = 0;
 
             switch (key)
             {
                 case Key.Left:
-                    Left -= acceleratedStep;
+                    deltaX = -acceleratedStep;
                     break;
                 case Key.Right:
-                    Left += acceleratedStep;
+                    deltaX = acceleratedStep;
                     break;
                 case Key.Up:
-                    Top -= acceleratedStep;
+                    deltaY = -acceleratedStep;
                     break;
                 case Key.Down:
-                    Top += acceleratedStep;
+                    deltaY = acceleratedStep;
                     break;
                 default:
                     break;
             }
+
+            ApplyMoveDelta(movingMemos, deltaX, deltaY, false);
         }
 
         private int UpdateArrowRepeatCount(Key key, bool isRepeat)
@@ -1018,40 +1220,42 @@ namespace Binjyo
             return repeatCount;
         }
 
-        private void MoveToNextSnap(Key key)
+        private void MoveToNextSnap(Key key, List<Memo> movingMemos)
         {
+            System.Windows.Rect boundingBox = GetBoundingBox(movingMemos);
             double? target = null;
             switch (key)
             {
                 case Key.Left:
-                    target = GetNextSnapPositionX(false);
+                    target = GetNextSnapPositionX(movingMemos, boundingBox, false);
                     if (target.HasValue)
-                        Left = target.Value;
+                        ApplyMoveDelta(movingMemos, target.Value - boundingBox.Left, 0, false);
                     break;
                 case Key.Right:
-                    target = GetNextSnapPositionX(true);
+                    target = GetNextSnapPositionX(movingMemos, boundingBox, true);
                     if (target.HasValue)
-                        Left = target.Value;
+                        ApplyMoveDelta(movingMemos, target.Value - boundingBox.Left, 0, false);
                     break;
                 case Key.Up:
-                    target = GetNextSnapPositionY(false);
+                    target = GetNextSnapPositionY(movingMemos, boundingBox, false);
                     if (target.HasValue)
-                        Top = target.Value;
+                        ApplyMoveDelta(movingMemos, 0, target.Value - boundingBox.Top, false);
                     break;
                 case Key.Down:
-                    target = GetNextSnapPositionY(true);
+                    target = GetNextSnapPositionY(movingMemos, boundingBox, true);
                     if (target.HasValue)
-                        Top = target.Value;
+                        ApplyMoveDelta(movingMemos, 0, target.Value - boundingBox.Top, false);
                     break;
             }
         }
 
-        private double? GetNextSnapPositionX(bool forward)
+        private double? GetNextSnapPositionX(List<Memo> movingMemos, System.Windows.Rect boundingBox, bool forward)
         {
             List<double> candidates = new List<double>();
-            double width = Width;
-            double top = Top;
-            double bottom = Top + Height;
+            double width = boundingBox.Width;
+            double top = boundingBox.Top;
+            double bottom = boundingBox.Bottom;
+            var movingSet = new HashSet<Memo>(movingMemos);
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
@@ -1061,9 +1265,9 @@ namespace Binjyo
                 candidates.Add(screenRight - width);
             }
 
-            foreach (Window item in Application.Current.Windows)
+            foreach (Memo item in GetVisibleMemos())
             {
-                if (item == this || item.Title != "Memo" || !item.IsVisible)
+                if (movingSet.Contains(item))
                     continue;
 
                 if (!IntervalsOverlapOrTouch(top, bottom, item.Top, item.Top + item.Height))
@@ -1075,15 +1279,16 @@ namespace Binjyo
                 candidates.Add(item.Left + item.Width - width);
             }
 
-            return FindNextCandidate(Left, candidates, forward);
+            return FindNextCandidate(boundingBox.Left, candidates, forward);
         }
 
-        private double? GetNextSnapPositionY(bool forward)
+        private double? GetNextSnapPositionY(List<Memo> movingMemos, System.Windows.Rect boundingBox, bool forward)
         {
             List<double> candidates = new List<double>();
-            double height = Height;
-            double left = Left;
-            double right = Left + Width;
+            double height = boundingBox.Height;
+            double left = boundingBox.Left;
+            double right = boundingBox.Right;
+            var movingSet = new HashSet<Memo>(movingMemos);
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
@@ -1093,9 +1298,9 @@ namespace Binjyo
                 candidates.Add(screenBottom - height);
             }
 
-            foreach (Window item in Application.Current.Windows)
+            foreach (Memo item in GetVisibleMemos())
             {
-                if (item == this || item.Title != "Memo" || !item.IsVisible)
+                if (movingSet.Contains(item))
                     continue;
 
                 if (!IntervalsOverlapOrTouch(left, right, item.Left, item.Left + item.Width))
@@ -1107,7 +1312,63 @@ namespace Binjyo
                 candidates.Add(item.Top + item.Height - height);
             }
 
-            return FindNextCandidate(Top, candidates, forward);
+            return FindNextCandidate(boundingBox.Top, candidates, forward);
+        }
+
+        private void ApplyMoveDelta(List<Memo> movingMemos, double deltaX, double deltaY, bool allowSnap)
+        {
+            if (movingMemos == null || movingMemos.Count == 0)
+                return;
+
+            var targetPositions = new Dictionary<Memo, System.Windows.Point>();
+            foreach (Memo memo in movingMemos)
+            {
+                targetPositions[memo] = new System.Windows.Point(memo.Left + deltaX, memo.Top + deltaY);
+            }
+
+            System.Windows.Rect boundingBox = GetBoundingBox(targetPositions);
+            if (allowSnap)
+            {
+                GetMoveSnapAdjustment(movingMemos, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
+                if (snapOffsetX != 0 || snapOffsetY != 0)
+                {
+                    foreach (Memo memo in movingMemos)
+                    {
+                        var position = targetPositions[memo];
+                        targetPositions[memo] = new System.Windows.Point(position.X + snapOffsetX, position.Y + snapOffsetY);
+                    }
+                    boundingBox = GetBoundingBox(targetPositions);
+                }
+            }
+
+            GetPerMemoReachabilityOffset(targetPositions, out double constraintOffsetX, out double constraintOffsetY);
+
+            foreach (Memo memo in movingMemos)
+            {
+                var position = targetPositions[memo];
+                memo.Left = position.X + constraintOffsetX;
+                memo.Top = position.Y + constraintOffsetY;
+            }
+        }
+
+        private void BeginDragAnchor(bool moveConnectedGroup)
+        {
+            dragMovesConnectedGroup = moveConnectedGroup;
+            dragStartMouseX = System.Windows.Forms.Control.MousePosition.X;
+            dragStartMouseY = System.Windows.Forms.Control.MousePosition.Y;
+            dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
+
+            foreach (Memo memo in moveConnectedGroup ? GetConnectedMemoGroup() : new List<Memo> { this })
+            {
+                dragStartPositions[memo] = new System.Windows.Point(memo.Left, memo.Top);
+            }
+        }
+
+        private void RefreshDragAnchorIfNeeded()
+        {
+            bool shouldMoveConnectedGroup = IsMoveGroupModifierDown();
+            if (dragStartPositions.Count == 0 || shouldMoveConnectedGroup != dragMovesConnectedGroup)
+                BeginDragAnchor(shouldMoveConnectedGroup);
         }
 
         private static double? FindNextCandidate(double currentValue, IEnumerable<double> candidates, bool forward)
@@ -1146,10 +1407,9 @@ namespace Binjyo
             }
 
             isdrag = true;
-            dragStartMouseX = System.Windows.Forms.Control.MousePosition.X;
-            dragStartMouseY = System.Windows.Forms.Control.MousePosition.Y;
             dragStartLeft = Left;
             dragStartTop = Top;
+            BeginDragAnchor(IsMoveGroupModifierDown());
             Mouse.Capture(this);
         }
 
@@ -1199,20 +1459,102 @@ namespace Binjyo
 
         private void UpdateDragFromMouse()
         {
+            RefreshDragAnchorIfNeeded();
             double xx = System.Windows.Forms.Control.MousePosition.X;
             double yy = System.Windows.Forms.Control.MousePosition.Y;
-            double rawLeft = dragStartLeft + (xx - dragStartMouseX) / dpiFactor;
-            double rawTop = dragStartTop + (yy - dragStartMouseY) / dpiFactor;
-            double nextLeft = rawLeft;
-            double nextTop = rawTop;
-            ApplySnap(ref nextLeft, ref nextTop);
-            Left = nextLeft;
-            Top = nextTop;
+            double deltaX = (xx - dragStartMouseX) / dpiFactor;
+            double deltaY = (yy - dragStartMouseY) / dpiFactor;
+            var movingMemos = dragStartPositions.Keys.ToList();
+            var targetPositions = new Dictionary<Memo, System.Windows.Point>();
+
+            foreach (var item in dragStartPositions)
+            {
+                targetPositions[item.Key] = new System.Windows.Point(item.Value.X + deltaX, item.Value.Y + deltaY);
+            }
+
+            System.Windows.Rect boundingBox = GetBoundingBox(targetPositions);
+            GetMoveSnapAdjustment(movingMemos, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
+            if (snapOffsetX != 0 || snapOffsetY != 0)
+            {
+                foreach (Memo memo in movingMemos)
+                {
+                    var position = targetPositions[memo];
+                    targetPositions[memo] = new System.Windows.Point(position.X + snapOffsetX, position.Y + snapOffsetY);
+                }
+                boundingBox = GetBoundingBox(targetPositions);
+            }
+
+            GetPerMemoReachabilityOffset(targetPositions, out double constraintOffsetX, out double constraintOffsetY);
+
+            foreach (Memo memo in movingMemos)
+            {
+                var position = targetPositions[memo];
+                memo.Left = position.X + constraintOffsetX;
+                memo.Top = position.Y + constraintOffsetY;
+            }
+        }
+
+        private void GetPerMemoReachabilityOffset(Dictionary<Memo, System.Windows.Point> targetPositions, out double offsetX, out double offsetY)
+        {
+            offsetX = 0;
+            offsetY = 0;
+
+            double minOffsetX = double.NegativeInfinity;
+            double maxOffsetX = double.PositiveInfinity;
+            double minOffsetY = double.NegativeInfinity;
+            double maxOffsetY = double.PositiveInfinity;
+
+            foreach (var item in targetPositions)
+            {
+                GetReachableOffsetRangeForMemo(item.Key, item.Value.X, item.Value.Y,
+                    out double itemMinOffsetX, out double itemMaxOffsetX,
+                    out double itemMinOffsetY, out double itemMaxOffsetY);
+
+                minOffsetX = Math.Max(minOffsetX, itemMinOffsetX);
+                maxOffsetX = Math.Min(maxOffsetX, itemMaxOffsetX);
+                minOffsetY = Math.Max(minOffsetY, itemMinOffsetY);
+                maxOffsetY = Math.Min(maxOffsetY, itemMaxOffsetY);
+            }
+
+            offsetX = Clamp(0, minOffsetX, maxOffsetX);
+            offsetY = Clamp(0, minOffsetY, maxOffsetY);
+        }
+
+        private void GetReachableOffsetRangeForMemo(Memo memo, double targetLeft, double targetTop,
+            out double minOffsetX, out double maxOffsetX,
+            out double minOffsetY, out double maxOffsetY)
+        {
+            minOffsetX = double.NegativeInfinity;
+            maxOffsetX = double.PositiveInfinity;
+            minOffsetY = double.NegativeInfinity;
+            maxOffsetY = double.PositiveInfinity;
+
+            var targetRect = new System.Windows.Rect(targetLeft, targetTop, memo.Width, memo.Height);
+            if (HasMinimumVisibleArea(targetRect))
+                return;
+
+            var nearestScreen = System.Windows.Forms.Screen.AllScreens
+                .OrderBy(screen => GetDistanceSquaredToScreen(targetRect, screen))
+                .FirstOrDefault();
+
+            if (nearestScreen == null)
+                return;
+
+            double screenLeft = nearestScreen.Bounds.Left / dpiFactor;
+            double screenTop = nearestScreen.Bounds.Top / dpiFactor;
+            double screenRight = nearestScreen.Bounds.Right / dpiFactor;
+            double screenBottom = nearestScreen.Bounds.Bottom / dpiFactor;
+
+            minOffsetX = screenLeft - memo.Width + MinVisiblePixels - targetLeft;
+            maxOffsetX = screenRight - MinVisiblePixels - targetLeft;
+            minOffsetY = screenTop - memo.Height + MinVisiblePixels - targetTop;
+            maxOffsetY = screenBottom - MinVisiblePixels - targetTop;
         }
 
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
         {
             isdrag = false;
+            dragStartPositions.Clear();
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
@@ -1267,6 +1609,7 @@ namespace Binjyo
         private void Window_Deactivated(object sender, EventArgs e)
         {
             isdrag = false;
+            dragStartPositions.Clear();
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
