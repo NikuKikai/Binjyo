@@ -80,6 +80,7 @@ namespace Binjyo
         private bool isEffectTransparent = false;
         private int pEffectTransparent = 128;
         private bool isEffectHuemap = false;
+        private readonly List<char> geometryTransformHistory = new List<char>();
 
         private double dragStartMouseX, dragStartMouseY;
         private double dragStartLeft, dragStartTop;
@@ -702,7 +703,10 @@ namespace Binjyo
 
             if (x < 0 || x >= Width || y < 0 || y >= Height)
                 return;
-            var px = bitmapTransformed.GetPixel((int)(x / scale), (int)(y / scale));
+            int displayX = ClampToPixelIndex((int)(x / scale), bitmapTransformed.Width);
+            int displayY = ClampToPixelIndex((int)(y / scale), bitmapTransformed.Height);
+            var px = bitmapTransformed.GetPixel(displayX, displayY);
+            var originalPoint = MapDisplayedPixelToOriginalPixel(displayX, displayY);
 
             popup.IsOpen = true;
             popup.HorizontalOffset = x / dpiFactor + 20;
@@ -733,11 +737,54 @@ namespace Binjyo
             // Show text
             HSVText.Text = String.Format("H{0: 000}°   S{1: 000}    L{2: 000}", (int)px.GetHue(), (int)(px.GetSaturation() * 100), (int)(px.GetBrightness() * 100));
             RGBText.Text = String.Format("R{0: 000}    G{1: 000}    B{2: 000}", px.R, px.G, px.B);
+            CoordText.Text = String.Format("X{0: 0000}    Y{1: 0000}", originalPoint.X, originalPoint.Y);
         }
 
         private void _HideHSVWheel()
         {
             popup.IsOpen = false;
+        }
+
+        private int ClampToPixelIndex(int value, int length)
+        {
+            if (length <= 0)
+                return 0;
+            return Math.Max(0, Math.Min(length - 1, value));
+        }
+
+        private System.Drawing.Point MapDisplayedPixelToOriginalPixel(int displayX, int displayY)
+        {
+            int currentWidth = bitmapTransformed.Width;
+            int currentHeight = bitmapTransformed.Height;
+            int x = displayX;
+            int y = displayY;
+
+            for (int i = geometryTransformHistory.Count - 1; i >= 0; i--)
+            {
+                switch (geometryTransformHistory[i])
+                {
+                    case 'H':
+                        x = currentWidth - 1 - x;
+                        break;
+                    case 'V':
+                        y = currentHeight - 1 - y;
+                        break;
+                    case 'R':
+                        int previousWidth = currentHeight;
+                        int previousHeight = currentWidth;
+                        int rotatedX = y;
+                        int rotatedY = currentWidth - 1 - x;
+                        x = rotatedX;
+                        y = rotatedY;
+                        currentWidth = previousWidth;
+                        currentHeight = previousHeight;
+                        break;
+                }
+            }
+
+            return new System.Drawing.Point(
+                ClampToPixelIndex(x, bitmap.Width),
+                ClampToPixelIndex(y, bitmap.Height));
         }
 
         private void ApplySnap(ref double nextLeft, ref double nextTop)
@@ -1082,20 +1129,24 @@ namespace Binjyo
                     break;
                 case Key.H:
                     this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                    geometryTransformHistory.Add('H');
                     UpdateBitmap();
                     break;
                 case Key.V:
                     this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                    geometryTransformHistory.Add('V');
                     UpdateBitmap();
                     break;
                 case Key.R:
                     this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                    geometryTransformHistory.Add('R');
                     UpdateBitmap();
                     break;
                 case Key.Left:
                 case Key.Right:
                 case Key.Up:
                 case Key.Down:
+                    _HideHSVWheel();
                     MoveByKeyboard(actualKey, e.IsRepeat);
                     e.Handled = true;
                     break;
