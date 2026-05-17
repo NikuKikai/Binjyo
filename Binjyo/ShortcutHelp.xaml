@@ -6,7 +6,7 @@
         mc:Ignorable="d"
         Title="Shortcut Help"
         Width="800"
-        Height="600"
+        Height="700"
         MinWidth="520"
         MinHeight="420"
         WindowStartupLocation="CenterScreen">
@@ -58,6 +58,9 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -131,6 +134,18 @@
                             <TextBlock Grid.Row="15" Grid.Column="0" Margin="0,6,0,0" Text="Hue map / color wheel"/>
                             <TextBlock Grid.Row="15" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="C / Shift"/>
                             <TextBlock Grid.Row="15" Grid.Column="2" Margin="0,6,0,0" Text="C toggles hue map. Hold Shift while hovering to show the color wheel." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="16" Grid.Column="0" Margin="0,6,0,0" Text="Move memo"/>
+                            <TextBlock Grid.Row="16" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Arrow keys"/>
+                            <TextBlock Grid.Row="16" Grid.Column="2" Margin="0,6,0,0" Text="Moves by 1 pixel. Hold to repeat and accelerate." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="17" Grid.Column="0" Margin="0,6,0,0" Text="Move memo faster"/>
+                            <TextBlock Grid.Row="17" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Shift + Arrow keys"/>
+                            <TextBlock Grid.Row="17" Grid.Column="2" Margin="0,6,0,0" Text="Multiplies the movement step by 10." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="18" Grid.Column="0" Margin="0,6,0,0" Text="Jump to next snap"/>
+                            <TextBlock Grid.Row="18" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Ctrl + Arrow keys"/>
+                            <TextBlock Grid.Row="18" Grid.Column="2" Margin="0,6,0,0" Text="Jumps to the next snappable position in that direction." TextWrapping="Wrap"/>
                         </Grid>
                     </StackPanel>
                 </Border>

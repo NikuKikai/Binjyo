@@ -76,6 +76,10 @@ namespace Binjyo
         private bool isOverButton = false;
         private bool isSaving = false;
         private const double SnapDistance = 12;
+        private int leftArrowRepeatCount = 0;
+        private int rightArrowRepeatCount = 0;
+        private int upArrowRepeatCount = 0;
+        private int downArrowRepeatCount = 0;
 
         private int lockmode = 0;
 
@@ -501,6 +505,13 @@ namespace Binjyo
                     this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     UpdateBitmap();
                     break;
+                case Key.Left:
+                case Key.Right:
+                case Key.Up:
+                case Key.Down:
+                    MoveByKeyboard(e.Key, e.IsRepeat);
+                    e.Handled = true;
+                    break;
                 case Key.B:
                     if (!e.IsRepeat)
                         isEditedDuringKeyB = false;
@@ -544,9 +555,192 @@ namespace Binjyo
                     }
                     UpdateBitmap();
                     break;
+                case Key.Left:
+                    leftArrowRepeatCount = 0;
+                    break;
+                case Key.Right:
+                    rightArrowRepeatCount = 0;
+                    break;
+                case Key.Up:
+                    upArrowRepeatCount = 0;
+                    break;
+                case Key.Down:
+                    downArrowRepeatCount = 0;
+                    break;
                 default:
                     break;
             }
+        }
+
+        private void MoveByKeyboard(Key key, bool isRepeat)
+        {
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            {
+                MoveToNextSnap(key);
+                return;
+            }
+
+            int repeatCount = UpdateArrowRepeatCount(key, isRepeat);
+            double multiplier = (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) ? 10 : 1;
+            double acceleratedStep = multiplier * (1 + repeatCount / 4);
+
+            switch (key)
+            {
+                case Key.Left:
+                    Left -= acceleratedStep;
+                    break;
+                case Key.Right:
+                    Left += acceleratedStep;
+                    break;
+                case Key.Up:
+                    Top -= acceleratedStep;
+                    break;
+                case Key.Down:
+                    Top += acceleratedStep;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private int UpdateArrowRepeatCount(Key key, bool isRepeat)
+        {
+            int repeatCount = isRepeat ? 1 : 0;
+            switch (key)
+            {
+                case Key.Left:
+                    leftArrowRepeatCount = isRepeat ? leftArrowRepeatCount + 1 : 0;
+                    repeatCount = leftArrowRepeatCount;
+                    break;
+                case Key.Right:
+                    rightArrowRepeatCount = isRepeat ? rightArrowRepeatCount + 1 : 0;
+                    repeatCount = rightArrowRepeatCount;
+                    break;
+                case Key.Up:
+                    upArrowRepeatCount = isRepeat ? upArrowRepeatCount + 1 : 0;
+                    repeatCount = upArrowRepeatCount;
+                    break;
+                case Key.Down:
+                    downArrowRepeatCount = isRepeat ? downArrowRepeatCount + 1 : 0;
+                    repeatCount = downArrowRepeatCount;
+                    break;
+            }
+            return repeatCount;
+        }
+
+        private void MoveToNextSnap(Key key)
+        {
+            double? target = null;
+            switch (key)
+            {
+                case Key.Left:
+                    target = GetNextSnapPositionX(false);
+                    if (target.HasValue)
+                        Left = target.Value;
+                    break;
+                case Key.Right:
+                    target = GetNextSnapPositionX(true);
+                    if (target.HasValue)
+                        Left = target.Value;
+                    break;
+                case Key.Up:
+                    target = GetNextSnapPositionY(false);
+                    if (target.HasValue)
+                        Top = target.Value;
+                    break;
+                case Key.Down:
+                    target = GetNextSnapPositionY(true);
+                    if (target.HasValue)
+                        Top = target.Value;
+                    break;
+            }
+        }
+
+        private double? GetNextSnapPositionX(bool forward)
+        {
+            List<double> candidates = new List<double>();
+            double width = Width;
+            double top = Top;
+            double bottom = Top + Height;
+
+            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+            {
+                double screenLeft = screen.Bounds.Left / dpiFactor;
+                double screenRight = screen.Bounds.Right / dpiFactor;
+                candidates.Add(screenLeft);
+                candidates.Add(screenRight - width);
+            }
+
+            foreach (Window item in Application.Current.Windows)
+            {
+                if (item == this || item.Title != "Memo" || !item.IsVisible)
+                    continue;
+
+                if (!IntervalsOverlapOrTouch(top, bottom, item.Top, item.Top + item.Height))
+                    continue;
+
+                candidates.Add(item.Left);
+                candidates.Add(item.Left + item.Width);
+                candidates.Add(item.Left - width);
+                candidates.Add(item.Left + item.Width - width);
+            }
+
+            return FindNextCandidate(Left, candidates, forward);
+        }
+
+        private double? GetNextSnapPositionY(bool forward)
+        {
+            List<double> candidates = new List<double>();
+            double height = Height;
+            double left = Left;
+            double right = Left + Width;
+
+            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+            {
+                double screenTop = screen.Bounds.Top / dpiFactor;
+                double screenBottom = screen.Bounds.Bottom / dpiFactor;
+                candidates.Add(screenTop);
+                candidates.Add(screenBottom - height);
+            }
+
+            foreach (Window item in Application.Current.Windows)
+            {
+                if (item == this || item.Title != "Memo" || !item.IsVisible)
+                    continue;
+
+                if (!IntervalsOverlapOrTouch(left, right, item.Left, item.Left + item.Width))
+                    continue;
+
+                candidates.Add(item.Top);
+                candidates.Add(item.Top + item.Height);
+                candidates.Add(item.Top - height);
+                candidates.Add(item.Top + item.Height - height);
+            }
+
+            return FindNextCandidate(Top, candidates, forward);
+        }
+
+        private static double? FindNextCandidate(double currentValue, IEnumerable<double> candidates, bool forward)
+        {
+            double? bestCandidate = null;
+            foreach (double candidate in candidates)
+            {
+                if (forward)
+                {
+                    if (candidate <= currentValue + SnapDistance)
+                        continue;
+                    if (!bestCandidate.HasValue || candidate < bestCandidate.Value)
+                        bestCandidate = candidate;
+                }
+                else
+                {
+                    if (candidate >= currentValue - SnapDistance)
+                        continue;
+                    if (!bestCandidate.HasValue || candidate > bestCandidate.Value)
+                        bestCandidate = candidate;
+                }
+            }
+            return bestCandidate;
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
