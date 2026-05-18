@@ -1428,8 +1428,6 @@ namespace Binjyo
             double snappedTop = nextTop;
             double bestDistanceX = SnapDistance + 1;
             double bestDistanceY = SnapDistance + 1;
-            double nextRight = nextLeft + width;
-            double nextBottom = nextTop + height;
             var movingSet = new HashSet<Memo>(movingMemos);
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
@@ -1445,6 +1443,17 @@ namespace Binjyo
                 TrySnapValue(nextTop, screenBottom - height, ref snappedTop, ref bestDistanceY);
             }
 
+            TrySnapAgainstMemosForX(nextLeft, nextTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
+            TrySnapAgainstMemosForY(nextLeft, snappedLeft, nextTop, width, height, movingSet, ref snappedTop, ref bestDistanceY);
+            TrySnapAgainstMemosForX(nextLeft, snappedTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
+
+            offsetX = snappedLeft - nextLeft;
+            offsetY = snappedTop - nextTop;
+        }
+
+        private void TrySnapAgainstMemosForX(double nextLeft, double currentTop, double width, double height, HashSet<Memo> movingSet, ref double snappedLeft, ref double bestDistanceX)
+        {
+            double currentBottom = currentTop + height;
             foreach (Memo item in GetVisibleMemos())
             {
                 if (movingSet.Contains(item))
@@ -1455,28 +1464,37 @@ namespace Binjyo
                 double otherRight = item.Left + item.Width;
                 double otherBottom = item.Top + item.Height;
 
-                bool canSnapX = IntervalsOverlapOrTouch(nextTop, nextBottom, otherTop, otherBottom);
-                bool canSnapY = IntervalsOverlapOrTouch(nextLeft, nextRight, otherLeft, otherRight);
+                if (!IntervalsOverlapOrTouch(currentTop, currentBottom, otherTop, otherBottom))
+                    continue;
 
-                if (canSnapX)
-                {
-                    TrySnapValue(nextLeft, otherLeft, ref snappedLeft, ref bestDistanceX);
-                    TrySnapValue(nextLeft, otherRight, ref snappedLeft, ref bestDistanceX);
-                    TrySnapValue(nextLeft, otherLeft - width, ref snappedLeft, ref bestDistanceX);
-                    TrySnapValue(nextLeft, otherRight - width, ref snappedLeft, ref bestDistanceX);
-                }
-
-                if (canSnapY)
-                {
-                    TrySnapValue(nextTop, otherTop, ref snappedTop, ref bestDistanceY);
-                    TrySnapValue(nextTop, otherBottom, ref snappedTop, ref bestDistanceY);
-                    TrySnapValue(nextTop, otherTop - height, ref snappedTop, ref bestDistanceY);
-                    TrySnapValue(nextTop, otherBottom - height, ref snappedTop, ref bestDistanceY);
-                }
+                TrySnapValue(nextLeft, otherLeft, ref snappedLeft, ref bestDistanceX);
+                TrySnapValue(nextLeft, otherRight, ref snappedLeft, ref bestDistanceX);
+                TrySnapValue(nextLeft, otherLeft - width, ref snappedLeft, ref bestDistanceX);
+                TrySnapValue(nextLeft, otherRight - width, ref snappedLeft, ref bestDistanceX);
             }
+        }
 
-            offsetX = snappedLeft - nextLeft;
-            offsetY = snappedTop - nextTop;
+        private void TrySnapAgainstMemosForY(double nextLeft, double currentLeft, double nextTop, double width, double height, HashSet<Memo> movingSet, ref double snappedTop, ref double bestDistanceY)
+        {
+            double currentRight = currentLeft + width;
+            foreach (Memo item in GetVisibleMemos())
+            {
+                if (movingSet.Contains(item))
+                    continue;
+
+                double otherLeft = item.Left;
+                double otherTop = item.Top;
+                double otherRight = item.Left + item.Width;
+                double otherBottom = item.Top + item.Height;
+
+                if (!IntervalsOverlapOrTouch(currentLeft, currentRight, otherLeft, otherRight))
+                    continue;
+
+                TrySnapValue(nextTop, otherTop, ref snappedTop, ref bestDistanceY);
+                TrySnapValue(nextTop, otherBottom, ref snappedTop, ref bestDistanceY);
+                TrySnapValue(nextTop, otherTop - height, ref snappedTop, ref bestDistanceY);
+                TrySnapValue(nextTop, otherBottom - height, ref snappedTop, ref bestDistanceY);
+            }
         }
 
         private void EnsureRectStaysReachable(ref double left, ref double top, double width, double height)
@@ -1681,8 +1699,9 @@ namespace Binjyo
                         EnterEditMode();
                     e.Handled = true;
                     break;
-                case Key.D:
-                    ResizeDelta(-0.2);
+                case Key.LeftAlt:
+                case Key.RightAlt:
+                    e.Handled = true;
                     break;
                 case Key.F:
                     if (!e.IsRepeat)
@@ -1769,6 +1788,10 @@ namespace Binjyo
 
             switch (actualKey)
             {
+                case Key.LeftAlt:
+                case Key.RightAlt:
+                    e.Handled = true;
+                    break;
                 case Key.B:
                     if (!isEditedDuringKeyB)
                     {

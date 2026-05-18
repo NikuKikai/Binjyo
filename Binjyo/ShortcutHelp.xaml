@@ -119,12 +119,9 @@
                             <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,6,0,0" Text="Close memo"/>
                             <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Esc"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,6,0,0" Text="Resize smaller"/>
-                            <TextBlock Grid.Row="6" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="D"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Margin="0,6,0,0" Text="Ctrl + mouse wheel down also works."/>
-
-                            <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,6,0,0" Text="Resize larger"/>
-                            <TextBlock Grid.Row="7" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Ctrl + wheel up"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,6,0,0" Text="Resize"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Ctrl + wheel"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2" Margin="0,6,0,0" Text="Wheel down makes the memo smaller. Wheel up makes it larger." TextWrapping="Wrap"/>
 
                             <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,6,0,0" Text="Reset size"/>
                             <TextBlock Grid.Row="8" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="`"/>
