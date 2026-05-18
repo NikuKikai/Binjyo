@@ -92,6 +92,10 @@
     <Compile Include="Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DrawingData.cs" />
+    <Compile Include="EditModePanel.xaml.cs">
+      <DependentUpon>EditModePanel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="HistoryStore.cs" />
     <Compile Include="HistoryWindow.xaml.cs">
       <DependentUpon>HistoryWindow.xaml</DependentUpon>
@@ -110,6 +114,10 @@
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="EditModePanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="HistoryWindow.xaml">
       <SubType>Designer</SubType>

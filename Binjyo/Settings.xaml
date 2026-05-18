@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Binjyo"
         mc:Ignorable="d"
-        Title="Settings (Binjyo v0.5.2)" Height="400" Width="400"
+        Title="Settings (Binjyo v0.6.1)" Height="400" Width="500"
         Background="#111"
         WindowState="Normal"
         >
@@ -42,6 +42,29 @@
                   Content="Enable snapping to screen edges and other memos"
                   Checked="CheckSnapMemo_Changed"
                   Unchecked="CheckSnapMemo_Changed"/>
+
+        <Grid Margin="10,18,10,0">
+            <Label Content="History" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
+        </Grid>
+        <Grid Margin="35,0,15,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="80" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0"
+                   VerticalAlignment="Center"
+                   Foreground="#FFD6D6D6"
+                   Content="Maximum history items"/>
+            <TextBox Name="HistoryEntryLimitBox"
+                     Grid.Column="1"
+                     Margin="12,0,0,0"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     TextChanged="HistoryEntryLimitBox_TextChanged"
+                     PreviewTextInput="HistoryEntryLimitBox_PreviewTextInput"
+                     Background="#FF3C3C3C"
+                     Foreground="#FFF3F3F3" />
+        </Grid>
     </StackPanel>
 
 </Window>

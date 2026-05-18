@@ -33,6 +33,8 @@
     </Window.Resources>
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
+        <Canvas Name="drawingOverlay"
+                IsHitTestVisible="False"/>
         <Rectangle Name="focusFlashOverlay"
                    IsHitTestVisible="False"
                    Fill="#FF00C800"

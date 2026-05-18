@@ -35,6 +35,12 @@ namespace Binjyo
         BottomRight
     }
 
+    public enum EditTool
+    {
+        Brush,
+        Eraser
+    }
+
     public static class BitmapExt
     {
         // https://stackoverflow.com/a/30729291
@@ -80,7 +86,20 @@ namespace Binjyo
         private bool isEffectTransparent = false;
         private int pEffectTransparent = 128;
         private bool isEffectHuemap = false;
+        private bool isHSVWheelPinned = false;
         private readonly List<char> geometryTransformHistory = new List<char>();
+        private DrawingDocumentData drawingDocument = new DrawingDocumentData();
+        private DrawingStrokeData activeDrawingStroke = null;
+        private EditModePanel editModePanel = null;
+        private bool isEditMode = false;
+        private bool isDrawingStroke = false;
+        private EditTool currentEditTool = EditTool.Brush;
+        private double drawingBrushSize = 5;
+        private readonly Stack<DrawingDocumentData> drawingUndoStack = new Stack<DrawingDocumentData>();
+        private DrawingDocumentData pendingDrawingOperationSnapshot = null;
+        private bool pendingDrawingOperationChanged = false;
+        private const double MinimumDrawingBrushSize = 1;
+        private const double MaximumDrawingBrushSize = 64;
 
         private double dragStartMouseX, dragStartMouseY;
         private double dragStartLeft, dragStartTop;
@@ -135,12 +154,15 @@ namespace Binjyo
             this.bitmap = bmp;
             this.bitmapTransformed = (Bitmap)this.bitmap.Clone();
             this._ShowBitmap(bmp);
+            LocationChanged += MemoBoundsChanged;
+            SizeChanged += MemoBoundsChanged;
             UpdateResizeModeVisuals();
         }
 
         protected void _Close()
         {
             SaveToHistory();
+            ExitEditMode();
             if (this.bitmap != null) this.bitmap.Dispose();
             if (this.bitmapTransformed != null) this.bitmapTransformed.Dispose();
             this.image.Source = null;
@@ -156,7 +178,7 @@ namespace Binjyo
             if (bitmpasource == null)
                 return;
 
-            HistoryStore.Save(bitmpasource, Left, Top, Width, Height);
+            HistoryStore.Save(bitmpasource, Left, Top, Width, Height, drawingDocument.Clone());
         }
 
         private void _ShowBitmap(Bitmap bmp, bool disposeBitmapAfterRender = false)
@@ -170,6 +192,7 @@ namespace Binjyo
                 Resize(scale);
 
                 this.image.Source = this.bitmpasource;
+                RenderDrawingOverlay();
                 Show();
             }
             finally
@@ -200,6 +223,32 @@ namespace Binjyo
                 EffectTransparent(bmp, pEffectTransparent);
 
             return bmp;
+        }
+
+        private Bitmap GetRenderedBitmap(bool includeDrawing)
+        {
+            Bitmap renderedBitmap = _GetBitmapAfterEffect();
+            if (includeDrawing)
+                ApplyDrawingToBitmap(renderedBitmap);
+            return renderedBitmap;
+        }
+
+        private BitmapSource GetRenderedBitmapSource(bool includeDrawing)
+        {
+            if (!includeDrawing)
+                return bitmpasource;
+
+            using (Bitmap renderedBitmap = GetRenderedBitmap(true))
+            {
+                BitmapSource bitmapSource = renderedBitmap.ToBitmapSource(PixelFormats.Bgra32);
+                bitmapSource.Freeze();
+                return bitmapSource;
+            }
+        }
+
+        private void CopyMemoToClipboard(bool includeDrawing)
+        {
+            Clipboard.SetImage(GetRenderedBitmapSource(includeDrawing));
         }
 
         protected void UpdateBitmap()
@@ -337,6 +386,9 @@ namespace Binjyo
 
         private void SetResizeMode(bool enabled)
         {
+            if (isEditMode)
+                return;
+
             isResizeMode = enabled && lockmode == 0;
             if (!isResizeMode)
                 StopResize();
@@ -348,9 +400,9 @@ namespace Binjyo
             if (resizeOverlay == null || button == null)
                 return;
 
-            resizeOverlay.Visibility = isResizeMode && lockmode == 0 ? Visibility.Visible : Visibility.Collapsed;
+            resizeOverlay.Visibility = isResizeMode && lockmode == 0 && !isEditMode ? Visibility.Visible : Visibility.Collapsed;
 
-            if (isResizeMode && lockmode == 0)
+            if ((isResizeMode && lockmode == 0) || isEditMode)
             {
                 button.Opacity = 0;
                 button.IsHitTestVisible = false;
@@ -666,6 +718,11 @@ namespace Binjyo
 
         public void Save()
         {
+            Save(true);
+        }
+
+        public void Save(bool includeDrawing)
+        {
             if (isSaving)
                 return;
 
@@ -679,11 +736,19 @@ namespace Binjyo
                 dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
                 if (dlg.ShowDialog() == true)
                 {
-                    var encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(BitmapFrame.Create(bitmpasource));
+                    using (Bitmap renderedBitmap = includeDrawing ? GetRenderedBitmap(true) : null)
                     using (var stream = dlg.OpenFile())
                     {
-                        encoder.Save(stream);
+                        if (includeDrawing)
+                        {
+                            renderedBitmap.Save(stream, ImageFormat.Png);
+                        }
+                        else
+                        {
+                            var encoder = new PngBitmapEncoder();
+                            encoder.Frames.Add(BitmapFrame.Create(bitmpasource));
+                            encoder.Save(stream);
+                        }
                     }
                 }
             }
@@ -745,6 +810,19 @@ namespace Binjyo
             popup.IsOpen = false;
         }
 
+        private bool ShouldShowHSVWheel()
+        {
+            return isHSVWheelPinned && !isEditMode && !isdrag && !isResizing && !isOverButton;
+        }
+
+        private void RefreshHSVWheelVisibility()
+        {
+            if (ShouldShowHSVWheel())
+                _UpdateHSVWheel();
+            else
+                _HideHSVWheel();
+        }
+
         private int ClampToPixelIndex(int value, int length)
         {
             if (length <= 0)
@@ -793,6 +871,434 @@ namespace Binjyo
             GetMoveSnapAdjustment(movingMemos, nextLeft, nextTop, Width, Height, out double offsetX, out double offsetY);
             nextLeft += offsetX;
             nextTop += offsetY;
+        }
+
+        private void MemoBoundsChanged(object sender, EventArgs e)
+        {
+            UpdateEditPanelPlacement();
+            RenderDrawingOverlay();
+        }
+
+        private void EnterEditMode()
+        {
+            if (isEditMode || lockmode != 0)
+                return;
+
+            SetResizeMode(false);
+            StopResize();
+            isEditMode = true;
+            isDrawingStroke = false;
+            activeDrawingStroke = null;
+            EnsureEditModePanel();
+            SetEditTool(EditTool.Brush);
+            UpdateResizeModeVisuals();
+            _HideHSVWheel();
+        }
+
+        private void ExitEditMode()
+        {
+            if (!isEditMode)
+                return;
+
+            if (isDrawingStroke)
+            {
+                isDrawingStroke = false;
+                activeDrawingStroke = null;
+                if (Mouse.Captured == this)
+                    Mouse.Capture(null);
+                CommitDrawingOperation();
+            }
+            else
+            {
+                CancelPendingDrawingOperation();
+            }
+
+            isEditMode = false;
+            CloseEditModePanel();
+            UpdateResizeModeVisuals();
+            Cursor = Cursors.Arrow;
+        }
+
+        private void EnsureEditModePanel()
+        {
+            if (editModePanel == null)
+            {
+                editModePanel = new EditModePanel();
+            }
+
+            UpdateEditPanelState();
+            if (!editModePanel.IsVisible)
+                editModePanel.Show();
+        }
+
+        private void CloseEditModePanel()
+        {
+            if (editModePanel == null)
+                return;
+
+            editModePanel.Close();
+            editModePanel = null;
+        }
+
+        private void UpdateEditPanelState()
+        {
+            if (editModePanel == null)
+                return;
+
+            editModePanel.UpdateToolName(currentEditTool == EditTool.Brush ? "Brush" : "Eraser");
+            editModePanel.UpdateBrushSize(drawingBrushSize);
+            UpdateEditPanelPlacement();
+        }
+
+        private void UpdateEditPanelPlacement()
+        {
+            if (editModePanel == null || !isEditMode)
+                return;
+
+            editModePanel.UpdatePlacement(Left, Top, Width, dpiFactor);
+        }
+
+        private void AdjustDrawingBrushSize(double delta)
+        {
+            drawingBrushSize = Math.Max(MinimumDrawingBrushSize, Math.Min(MaximumDrawingBrushSize, drawingBrushSize + delta));
+            UpdateEditPanelState();
+        }
+
+        private void SetEditTool(EditTool tool)
+        {
+            currentEditTool = tool;
+            Cursor = tool == EditTool.Brush ? Cursors.Pen : Cursors.Cross;
+            UpdateEditPanelState();
+        }
+
+        private void BeginDrawingOperation()
+        {
+            pendingDrawingOperationSnapshot = drawingDocument.Clone();
+            pendingDrawingOperationChanged = false;
+        }
+
+        private void MarkDrawingOperationChanged()
+        {
+            pendingDrawingOperationChanged = true;
+        }
+
+        private void CommitDrawingOperation()
+        {
+            if (pendingDrawingOperationSnapshot != null && pendingDrawingOperationChanged)
+                drawingUndoStack.Push(pendingDrawingOperationSnapshot);
+
+            pendingDrawingOperationSnapshot = null;
+            pendingDrawingOperationChanged = false;
+        }
+
+        private void CancelPendingDrawingOperation()
+        {
+            pendingDrawingOperationSnapshot = null;
+            pendingDrawingOperationChanged = false;
+        }
+
+        private void ClearDrawingUndoHistory()
+        {
+            drawingUndoStack.Clear();
+            CancelPendingDrawingOperation();
+        }
+
+        private bool TryGetDrawingPoint(System.Windows.Point localPosition, out DrawingPointData point)
+        {
+            point = null;
+
+            if (bitmapTransformed == null || localPosition.X < 0 || localPosition.X >= Width || localPosition.Y < 0 || localPosition.Y >= Height)
+                return false;
+
+            double imageX = Math.Max(0, Math.Min(bitmapTransformed.Width - 1, localPosition.X / scale));
+            double imageY = Math.Max(0, Math.Min(bitmapTransformed.Height - 1, localPosition.Y / scale));
+            point = new DrawingPointData
+            {
+                X = imageX,
+                Y = imageY
+            };
+            return true;
+        }
+
+        private void BeginDrawingStroke(System.Windows.Point localPosition)
+        {
+            if (!TryGetDrawingPoint(localPosition, out DrawingPointData point))
+                return;
+
+            BeginDrawingOperation();
+
+            if (currentEditTool == EditTool.Eraser)
+            {
+                EraseStrokeAtPoint(point);
+            }
+            else
+            {
+                activeDrawingStroke = new DrawingStrokeData
+                {
+                    Size = drawingBrushSize
+                };
+                activeDrawingStroke.Points.Add(point);
+                drawingDocument.Strokes.Add(activeDrawingStroke);
+                MarkDrawingOperationChanged();
+            }
+
+            isDrawingStroke = true;
+            Mouse.Capture(this);
+            RenderDrawingOverlay();
+        }
+
+        private void ExtendDrawingStroke(System.Windows.Point localPosition)
+        {
+            if (!isDrawingStroke)
+                return;
+
+            if (!TryGetDrawingPoint(localPosition, out DrawingPointData point))
+                return;
+
+            if (currentEditTool == EditTool.Eraser)
+            {
+                EraseStrokeAtPoint(point);
+                return;
+            }
+
+            if (activeDrawingStroke == null)
+                return;
+
+            DrawingPointData lastPoint = activeDrawingStroke.Points.LastOrDefault();
+            if (lastPoint != null &&
+                Math.Abs(lastPoint.X - point.X) < 0.25 &&
+                Math.Abs(lastPoint.Y - point.Y) < 0.25)
+            {
+                return;
+            }
+
+            activeDrawingStroke.Points.Add(point);
+            RenderDrawingOverlay();
+        }
+
+        private void EndDrawingStroke()
+        {
+            isDrawingStroke = false;
+            activeDrawingStroke = null;
+            if (Mouse.Captured == this)
+                Mouse.Capture(null);
+            CommitDrawingOperation();
+            RenderDrawingOverlay();
+        }
+
+        private void UndoLastDrawingStroke()
+        {
+            if (isDrawingStroke)
+            {
+                isDrawingStroke = false;
+                activeDrawingStroke = null;
+                if (Mouse.Captured == this)
+                    Mouse.Capture(null);
+                if (pendingDrawingOperationSnapshot != null)
+                {
+                    drawingDocument = pendingDrawingOperationSnapshot.Clone();
+                    CancelPendingDrawingOperation();
+                    RenderDrawingOverlay();
+                    return;
+                }
+                CancelPendingDrawingOperation();
+            }
+
+            if (drawingUndoStack.Count == 0)
+                return;
+
+            drawingDocument = drawingUndoStack.Pop();
+            RenderDrawingOverlay();
+        }
+
+        private void EraseStrokeAtPoint(DrawingPointData point)
+        {
+            if (drawingDocument.Strokes.Count == 0)
+                return;
+
+            double eraserRadius = Math.Max(1, drawingBrushSize / 2.0);
+            int removedCount = drawingDocument.Strokes.RemoveAll(stroke => DoesStrokeIntersectPoint(stroke, point, eraserRadius));
+            if (removedCount > 0)
+            {
+                MarkDrawingOperationChanged();
+                RenderDrawingOverlay();
+            }
+        }
+
+        private static bool DoesStrokeIntersectPoint(DrawingStrokeData stroke, DrawingPointData point, double eraserRadius)
+        {
+            if (stroke == null || stroke.Points.Count == 0)
+                return false;
+
+            double threshold = eraserRadius + stroke.Size / 2.0;
+            double thresholdSquared = threshold * threshold;
+
+            if (stroke.Points.Count == 1)
+            {
+                return GetDistanceSquared(stroke.Points[0], point) <= thresholdSquared;
+            }
+
+            for (int i = 1; i < stroke.Points.Count; i++)
+            {
+                if (GetDistanceSquaredToSegment(stroke.Points[i - 1], stroke.Points[i], point) <= thresholdSquared)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static double GetDistanceSquared(DrawingPointData a, DrawingPointData b)
+        {
+            double dx = a.X - b.X;
+            double dy = a.Y - b.Y;
+            return dx * dx + dy * dy;
+        }
+
+        private static double GetDistanceSquaredToSegment(DrawingPointData segmentStart, DrawingPointData segmentEnd, DrawingPointData point)
+        {
+            double segmentDeltaX = segmentEnd.X - segmentStart.X;
+            double segmentDeltaY = segmentEnd.Y - segmentStart.Y;
+            double segmentLengthSquared = segmentDeltaX * segmentDeltaX + segmentDeltaY * segmentDeltaY;
+
+            if (segmentLengthSquared <= 0.0001)
+                return GetDistanceSquared(segmentStart, point);
+
+            double projection = ((point.X - segmentStart.X) * segmentDeltaX + (point.Y - segmentStart.Y) * segmentDeltaY) / segmentLengthSquared;
+            projection = Clamp(projection, 0, 1);
+
+            double projectedX = segmentStart.X + projection * segmentDeltaX;
+            double projectedY = segmentStart.Y + projection * segmentDeltaY;
+            double distanceX = point.X - projectedX;
+            double distanceY = point.Y - projectedY;
+            return distanceX * distanceX + distanceY * distanceY;
+        }
+
+        private void RenderDrawingOverlay()
+        {
+            if (drawingOverlay == null)
+                return;
+
+            drawingOverlay.Children.Clear();
+
+            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+            {
+                if (stroke.Points.Count == 0)
+                    continue;
+
+                double displayThickness = Math.Max(1, stroke.Size / dpiFactor * scale);
+                if (stroke.Points.Count == 1)
+                {
+                    var point = stroke.Points[0];
+                    drawingOverlay.Children.Add(new Ellipse
+                    {
+                        Width = displayThickness,
+                        Height = displayThickness,
+                        Fill = new SolidColorBrush(Colors.Red),
+                        Margin = new Thickness(point.X / dpiFactor * scale - displayThickness / 2, point.Y / dpiFactor * scale - displayThickness / 2, 0, 0)
+                    });
+                    continue;
+                }
+
+                var polyline = new Polyline
+                {
+                    Stroke = new SolidColorBrush(Colors.Red),
+                    StrokeThickness = displayThickness,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
+                    StrokeLineJoin = PenLineJoin.Round
+                };
+
+                foreach (DrawingPointData point in stroke.Points)
+                {
+                    polyline.Points.Add(new System.Windows.Point(point.X / dpiFactor * scale, point.Y / dpiFactor * scale));
+                }
+
+                drawingOverlay.Children.Add(polyline);
+            }
+        }
+
+        private void ApplyDrawingToBitmap(Bitmap targetBitmap)
+        {
+            if (drawingDocument == null || drawingDocument.Strokes.Count == 0)
+                return;
+
+            using (Graphics graphics = Graphics.FromImage(targetBitmap))
+            {
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+                {
+                    if (stroke.Points.Count == 0)
+                        continue;
+
+                    using (var pen = new System.Drawing.Pen(System.Drawing.Color.Red, (float)stroke.Size))
+                    using (var brush = new SolidBrush(System.Drawing.Color.Red))
+                    {
+                        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+                        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                        pen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+
+                        if (stroke.Points.Count == 1)
+                        {
+                            DrawingPointData point = stroke.Points[0];
+                            float radius = (float)stroke.Size / 2f;
+                            graphics.FillEllipse(brush, (float)point.X - radius, (float)point.Y - radius, radius * 2f, radius * 2f);
+                            continue;
+                        }
+
+                        var points = stroke.Points
+                            .Select(point => new System.Drawing.PointF((float)point.X, (float)point.Y))
+                            .ToArray();
+                        graphics.DrawLines(pen, points);
+                    }
+                }
+            }
+        }
+
+        public void RestoreDrawingData(DrawingDocumentData data)
+        {
+            drawingDocument = data?.Clone() ?? new DrawingDocumentData();
+            ClearDrawingUndoHistory();
+            RenderDrawingOverlay();
+        }
+
+        private void FlipDrawingHorizontally()
+        {
+            ClearDrawingUndoHistory();
+            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+            {
+                foreach (DrawingPointData point in stroke.Points)
+                {
+                    point.X = bitmapTransformed.Width - 1 - point.X;
+                }
+            }
+        }
+
+        private void FlipDrawingVertically()
+        {
+            ClearDrawingUndoHistory();
+            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+            {
+                foreach (DrawingPointData point in stroke.Points)
+                {
+                    point.Y = bitmapTransformed.Height - 1 - point.Y;
+                }
+            }
+        }
+
+        private void RotateDrawing90()
+        {
+            ClearDrawingUndoHistory();
+            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+            {
+                foreach (DrawingPointData point in stroke.Points)
+                {
+                    double rotatedX = bitmapTransformed.Height - 1 - point.Y;
+                    double rotatedY = point.X;
+                    point.X = rotatedX;
+                    point.Y = rotatedY;
+                }
+            }
         }
 
         private bool IsResizeSnapEnabled()
@@ -1060,6 +1566,20 @@ namespace Binjyo
             return endA >= startB && endB >= startA;
         }
 
+        private static bool IsEventFromButton(object source)
+        {
+            DependencyObject current = source as DependencyObject;
+            while (current != null)
+            {
+                if (current is Button)
+                    return true;
+
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
+        }
+
 
         protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
         {
@@ -1077,6 +1597,44 @@ namespace Binjyo
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             Key actualKey = GetActualKey(e);
+
+            if (isEditMode)
+            {
+                switch (actualKey)
+                {
+                    case Key.Escape:
+                    case Key.Enter:
+                        if (!e.IsRepeat)
+                            ExitEditMode();
+                        break;
+                    case Key.E:
+                        if (!e.IsRepeat)
+                            SetEditTool(EditTool.Eraser);
+                        break;
+                    case Key.Q:
+                        if (!e.IsRepeat)
+                            SetEditTool(EditTool.Brush);
+                        break;
+                    case Key.Z:
+                        if (!e.IsRepeat)
+                            UndoLastDrawingStroke();
+                        break;
+                    case Key.Oem4:
+                        if (!e.IsRepeat)
+                            AdjustDrawingBrushSize(-1);
+                        break;
+                    case Key.Oem6:
+                        if (!e.IsRepeat)
+                            AdjustDrawingBrushSize(1);
+                        break;
+                    default:
+                        break;
+                }
+
+                e.Handled = true;
+                return;
+            }
+
             switch(actualKey)
             {
                 case Key.Escape:
@@ -1086,24 +1644,28 @@ namespace Binjyo
                 case Key.S:
                     if (!e.IsRepeat)
                     {
-                        Save();
+                        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                            Save(false);
+                        else
+                            Save();
                     }
                     e.Handled = true;
                     break;
                 case Key.C:
-                    if(Keyboard.IsKeyDown(Key.LeftCtrl))
-                        Clipboard.SetImage(bitmpasource);
-                    else
+                    if (!e.IsRepeat)
                     {
-                        isEffectHuemap = !isEffectHuemap;
-                        UpdateBitmap();
+                        bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
+                        CopyMemoToClipboard(includeDrawing);
+                        e.Handled = true;
                     }
                     break;
                 case Key.X:
-                    if (Keyboard.IsKeyDown(Key.LeftCtrl))
+                    if (!e.IsRepeat)
                     {
-                        Clipboard.SetImage(bitmpasource);
+                        bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
+                        CopyMemoToClipboard(includeDrawing);
                         this._Close();
+                        e.Handled = true;
                     }
                     break;
                 case Key.OemTilde:
@@ -1114,30 +1676,55 @@ namespace Binjyo
                         SetResizeMode(!isResizeMode);
                     e.Handled = true;
                     break;
+                case Key.E:
+                    if (!e.IsRepeat)
+                        EnterEditMode();
+                    e.Handled = true;
+                    break;
                 case Key.D:
                     ResizeDelta(-0.2);
                     break;
                 case Key.F:
-                    ResizeDelta(0.2);
+                    if (!e.IsRepeat)
+                    {
+                        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                        {
+                            FlipDrawingVertically();
+                            this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                            geometryTransformHistory.Add('V');
+                        }
+                        else
+                        {
+                            FlipDrawingHorizontally();
+                            this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                            geometryTransformHistory.Add('H');
+                        }
+                        UpdateBitmap();
+                    }
                     break;
                 case Key.G:
-                    this.isEffectGray = !this.isEffectGray;
-                    UpdateBitmap();
-                    break;
-                case Key.LeftShift:
-                    this._UpdateHSVWheel();
+                    if (!e.IsRepeat)
+                    {
+                        this.isEffectGray = !this.isEffectGray;
+                        UpdateBitmap();
+                    }
                     break;
                 case Key.H:
-                    this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
-                    geometryTransformHistory.Add('H');
-                    UpdateBitmap();
+                    if (!e.IsRepeat)
+                    {
+                        isEffectHuemap = !isEffectHuemap;
+                        UpdateBitmap();
+                    }
                     break;
-                case Key.V:
-                    this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    geometryTransformHistory.Add('V');
-                    UpdateBitmap();
+                case Key.CapsLock:
+                    if (!e.IsRepeat)
+                    {
+                        isHSVWheelPinned = !isHSVWheelPinned;
+                        RefreshHSVWheelVisibility();
+                    }
                     break;
                 case Key.R:
+                    RotateDrawing90();
                     this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     geometryTransformHistory.Add('R');
                     UpdateBitmap();
@@ -1174,6 +1761,12 @@ namespace Binjyo
         private void Window_KeyUp(object sender, KeyEventArgs e)
         {
             Key actualKey = GetActualKey(e);
+            if (isEditMode)
+            {
+                e.Handled = true;
+                return;
+            }
+
             switch (actualKey)
             {
                 case Key.B:
@@ -1545,6 +2138,17 @@ namespace Binjyo
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (isEditMode)
+            {
+                if (e.ChangedButton == MouseButton.Left)
+                    BeginDrawingStroke(e.GetPosition(this));
+                e.Handled = true;
+                return;
+            }
+
+            if (IsEventFromButton(e.OriginalSource))
+                return;
+
             if (isResizeMode && lockmode == 0)
             {
                 ResizeHandle handle = GetResizeHandleAtMousePosition();
@@ -1568,6 +2172,18 @@ namespace Binjyo
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
+            if (isEditMode)
+            {
+                Cursor = currentEditTool == EditTool.Brush ? Cursors.Pen : Cursors.Cross;
+                if (isDrawingStroke && Mouse.LeftButton == MouseButtonState.Pressed)
+                    ExtendDrawingStroke(e.GetPosition(this));
+                else if (isDrawingStroke)
+                    EndDrawingStroke();
+
+                _HideHSVWheel();
+                return;
+            }
+
             if (isResizing)
             {
                 if (Mouse.LeftButton == MouseButtonState.Pressed)
@@ -1599,11 +2215,7 @@ namespace Binjyo
                 Cursor = Cursors.Arrow;
             }
 
-            // Show HSV
-            if (!isdrag && !isResizing && Keyboard.IsKeyDown(Key.LeftShift) && !isOverButton)
-                this._UpdateHSVWheel();
-            else
-                this._HideHSVWheel();
+            RefreshHSVWheelVisibility();
         }
 
         private void UpdateDragFromMouse()
@@ -1702,6 +2314,13 @@ namespace Binjyo
 
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
         {
+            if (isEditMode)
+            {
+                EndDrawingStroke();
+                e.Handled = true;
+                return;
+            }
+
             isdrag = false;
             dragStartPositions.Clear();
             StopResize();
@@ -1711,22 +2330,32 @@ namespace Binjyo
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            Clipboard.SetImage(bitmpasource);
+            if (isEditMode)
+                return;
+
+            if (IsEventFromButton(e.OriginalSource))
+                return;
+
+            bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
+            CopyMemoToClipboard(includeDrawing);
             this._Close();
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
         {
+            RefreshHSVWheelVisibility();
         }
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
-            //isdrag = false;
-            popup.IsOpen = false;
+            _HideHSVWheel();
         }
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if (isEditMode)
+                return;
+
             if (Keyboard.IsKeyDown(Key.LeftCtrl))
             {
                 if (e.Delta > 0) ResizeDelta(0.1);
@@ -1757,18 +2386,22 @@ namespace Binjyo
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
+            if (isEditMode)
+                ExitEditMode();
+
             isdrag = false;
             dragStartPositions.Clear();
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
-            popup.IsOpen = false;
+            RefreshHSVWheelVisibility();
         }
 
         private void Window_Activated(object sender, EventArgs e)
         {
             MarkAsFocused();
             FlashFocusCue();
+            RefreshHSVWheelVisibility();
         }
 
         private void Window_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -1781,6 +2414,9 @@ namespace Binjyo
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            if (isEditMode)
+                return;
+
             switch (lockmode)
             {
                 case 2:
@@ -1805,7 +2441,6 @@ namespace Binjyo
 
         private void Button_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            e.Handled = true;
         }
 
         private void Button_MouseEnter(object sender, MouseEventArgs e)
@@ -1815,6 +2450,7 @@ namespace Binjyo
             {
                 button.Opacity = 1;
             }
+            RefreshHSVWheelVisibility();
         }
 
         private void Button_MouseLeave(object sender, MouseEventArgs e)
@@ -1824,6 +2460,7 @@ namespace Binjyo
             {
                 button.Opacity = 0.005;
             }
+            RefreshHSVWheelVisibility();
         }
 
         #endregion

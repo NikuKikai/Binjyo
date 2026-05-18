@@ -96,6 +96,7 @@ namespace Binjyo
         {
             Bitmap bitmap = HistoryStore.LoadBitmap(viewModel.Entry);
             var memo = new Memo(bitmap, 0, 0);
+            memo.RestoreDrawingData(HistoryStore.LoadDrawingData(viewModel.Entry));
             GetAdjustedBounds(
                 viewModel.Entry.Left,
                 viewModel.Entry.Top,
@@ -170,6 +171,12 @@ namespace Binjyo
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             HistoryStore.ClearAll();
+            ReloadEntries();
+        }
+
+        private void ClearOldButton_Click(object sender, RoutedEventArgs e)
+        {
+            HistoryStore.ClearOlderThan(DateTime.Now.AddDays(-7));
             ReloadEntries();
         }
     }

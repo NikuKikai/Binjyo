@@ -1,0 +1,33 @@
+<Window x:Class="Binjyo.EditModePanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit Mode Panel"
+        Width="170"
+        Height="92"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ShowActivated="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Focusable="False">
+    <Border Background="#FF000000"
+            CornerRadius="4"
+            Padding="10">
+        <StackPanel>
+            <TextBlock Name="TitleText"
+                       Foreground="White"
+                       FontWeight="Bold"
+                       Text="Edit Mode"/>
+            <TextBlock Name="ToolNameText"
+                        Margin="0,8,0,0"
+                        Foreground="White"
+                        Text="Tool: Brush"/>
+            <TextBlock Name="BrushSizeText"
+                       Margin="0,4,0,0"
+                       Foreground="White"
+                       Text="Size: 5"/>
+        </StackPanel>
+    </Border>
+</Window>

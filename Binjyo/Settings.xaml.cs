@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Text.RegularExpressions;
 
 namespace Binjyo
 {
@@ -35,6 +36,7 @@ namespace Binjyo
             modifierScreenshot = (ModifierKeys)Properties.Settings.Default.ModifierScreenshot;
             KeyBoxSreenshot.Text = keyScreenshot.ToString();
             CheckSnapMemo.IsChecked = Properties.Settings.Default.SnapMemo;
+            HistoryEntryLimitBox.Text = Properties.Settings.Default.HistoryEntryLimit.ToString();
             switch (modifierScreenshot)
             {
                 case ModifierKeys.Control | ModifierKeys.Alt:
@@ -131,6 +133,27 @@ namespace Binjyo
                 return;
 
             Properties.Settings.Default.SnapMemo = CheckSnapMemo.IsChecked.Value;
+            Properties.Settings.Default.Save();
+        }
+
+        private void HistoryEntryLimitBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = Regex.IsMatch(e.Text, "[^0-9]");
+        }
+
+        private void HistoryEntryLimitBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (HistoryEntryLimitBox == null)
+                return;
+
+            if (!int.TryParse(HistoryEntryLimitBox.Text, out int value))
+                return;
+
+            value = Math.Max(1, value);
+            if (Properties.Settings.Default.HistoryEntryLimit == value)
+                return;
+
+            Properties.Settings.Default.HistoryEntryLimit = value;
             Properties.Settings.Default.Save();
         }
     }
