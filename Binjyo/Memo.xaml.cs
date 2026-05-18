@@ -86,7 +86,7 @@ namespace Binjyo
         private bool isEffectTransparent = false;
         private int pEffectTransparent = 128;
         private bool isEffectHuemap = false;
-        private bool isHSVWheelPinned = false;
+        private static bool isHSVWheelPinnedGlobally = false;
         private readonly List<char> geometryTransformHistory = new List<char>();
         private DrawingDocumentData drawingDocument = new DrawingDocumentData();
         private DrawingStrokeData activeDrawingStroke = null;
@@ -812,7 +812,7 @@ namespace Binjyo
 
         private bool ShouldShowHSVWheel()
         {
-            return isHSVWheelPinned && !isEditMode && !isdrag && !isResizing && !isOverButton;
+            return isHSVWheelPinnedGlobally && !isEditMode && !isdrag && !isResizing && !isOverButton;
         }
 
         private void RefreshHSVWheelVisibility()
@@ -821,6 +821,14 @@ namespace Binjyo
                 _UpdateHSVWheel();
             else
                 _HideHSVWheel();
+        }
+
+        private static void RefreshAllMemoHSVWheelVisibility()
+        {
+            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>())
+            {
+                memo.RefreshHSVWheelVisibility();
+            }
         }
 
         private int ClampToPixelIndex(int value, int length)
@@ -1738,8 +1746,8 @@ namespace Binjyo
                 case Key.CapsLock:
                     if (!e.IsRepeat)
                     {
-                        isHSVWheelPinned = !isHSVWheelPinned;
-                        RefreshHSVWheelVisibility();
+                        isHSVWheelPinnedGlobally = !isHSVWheelPinnedGlobally;
+                        RefreshAllMemoHSVWheelVisibility();
                     }
                     break;
                 case Key.R:
