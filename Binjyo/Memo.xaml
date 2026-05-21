@@ -12,6 +12,7 @@
         Topmost="True"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
+        ContextMenuOpening="Window_ContextMenuOpening"
         KeyDown="Window_KeyDown"
         KeyUp="Window_KeyUp"
         MouseEnter="Window_MouseEnter"

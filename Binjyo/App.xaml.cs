@@ -134,7 +134,7 @@ namespace Binjyo
             _notifyIcon.ContextMenuStrip = menu;
         }
 
-        private void SetViewMode(MemoDisplayMode mode)
+        public void SetViewMode(MemoDisplayMode mode)
         {
             Memo.SetGlobalDisplayMode(mode);
         }
@@ -149,7 +149,7 @@ namespace Binjyo
             autoHideItem.Checked = currentMode == MemoDisplayMode.AutoHide;
             minimizedItem.Checked = currentMode == MemoDisplayMode.Minimized;
         }
-        private void OpenHistory()
+        public void OpenHistory()
         {
             if (historyWindow == null)
             {
@@ -160,7 +160,7 @@ namespace Binjyo
             historyWindow.Show();
             historyWindow.Activate();
         }
-        private void OpenShortcutHelp()
+        public void OpenShortcutHelp()
         {
             if (shortcutHelp == null)
             {
@@ -171,7 +171,7 @@ namespace Binjyo
             shortcutHelp.Show();
             shortcutHelp.Activate();
         }
-        private void OpenSettings()
+        public void OpenSettings()
         {
             if (settings == null)
             {
@@ -180,7 +180,7 @@ namespace Binjyo
             }
             settings.Show();
         }
-        private void CloseAll()
+        public void CloseAll()
         {
             foreach (Window item in Application.Current.Windows)
             {
@@ -188,7 +188,7 @@ namespace Binjyo
             }
         }
 
-        private void ExitApplication()
+        public void ExitApplication()
         {
             _isExit = true;
             foreach (Window item in Application.Current.Windows)

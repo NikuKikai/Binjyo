@@ -9,8 +9,20 @@
         Height="700"
         MinWidth="640"
         MinHeight="420"
+        Background="#111111"
         WindowStartupLocation="CenterScreen">
     <DockPanel Margin="12">
+        <DockPanel.Resources>
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="#FF1E1E1E"/>
+                <Setter Property="Foreground" Value="#FFF3F3F3"/>
+                <Setter Property="BorderBrush" Value="#FF3C3C3C"/>
+                <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="#FFD6D6D6"/>
+            </Style>
+        </DockPanel.Resources>
         <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -20,6 +32,7 @@
             <TextBlock VerticalAlignment="Center"
                        FontSize="20"
                        FontWeight="SemiBold"
+                       Foreground="#FFF3F3F3"
                        Text="History"/>
             <Button Grid.Column="1"
                     Margin="0,0,8,0"
@@ -40,6 +53,7 @@
                             <TextBlock Margin="0,0,0,8"
                                        FontSize="16"
                                        FontWeight="SemiBold"
+                                       Foreground="#FFF3F3F3"
                                        Text="{Binding Key}"/>
                             <ItemsControl ItemsSource="{Binding Items}">
                                 <ItemsControl.ItemsPanel>
@@ -51,15 +65,15 @@
                                     <DataTemplate>
                                         <Border Margin="0,0,12,12"
                                                 Padding="8"
-                                                BorderBrush="#FFD0D0D0"
+                                                BorderBrush="#FF3C3C3C"
                                                 BorderThickness="1"
-                                                Background="#FFF7F7F7"
+                                                Background="#FF1E1E1E"
                                                 MouseLeftButtonDown="EntryBorder_MouseLeftButtonDown">
                                             <StackPanel Width="180">
                                                 <Border Width="164"
                                                         Height="120"
                                                         Background="#FF202020"
-                                                        BorderBrush="#FFB0B0B0"
+                                                        BorderBrush="#FF3C3C3C"
                                                         BorderThickness="1">
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="Uniform"
@@ -68,12 +82,13 @@
                                                 </Border>
                                                 <TextBlock Margin="0,8,0,0"
                                                            FontWeight="SemiBold"
+                                                           Foreground="#FFF3F3F3"
                                                            Text="{Binding CreatedAtText}"/>
                                                 <TextBlock Margin="0,4,0,0"
-                                                           Foreground="#FF505050"
+                                                           Foreground="#FFD6D6D6"
                                                            Text="{Binding SizeText}"/>
                                                 <TextBlock Margin="0,2,0,0"
-                                                           Foreground="#FF505050"
+                                                           Foreground="#FFD6D6D6"
                                                            Text="{Binding PositionText}"/>
                                             </StackPanel>
                                         </Border>
