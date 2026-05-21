@@ -132,6 +132,7 @@ namespace Binjyo
         private bool isSaving = false;
         private bool isClosing = false;
         private bool isSuspendingDisplayPosition = false;
+        private EventHandler centerInfoFadeCompletedHandler = null;
         private const double SnapDistance = 12;
         private const double MinVisiblePixels = 2;
         private const double ResizeHandleSize = 14;
@@ -492,12 +493,39 @@ namespace Binjyo
         {
             isEffectGray = !isEffectGray;
             UpdateBitmap();
+            ShowCenterInfoFading("Grayscale", isEffectGray ? "On" : "Off");
         }
 
         private void ToggleHueMap()
         {
             isEffectHuemap = !isEffectHuemap;
             UpdateBitmap();
+            ShowCenterInfoFading("Hue Map", isEffectHuemap ? "On" : "Off");
+        }
+
+        private void ToggleBinarization()
+        {
+            isEffectBinarize = !isEffectBinarize;
+            if (isEffectBinarize)
+                isEffectQuantize = false;
+            UpdateBitmap();
+            ShowCenterInfoFading("Binarization", isEffectBinarize ? $"{ThresholdToPercent(pEffectBinarize)}%" : "Off");
+        }
+
+        private void ToggleQuantization()
+        {
+            isEffectQuantize = !isEffectQuantize;
+            if (isEffectQuantize)
+                isEffectBinarize = false;
+            UpdateBitmap();
+            ShowCenterInfoFading("Quantization", isEffectQuantize ? $"{pEffectQuantize} levels" : "Off");
+        }
+
+        private void ToggleTransparency()
+        {
+            isEffectTransparent = !isEffectTransparent;
+            UpdateBitmap();
+            ShowCenterInfoFading("Transparency", isEffectTransparent ? $"{ThresholdToPercent(pEffectTransparent)}%" : "Off");
         }
 
         private void SetBinarizationEnabled(bool enabled)
@@ -506,6 +534,7 @@ namespace Binjyo
             if (enabled)
                 isEffectQuantize = false;
             UpdateBitmap();
+            ShowCenterInfoFading("Binarization", enabled ? $"{ThresholdToPercent(pEffectBinarize)}%" : "Off");
         }
 
         private void SetBinarizationPercent(int percent)
@@ -514,6 +543,7 @@ namespace Binjyo
             isEffectBinarize = true;
             isEffectQuantize = false;
             UpdateBitmap();
+            ShowCenterInfoFading("Binarization", $"{percent}%");
         }
 
         private void SetQuantizationEnabled(bool enabled)
@@ -522,6 +552,7 @@ namespace Binjyo
             if (enabled)
                 isEffectBinarize = false;
             UpdateBitmap();
+            ShowCenterInfoFading("Quantization", enabled ? $"{pEffectQuantize} levels" : "Off");
         }
 
         private void SetQuantizationLevel(int level)
@@ -530,12 +561,14 @@ namespace Binjyo
             isEffectQuantize = true;
             isEffectBinarize = false;
             UpdateBitmap();
+            ShowCenterInfoFading("Quantization", $"{level} levels");
         }
 
         private void SetTransparencyEnabled(bool enabled)
         {
             isEffectTransparent = enabled;
             UpdateBitmap();
+            ShowCenterInfoFading("Transparency", enabled ? $"{ThresholdToPercent(pEffectTransparent)}%" : "Off");
         }
 
         private void SetTransparencyPercent(int percent)
@@ -543,6 +576,7 @@ namespace Binjyo
             pEffectTransparent = PercentToThreshold(percent);
             isEffectTransparent = true;
             UpdateBitmap();
+            ShowCenterInfoFading("Transparency", $"{percent}%");
         }
 
         public new void RestoreBounds(double left, double top, double width, double height)
@@ -697,6 +731,69 @@ namespace Binjyo
             anchorTop = top;
             hasAnchorPosition = true;
             ApplyCurrentDisplayMode();
+        }
+
+        private void SetCenterInfoText(string title, string detail)
+        {
+            resizeScaleText.Text = title;
+            resizeScaleTextStrokeLeft.Text = title;
+            resizeScaleTextStrokeRight.Text = title;
+            resizeScaleTextStrokeTop.Text = title;
+            resizeScaleTextStrokeBottom.Text = title;
+            resizeSizeText.Text = detail;
+            resizeSizeTextStrokeLeft.Text = detail;
+            resizeSizeTextStrokeRight.Text = detail;
+            resizeSizeTextStrokeTop.Text = detail;
+            resizeSizeTextStrokeBottom.Text = detail;
+        }
+
+        private void ShowCenterInfoPersistent(string title, string detail)
+        {
+            if (resizeInfoOverlay == null)
+                return;
+
+            SetCenterInfoText(title, detail);
+            resizeInfoOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+            resizeInfoOverlay.Visibility = Visibility.Visible;
+            resizeInfoOverlay.Opacity = 1;
+        }
+
+        private void ShowCenterInfoFading(string title, string detail)
+        {
+            if (resizeInfoOverlay == null)
+                return;
+
+            SetCenterInfoText(title, detail);
+            resizeInfoOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+            resizeInfoOverlay.Visibility = Visibility.Visible;
+            resizeInfoOverlay.Opacity = 1;
+
+            if (centerInfoFadeCompletedHandler != null)
+                resizeInfoOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+
+            var animation = new DoubleAnimationUsingKeyFrames();
+            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(550))));
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(900))));
+            centerInfoFadeCompletedHandler = (s, e) =>
+            {
+                resizeInfoOverlay.Visibility = Visibility.Collapsed;
+                resizeInfoOverlay.Opacity = 1;
+                centerInfoFadeCompletedHandler = null;
+            };
+            animation.Completed += centerInfoFadeCompletedHandler;
+            resizeInfoOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
+        }
+
+        private void HideCenterInfo()
+        {
+            if (resizeInfoOverlay == null)
+                return;
+
+            resizeInfoOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+            resizeInfoOverlay.Visibility = Visibility.Collapsed;
+            resizeInfoOverlay.Opacity = 1;
+            centerInfoFadeCompletedHandler = null;
         }
 
         private void UpdateEvadeDisplayPosition()

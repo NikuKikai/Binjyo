@@ -458,17 +458,11 @@ namespace Binjyo
                     break;
                 case Key.G:
                     if (!e.IsRepeat)
-                    {
-                        this.isEffectGray = !this.isEffectGray;
-                        UpdateBitmap();
-                    }
+                        ToggleGrayscale();
                     break;
                 case Key.H:
                     if (!e.IsRepeat)
-                    {
-                        isEffectHuemap = !isEffectHuemap;
-                        UpdateBitmap();
-                    }
+                        ToggleHueMap();
                     break;
                 case Key.CapsLock:
                     if (!e.IsRepeat)
@@ -529,26 +523,15 @@ namespace Binjyo
                     break;
                 case Key.B:
                     if (!isEditedDuringKeyB)
-                    {
-                        isEffectBinarize = !isEffectBinarize;
-                        if (isEffectBinarize) isEffectQuantize = false;
-                    }
-                    UpdateBitmap();
+                        ToggleBinarization();
                     break;
                 case Key.Q:
                     if (!isEditedDuringKeyQ)
-                    {
-                        isEffectQuantize = !isEffectQuantize;
-                        if (isEffectQuantize) isEffectBinarize = false;
-                    }
-                    UpdateBitmap();
+                        ToggleQuantization();
                     break;
                 case Key.O:
                     if (!isEditedDuringKeyO)
-                    {
-                        isEffectTransparent = !isEffectTransparent;
-                    }
-                    UpdateBitmap();
+                        ToggleTransparency();
                     break;
                 case Key.Left:
                     leftArrowRepeatCount = 0;
@@ -1141,6 +1124,7 @@ namespace Binjyo
                 isEffectBinarize = true; isEffectQuantize = false;
                 pEffectBinarize = Math.Max(Math.Min(pEffectBinarize + 15 * Math.Sign(e.Delta), 250), 5);
                 UpdateBitmap();
+                ShowCenterInfoFading("Binarization", $"{ThresholdToPercent(pEffectBinarize)}%");
             }
             else if (Keyboard.IsKeyDown(Key.Q))
             {
@@ -1148,6 +1132,7 @@ namespace Binjyo
                 isEffectQuantize = true; isEffectBinarize = false;
                 pEffectQuantize = Math.Max(Math.Min(pEffectQuantize + 1 * Math.Sign(e.Delta), 16), 3);
                 UpdateBitmap();
+                ShowCenterInfoFading("Quantization", $"{pEffectQuantize} levels");
             }
             else if (Keyboard.IsKeyDown(Key.O))
             {
@@ -1155,6 +1140,7 @@ namespace Binjyo
                 isEffectTransparent = true;
                 pEffectTransparent = Math.Max(Math.Min(pEffectTransparent + 15 * Math.Sign(e.Delta), 245), 10);
                 UpdateBitmap();
+                ShowCenterInfoFading("Transparency", $"{ThresholdToPercent(pEffectTransparent)}%");
             }
         }
 

@@ -85,8 +85,7 @@ namespace Binjyo
             activeResizeHandle = ResizeHandle.None;
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
-            if (resizeInfoOverlay != null)
-                resizeInfoOverlay.Visibility = Visibility.Collapsed;
+            HideCenterInfo();
         }
 
         private void UpdateResizeFromMouse()
@@ -109,23 +108,9 @@ namespace Binjyo
 
         private void UpdateResizeInfoOverlay(double currentScale, double currentWidth, double currentHeight)
         {
-            if (resizeInfoOverlay == null)
-                return;
-
             string scaleText = $"{Math.Round(currentScale * 100):0}%";
             string sizeText = $"{Math.Round(currentWidth):0} x {Math.Round(currentHeight):0}";
-
-            resizeScaleText.Text = scaleText;
-            resizeScaleTextStrokeLeft.Text = scaleText;
-            resizeScaleTextStrokeRight.Text = scaleText;
-            resizeScaleTextStrokeTop.Text = scaleText;
-            resizeScaleTextStrokeBottom.Text = scaleText;
-            resizeSizeText.Text = sizeText;
-            resizeSizeTextStrokeLeft.Text = sizeText;
-            resizeSizeTextStrokeRight.Text = sizeText;
-            resizeSizeTextStrokeTop.Text = sizeText;
-            resizeSizeTextStrokeBottom.Text = sizeText;
-            resizeInfoOverlay.Visibility = Visibility.Visible;
+            ShowCenterInfoPersistent(scaleText, sizeText);
         }
 
         private double GetResizeScaleFromMouseDelta(double deltaX, double deltaY)
