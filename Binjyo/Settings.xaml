@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Binjyo"
         mc:Ignorable="d"
-        Title="Settings" Height="400" Width="500"
+        Title="Settings" Height="560" Width="500"
         Background="#111"
         WindowState="Normal"
         >
@@ -42,6 +42,44 @@
                   Content="Enable snapping to screen edges and other memos"
                   Checked="CheckSnapMemo_Changed"
                   Unchecked="CheckSnapMemo_Changed"/>
+
+        <Grid Margin="10,18,10,0">
+            <Label Content="Memo display mode (Global)" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
+        </Grid>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Margin="35,0,15,0" Grid.Column="0">
+                <RadioButton Name="RadioDisplayMode0" Content="Ctrl+Alt" GroupName="RadioGroup2" Foreground="#FFD6D6D6" Margin="0,0,10,0"
+                             Checked="RadioDisplayMode_Checked"/>
+                <RadioButton Name="RadioDisplayMode1" Content="Ctrl+Shift" GroupName="RadioGroup2" Foreground="#FFD6D6D6" Margin="0,0,10,0"
+                             Checked="RadioDisplayMode_Checked"/>
+                <RadioButton Name="RadioDisplayMode2" Content="Ctrl+Win" GroupName="RadioGroup2" Foreground="#FFD6D6D6" Margin="0,0,10,0"
+                             Checked="RadioDisplayMode_Checked"/>
+            </StackPanel>
+            <TextBox Name="KeyBoxDisplayMode" TextAlignment="Center" VerticalContentAlignment="Center"
+                     Grid.Column="1" HorizontalAlignment="Right" MinWidth="40" Margin="0,0,15,0"
+                     Text="X" IsReadOnly="True" Background="#FF3C3C3C" Foreground="#FFF3F3F3" />
+        </Grid>
+
+        <Grid Margin="10,18,10,0">
+            <Label Content="Auto hide behavior" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
+        </Grid>
+        <StackPanel Margin="35,0,15,0">
+            <RadioButton Name="RadioAutoHideHover"
+                         Content="Hide only while the mouse is over a memo"
+                         GroupName="AutoHideGroup"
+                         Foreground="#FFD6D6D6"
+                         Margin="0,0,0,6"
+                         Checked="RadioAutoHide_Checked"/>
+            <RadioButton Name="RadioAutoHideEvade"
+                         Content="Evade the mouse using a soft repulsion"
+                         GroupName="AutoHideGroup"
+                         Foreground="#FFD6D6D6"
+                         Checked="RadioAutoHide_Checked"/>
+        </StackPanel>
 
         <Grid Margin="10,18,10,0">
             <Label Content="History" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />

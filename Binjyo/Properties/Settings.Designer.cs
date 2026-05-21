@@ -49,6 +49,18 @@ namespace Binjyo.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ModifierDisplayMode {
+            get {
+                return ((int)(this["ModifierDisplayMode"]));
+            }
+            set {
+                this["ModifierDisplayMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool SnapMemo {
             get {
@@ -56,6 +68,18 @@ namespace Binjyo.Properties {
             }
             set {
                 this["SnapMemo"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int AutoHideBehavior {
+            get {
+                return ((int)(this["AutoHideBehavior"]));
+            }
+            set {
+                this["AutoHideBehavior"] = value;
             }
         }
         

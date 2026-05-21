@@ -8,8 +8,14 @@
     <Setting Name="ModifierScreenshot" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
+    <Setting Name="ModifierDisplayMode" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
     <Setting Name="SnapMemo" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="AutoHideBehavior" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="HistoryEntryLimit" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">100</Value>

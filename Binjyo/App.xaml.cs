@@ -19,7 +19,8 @@ namespace Binjyo
     {
         private System.Windows.Forms.NotifyIcon _notifyIcon;
         private bool _isExit;
-        private HotKey _hotKey;
+        private HotKey _screenshotHotKey;
+        private HotKey _displayModeHotKey;
 
         // single-instance
         static Mutex mutex = new Mutex(true, "{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}");
@@ -59,6 +60,7 @@ namespace Binjyo
         {
             var keyScreenshot = (Key)Binjyo.Properties.Settings.Default.KeyScreenshot;
             var modifierScreenshot = (ModifierKeys)Binjyo.Properties.Settings.Default.ModifierScreenshot;
+            var modifierDisplayMode = (ModifierKeys)Binjyo.Properties.Settings.Default.ModifierDisplayMode;
             if (keyScreenshot == Key.None)
             {
                 keyScreenshot = Key.A;
@@ -67,36 +69,85 @@ namespace Binjyo
                 Binjyo.Properties.Settings.Default.ModifierScreenshot = (int)modifierScreenshot;
                 Binjyo.Properties.Settings.Default.Save();
             }
+            if (modifierDisplayMode == ModifierKeys.None)
+            {
+                modifierDisplayMode = ModifierKeys.Control | ModifierKeys.Shift;
+                Binjyo.Properties.Settings.Default.ModifierDisplayMode = (int)modifierDisplayMode;
+                Binjyo.Properties.Settings.Default.Save();
+            }
             OnSettingsScreenshotKeySet(keyScreenshot, modifierScreenshot);
+            OnSettingsDisplayModeModifierSet(modifierDisplayMode);
         }
 
         private void OnSettingsScreenshotKeySet(Key key, ModifierKeys modifier)
         {
-            if (_hotKey != null) _hotKey.Unregister();
-            _hotKey = new HotKey(key, (Binjyo.KeyModifier)modifier, OnHotKeyHandler);
+            if (_screenshotHotKey != null) _screenshotHotKey.Unregister();
+            _screenshotHotKey = new HotKey(key, (Binjyo.KeyModifier)modifier, OnScreenshotHotKeyHandler);
 
             if (shortcutHelp != null)
                 shortcutHelp.UpdateGlobalShortcut(key, modifier);
         }
 
-        private void OnHotKeyHandler(HotKey hotKey)
+        private void OnSettingsDisplayModeModifierSet(ModifierKeys modifier)
         {
-            //ShowMainWindow();
+            if (_displayModeHotKey != null) _displayModeHotKey.Unregister();
+            _displayModeHotKey = new HotKey(Key.X, (Binjyo.KeyModifier)modifier, OnDisplayModeHotKeyHandler);
+
+            if (shortcutHelp != null)
+                shortcutHelp.UpdateDisplayModeShortcut(modifier);
+        }
+
+        private void OnScreenshotHotKeyHandler(HotKey hotKey)
+        {
             mainWindow.Shot();
+        }
+
+        private void OnDisplayModeHotKeyHandler(HotKey hotKey)
+        {
+            Memo.CycleGlobalDisplayMode();
         }
 
         private void CreateContextMenu()
         {
-            _notifyIcon.ContextMenuStrip =
-              new System.Windows.Forms.ContextMenuStrip();
+            var menu = new System.Windows.Forms.ContextMenuStrip();
             //_notifyIcon.ContextMenuStrip.Items.Add("MainWindow...").Click += (s, e) => ShowMainWindow();
-            _notifyIcon.ContextMenuStrip.Items.Add("Minimize All").Click += (s, e) => MinimizeAll();
-            _notifyIcon.ContextMenuStrip.Items.Add("Expand/Unlock All").Click += (s, e) => ExpandAll();
-            _notifyIcon.ContextMenuStrip.Items.Add("Close All").Click += (s, e) => CloseAll();
-            _notifyIcon.ContextMenuStrip.Items.Add("History...").Click += (s, e) => OpenHistory();
-            _notifyIcon.ContextMenuStrip.Items.Add("Shortcut Help").Click += (s, e) => OpenShortcutHelp();
-            _notifyIcon.ContextMenuStrip.Items.Add("Settings...").Click += (s, e) => OpenSettings();
-            _notifyIcon.ContextMenuStrip.Items.Add("Exit").Click += (s, e) => ExitApplication();
+
+            var viewModeItem = new System.Windows.Forms.ToolStripMenuItem("View mode");
+            var expandedItem = new System.Windows.Forms.ToolStripMenuItem("Expanded");
+            var autoHideItem = new System.Windows.Forms.ToolStripMenuItem("Auto Hide");
+            var minimizedItem = new System.Windows.Forms.ToolStripMenuItem("Minimized");
+
+            expandedItem.Click += (s, e) => SetViewMode(MemoDisplayMode.Expanded);
+            autoHideItem.Click += (s, e) => SetViewMode(MemoDisplayMode.AutoHide);
+            minimizedItem.Click += (s, e) => SetViewMode(MemoDisplayMode.Minimized);
+            viewModeItem.DropDownOpening += (s, e) => UpdateViewModeMenuChecks(expandedItem, autoHideItem, minimizedItem);
+            viewModeItem.DropDownItems.Add(expandedItem);
+            viewModeItem.DropDownItems.Add(autoHideItem);
+            viewModeItem.DropDownItems.Add(minimizedItem);
+
+            menu.Items.Add(viewModeItem);
+            menu.Items.Add("Close All").Click += (s, e) => CloseAll();
+            menu.Items.Add("History...").Click += (s, e) => OpenHistory();
+            menu.Items.Add("Shortcut Help").Click += (s, e) => OpenShortcutHelp();
+            menu.Items.Add("Settings...").Click += (s, e) => OpenSettings();
+            menu.Items.Add("Exit").Click += (s, e) => ExitApplication();
+            _notifyIcon.ContextMenuStrip = menu;
+        }
+
+        private void SetViewMode(MemoDisplayMode mode)
+        {
+            Memo.SetGlobalDisplayMode(mode);
+        }
+
+        private void UpdateViewModeMenuChecks(
+            System.Windows.Forms.ToolStripMenuItem expandedItem,
+            System.Windows.Forms.ToolStripMenuItem autoHideItem,
+            System.Windows.Forms.ToolStripMenuItem minimizedItem)
+        {
+            MemoDisplayMode currentMode = Memo.GetGlobalDisplayMode();
+            expandedItem.Checked = currentMode == MemoDisplayMode.Expanded;
+            autoHideItem.Checked = currentMode == MemoDisplayMode.AutoHide;
+            minimizedItem.Checked = currentMode == MemoDisplayMode.Minimized;
         }
         private void OpenHistory()
         {
@@ -116,6 +167,7 @@ namespace Binjyo
                 shortcutHelp = new ShortcutHelp();
                 shortcutHelp.Closed += (s, e) => shortcutHelp = null;
             }
+            shortcutHelp.UpdateDisplayModeShortcut((ModifierKeys)Binjyo.Properties.Settings.Default.ModifierDisplayMode);
             shortcutHelp.Show();
             shortcutHelp.Activate();
         }
@@ -123,30 +175,10 @@ namespace Binjyo
         {
             if (settings == null)
             {
-                settings = new Settings(OnSettingsScreenshotKeySet);
+                settings = new Settings(OnSettingsScreenshotKeySet, OnSettingsDisplayModeModifierSet);
                 settings.Closed += (s, e) => settings = null;
             }
             settings.Show();
-        }
-        private void MinimizeAll()
-        {
-            foreach (Window item in Application.Current.Windows)
-            {
-                if (item.Title == "Memo")
-                {
-                    ((Memo)item).Minimize();
-                }
-            }
-        }
-        private void ExpandAll()
-        {
-            foreach (Window item in Application.Current.Windows)
-            {
-                if (item.Title == "Memo")
-                {
-                    ((Memo)item).Expand();
-                }
-            }
         }
         private void CloseAll()
         {

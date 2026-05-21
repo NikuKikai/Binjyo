@@ -26,11 +26,6 @@
         Activated="Window_Activated"
         Deactivated="Window_Deactivated"
         >
-    <Window.Resources>
-        <Image x:Key="lockoff" Source="Resources/lockoff.ico" Height="16" Width="16" Margin="0,0,0,0" />
-        <Image x:Key="lockon" Source="Resources/lockon.ico" Height="16" Width="16" Margin="0,0,0,0"/>
-        <Image x:Key="lockmin" Source="Resources/lockmin.ico" Height="16" Width="16" Margin="0,0,0,0"/>
-    </Window.Resources>
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
         <Canvas Name="drawingOverlay"
@@ -133,16 +128,6 @@
                 </Grid>
             </StackPanel>
         </Grid>
-        <Button Name="button" Margin="0,0,0,0" Width="18" Height="18" 
-                HorizontalAlignment="Left" VerticalAlignment="Top" Opacity="0"
-                BorderThickness="0"
-                Click="Button_Click" PreviewMouseDown="Button_MouseDown"
-                PreviewMouseDoubleClick="Button_PreviewMouseDoubleClick"
-                MouseEnter="Button_MouseEnter" MouseLeave="Button_MouseLeave"
-                >
-            <DynamicResource ResourceKey="lockoff"/>
-
-        </Button>
         <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
             <Grid>
                 <Grid x:Name="HSVpicker" Background="#66000000" Width="170" Height="170">

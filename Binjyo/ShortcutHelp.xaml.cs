@@ -15,11 +15,17 @@ namespace Binjyo
             UpdateGlobalShortcut(
                 (Key)Properties.Settings.Default.KeyScreenshot,
                 (ModifierKeys)Properties.Settings.Default.ModifierScreenshot);
+            UpdateDisplayModeShortcut((ModifierKeys)Properties.Settings.Default.ModifierDisplayMode);
         }
 
         public void UpdateGlobalShortcut(Key key, ModifierKeys modifiers)
         {
             GlobalShortcutText.Text = $"{FormatModifiers(modifiers)}{key}";
+        }
+
+        public void UpdateDisplayModeShortcut(ModifierKeys modifiers)
+        {
+            GlobalDisplayModeShortcutText.Text = $"{FormatModifiers(modifiers)}X";
         }
 
         private static string FormatModifiers(ModifierKeys modifiers)

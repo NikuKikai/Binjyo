@@ -41,6 +41,19 @@ namespace Binjyo
         Eraser
     }
 
+    public enum MemoDisplayMode
+    {
+        Expanded,
+        AutoHide,
+        Minimized
+    }
+
+    public enum MemoAutoHideBehavior
+    {
+        HideOnHover = 0,
+        EvadeMouse = 1
+    }
+
     public static class BitmapExt
     {
         // https://stackoverflow.com/a/30729291
@@ -68,6 +81,7 @@ namespace Binjyo
     public partial class Memo : System.Windows.Window
     {
         private static long focusSequence = 0;
+        private static MemoDisplayMode globalDisplayMode = MemoDisplayMode.Expanded;
         private DispatcherTimer timer = null;
 
         private double dpiFactor = 1;
@@ -106,12 +120,17 @@ namespace Binjyo
         private bool isdrag = false;
         private bool isResizeMode = false;
         private bool isResizing = false;
-        private bool isOverButton = false;
         private bool isSaving = false;
+        private bool isSuspendingDisplayPosition = false;
         private const double SnapDistance = 12;
         private const double MinVisiblePixels = 2;
         private const double ResizeHandleSize = 14;
         private const double ResizeHandleInset = 2;
+        private const double MouseEvadeRange = 200;
+        private const double MouseEvadeBaseStrength = 300;
+        private const double MouseEvadeSpringStrength = 0.4;
+        private const double MouseEvadeBlend = 0.35;
+        private const double MouseEvadeSettledDistance = 0.5;
         private int leftArrowRepeatCount = 0;
         private int rightArrowRepeatCount = 0;
         private int upArrowRepeatCount = 0;
@@ -125,8 +144,9 @@ namespace Binjyo
         private double resizeStartRight = 0;
         private double resizeStartBottom = 0;
         private long lastFocusOrder = 0;
-
-        private int lockmode = 0;
+        private double anchorLeft = 0;
+        private double anchorTop = 0;
+        private bool hasAnchorPosition = false;
 
 
         public Memo(Bitmap bmp, int left, int top)    // Physical coordinates
@@ -150,6 +170,9 @@ namespace Binjyo
             //this.dpiFactor = VisualTreeHelper.GetDpi(this as Visual).DpiScaleX;
             //Console.WriteLine("Memo init  " + dpiFactor.ToString());
             Left = left / dpiFactor; Top = top / dpiFactor;
+            anchorLeft = Left;
+            anchorTop = Top;
+            hasAnchorPosition = true;
 
             this.bitmap = bmp;
             this.bitmapTransformed = (Bitmap)this.bitmap.Clone();
@@ -157,6 +180,38 @@ namespace Binjyo
             LocationChanged += MemoBoundsChanged;
             SizeChanged += MemoBoundsChanged;
             UpdateResizeModeVisuals();
+            ApplyCurrentDisplayMode();
+        }
+
+        public static MemoDisplayMode GetGlobalDisplayMode()
+        {
+            return globalDisplayMode;
+        }
+
+        public static void SetGlobalDisplayMode(MemoDisplayMode mode)
+        {
+            globalDisplayMode = mode;
+            foreach (Memo memo in GetVisibleAndHiddenMemos())
+                memo.ApplyCurrentDisplayMode();
+        }
+
+        public static void CycleGlobalDisplayMode()
+        {
+            MemoDisplayMode nextMode;
+            switch (globalDisplayMode)
+            {
+                case MemoDisplayMode.Expanded:
+                    nextMode = MemoDisplayMode.AutoHide;
+                    break;
+                case MemoDisplayMode.AutoHide:
+                    nextMode = MemoDisplayMode.Minimized;
+                    break;
+                default:
+                    nextMode = MemoDisplayMode.Expanded;
+                    break;
+            }
+
+            SetGlobalDisplayMode(nextMode);
         }
 
         protected void _Close()
@@ -274,27 +329,7 @@ namespace Binjyo
 
         private void TimerHandler()
         {
-            switch (lockmode)
-            {
-                case 1:
-                    double x = System.Windows.Forms.Control.MousePosition.X;
-                    double y = System.Windows.Forms.Control.MousePosition.Y;
-                    if (Left < x && x < Left + Width &&
-                        Top < y && y < Top + Height)
-                    {
-                        image.Opacity = 0;
-                        button.Opacity = 1;
-                    }
-                    else
-                    {
-                        image.Opacity = 1;
-                        button.Opacity = 0.005;
-                    }
-                    break;
-
-                default:
-                    break;
-            }
+            ApplyCurrentDisplayMode();
         }
 
         #endregion
@@ -304,25 +339,16 @@ namespace Binjyo
 
         public void Minimize()
         {
-            isdrag = false;
-            StopResize();
-            SetResizeMode(false);
-            lockmode = 2;
-            image.Opacity = 0;
-
-            button.Opacity = 1;
-            button.Content = FindResource("lockmin");
+            SetGlobalDisplayMode(MemoDisplayMode.Minimized);
         }
         public void Expand()
         {
-            isdrag = false;
-            StopResize();
-            lockmode = 0;
-            image.Opacity = 1;
+            SetGlobalDisplayMode(MemoDisplayMode.Expanded);
+        }
 
-            button.Opacity = 0.7;
-            button.Content = FindResource("lockoff");
-            UpdateResizeModeVisuals();
+        public void SetAutoHide()
+        {
+            SetGlobalDisplayMode(MemoDisplayMode.AutoHide);
         }
         public void Resize(double s)
         {
@@ -389,7 +415,7 @@ namespace Binjyo
             if (isEditMode)
                 return;
 
-            isResizeMode = enabled && lockmode == 0;
+            isResizeMode = enabled && CanInteractNormally();
             if (!isResizeMode)
                 StopResize();
             UpdateResizeModeVisuals();
@@ -397,22 +423,200 @@ namespace Binjyo
 
         private void UpdateResizeModeVisuals()
         {
-            if (resizeOverlay == null || button == null)
+            if (resizeOverlay == null)
                 return;
 
-            resizeOverlay.Visibility = isResizeMode && lockmode == 0 && !isEditMode ? Visibility.Visible : Visibility.Collapsed;
+            resizeOverlay.Visibility = isResizeMode && CanInteractNormally() && !isEditMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
 
-            if ((isResizeMode && lockmode == 0) || isEditMode)
+        private bool CanInteractNormally()
+        {
+            return globalDisplayMode == MemoDisplayMode.Expanded;
+        }
+
+        private void ApplyCurrentDisplayMode()
+        {
+            if (!hasAnchorPosition)
+                return;
+
+            switch (globalDisplayMode)
             {
-                button.Opacity = 0;
-                button.IsHitTestVisible = false;
+                case MemoDisplayMode.Minimized:
+                    ApplyMinimizedDisplayMode();
+                    break;
+                case MemoDisplayMode.AutoHide:
+                    ApplyAutoHideDisplayMode();
+                    break;
+                default:
+                    ApplyExpandedDisplayMode();
+                    break;
             }
-            else
+
+            UpdateResizeModeVisuals();
+        }
+
+        private void ApplyExpandedDisplayMode()
+        {
+            EnsureMemoVisible();
+            image.Opacity = 1;
+            ApplyDisplayPosition(anchorLeft, anchorTop);
+        }
+
+        private void ApplyAutoHideDisplayMode()
+        {
+            EnsureMemoVisible();
+
+            if ((MemoAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == MemoAutoHideBehavior.EvadeMouse)
             {
-                button.IsHitTestVisible = true;
-                if (lockmode == 0 && !isOverButton)
-                    button.Opacity = 0.005;
+                image.Opacity = 1;
+                UpdateEvadeDisplayPosition();
+                return;
             }
+
+            ApplyDisplayPosition(anchorLeft, anchorTop);
+            image.Opacity = IsMouseInsideMemoBounds() ? 0 : 1;
+        }
+
+        private void ApplyMinimizedDisplayMode()
+        {
+            isdrag = false;
+            dragStartPositions.Clear();
+            StopResize();
+            if (isResizeMode)
+                isResizeMode = false;
+            _HideHSVWheel();
+            if (IsVisible)
+                Hide();
+        }
+
+        private void EnsureMemoVisible()
+        {
+            if (!IsVisible)
+                Show();
+        }
+
+        private void ApplyDisplayPosition(double left, double top)
+        {
+            if (Math.Abs(Left - left) < 0.001 && Math.Abs(Top - top) < 0.001)
+                return;
+
+            isSuspendingDisplayPosition = true;
+            Left = left;
+            Top = top;
+            isSuspendingDisplayPosition = false;
+        }
+
+        private void SetAnchorPosition(double left, double top)
+        {
+            anchorLeft = left;
+            anchorTop = top;
+            hasAnchorPosition = true;
+            ApplyCurrentDisplayMode();
+        }
+
+        private void UpdateEvadeDisplayPosition()
+        {
+            if (isdrag || isResizing || isEditMode)
+            {
+                ApplyDisplayPosition(anchorLeft, anchorTop);
+                return;
+            }
+
+            var mouse = System.Windows.Forms.Control.MousePosition;
+            double mouseX = mouse.X / dpiFactor;
+            double mouseY = mouse.Y / dpiFactor;
+            System.Windows.Rect displayRect = new System.Windows.Rect(Left, Top, Width, Height);
+            double signedDistance = GetRectSignedDistance(displayRect, mouseX, mouseY, out double normalX, out double normalY);
+            if (signedDistance >= MouseEvadeRange)
+            {
+                if (Math.Abs(Left - anchorLeft) < MouseEvadeSettledDistance && Math.Abs(Top - anchorTop) < MouseEvadeSettledDistance)
+                    return;
+            }
+
+            double normalized = Clamp(1 - signedDistance / MouseEvadeRange, 0, 1);
+            double forceMagnitude = MouseEvadeBaseStrength * normalized * normalized;
+            double forceX = normalX * forceMagnitude;
+            double forceY = normalY * forceMagnitude;
+            double springCap = 400 * Math.Max(1, signedDistance / MouseEvadeRange);
+            double springX = Clamp(anchorLeft - Left, -springCap, springCap) * MouseEvadeSpringStrength;
+            double springY = Clamp(anchorTop - Top, -springCap, springCap) * MouseEvadeSpringStrength;
+            double vX = forceX + springX;
+            double vY = forceY + springY;
+
+            double targetLeft = Left + vX * MouseEvadeBlend;
+            double targetTop = Top + vY * MouseEvadeBlend;
+            ApplyDisplayPosition(targetLeft, targetTop);
+        }
+
+        private bool IsMouseInsideMemoBounds()
+        {
+            var mouse = System.Windows.Forms.Control.MousePosition;
+            double x = mouse.X / dpiFactor;
+            double y = mouse.Y / dpiFactor;
+            return Left <= x && x <= Left + Width && Top <= y && y <= Top + Height;
+        }
+
+        private static double Lerp(double current, double target, double amount)
+        {
+            return current + (target - current) * amount;
+        }
+
+        private static double GetRectSignedDistance(System.Windows.Rect rect, double x, double y, out double normalX, out double normalY)
+        {
+            double leftDistance = x - rect.Left;
+            double rightDistance = rect.Right - x;
+            double topDistance = y - rect.Top;
+            double bottomDistance = rect.Bottom - y;
+            bool isInside = leftDistance >= 0 && rightDistance >= 0 && topDistance >= 0 && bottomDistance >= 0;
+
+            if (isInside)
+            {
+                double minDistance = leftDistance;
+                normalX = 1;
+                normalY = 0;
+
+                if (rightDistance < minDistance)
+                {
+                    minDistance = rightDistance;
+                    normalX = -1;
+                    normalY = 0;
+                }
+
+                if (topDistance < minDistance)
+                {
+                    minDistance = topDistance;
+                    normalX = 0;
+                    normalY = 1;
+                }
+
+                if (bottomDistance < minDistance)
+                {
+                    minDistance = bottomDistance;
+                    normalX = 0;
+                    normalY = -1;
+                }
+
+                return -minDistance;
+            }
+
+            double nearestX = Clamp(x, rect.Left, rect.Right);
+            double nearestY = Clamp(y, rect.Top, rect.Bottom);
+            double deltaX = nearestX - x;
+            double deltaY = nearestY - y;
+            double distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (distance < 0.0001)
+            {
+                normalX = 1;
+                normalY = 0;
+                return 0;
+            }
+
+            normalX = deltaX / distance;
+            normalY = deltaY / distance;
+            return distance;
         }
 
         private bool IsResizeHandle(ResizeHandle handle)
@@ -812,7 +1016,7 @@ namespace Binjyo
 
         private bool ShouldShowHSVWheel()
         {
-            return isHSVWheelPinnedGlobally && !isEditMode && !isdrag && !isResizing && !isOverButton;
+            return isHSVWheelPinnedGlobally && !isEditMode && !isdrag && !isResizing && globalDisplayMode != MemoDisplayMode.Minimized;
         }
 
         private void RefreshHSVWheelVisibility()
@@ -883,13 +1087,19 @@ namespace Binjyo
 
         private void MemoBoundsChanged(object sender, EventArgs e)
         {
+            if (!isSuspendingDisplayPosition)
+            {
+                anchorLeft = Left;
+                anchorTop = Top;
+                hasAnchorPosition = true;
+            }
             UpdateEditPanelPlacement();
             RenderDrawingOverlay();
         }
 
         private void EnterEditMode()
         {
-            if (isEditMode || lockmode != 0)
+            if (isEditMode || !CanInteractNormally())
                 return;
 
             SetResizeMode(false);
@@ -1331,12 +1541,19 @@ namespace Binjyo
             return Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
         }
 
-        private List<Memo> GetVisibleMemos()
+        private static List<Memo> GetVisibleAndHiddenMemos()
         {
             return Application.Current.Windows
                 .OfType<Window>()
-                .Where(item => item.Title == "Memo" && item.IsVisible)
+                .Where(item => item.Title == "Memo")
                 .Cast<Memo>()
+                .ToList();
+        }
+
+        private List<Memo> GetVisibleMemos()
+        {
+            return GetVisibleAndHiddenMemos()
+                .Where(item => item.IsVisible)
                 .ToList();
         }
 
@@ -1348,7 +1565,7 @@ namespace Binjyo
 
         private System.Windows.Rect GetMemoBounds(Memo memo)
         {
-            return new System.Windows.Rect(memo.Left, memo.Top, memo.Width, memo.Height);
+            return new System.Windows.Rect(memo.anchorLeft, memo.anchorTop, memo.Width, memo.Height);
         }
 
         private List<Memo> GetConnectedMemoGroup()
@@ -1391,10 +1608,10 @@ namespace Binjyo
 
             foreach (Memo memo in memos)
             {
-                left = Math.Min(left, memo.Left);
-                top = Math.Min(top, memo.Top);
-                right = Math.Max(right, memo.Left + memo.Width);
-                bottom = Math.Max(bottom, memo.Top + memo.Height);
+                left = Math.Min(left, memo.anchorLeft);
+                top = Math.Min(top, memo.anchorTop);
+                right = Math.Max(right, memo.anchorLeft + memo.Width);
+                bottom = Math.Max(bottom, memo.anchorTop + memo.Height);
             }
 
             if (double.IsInfinity(left) || double.IsInfinity(top))
@@ -1467,10 +1684,10 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                double otherLeft = item.Left;
-                double otherTop = item.Top;
-                double otherRight = item.Left + item.Width;
-                double otherBottom = item.Top + item.Height;
+                double otherLeft = item.anchorLeft;
+                double otherTop = item.anchorTop;
+                double otherRight = item.anchorLeft + item.Width;
+                double otherBottom = item.anchorTop + item.Height;
 
                 if (!IntervalsOverlapOrTouch(currentTop, currentBottom, otherTop, otherBottom))
                     continue;
@@ -1490,10 +1707,10 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                double otherLeft = item.Left;
-                double otherTop = item.Top;
-                double otherRight = item.Left + item.Width;
-                double otherBottom = item.Top + item.Height;
+                double otherLeft = item.anchorLeft;
+                double otherTop = item.anchorTop;
+                double otherRight = item.anchorLeft + item.Width;
+                double otherBottom = item.anchorTop + item.Height;
 
                 if (!IntervalsOverlapOrTouch(currentLeft, currentRight, otherLeft, otherRight))
                     continue;
@@ -1590,20 +1807,6 @@ namespace Binjyo
         private static bool IntervalsOverlapOrTouch(double startA, double endA, double startB, double endB)
         {
             return endA >= startB && endB >= startA;
-        }
-
-        private static bool IsEventFromButton(object source)
-        {
-            DependencyObject current = source as DependencyObject;
-            while (current != null)
-            {
-                if (current is Button)
-                    return true;
-
-                current = VisualTreeHelper.GetParent(current);
-            }
-
-            return false;
         }
 
 
@@ -2043,13 +2246,13 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                if (!IntervalsOverlapOrTouch(top, bottom, item.Top, item.Top + item.Height))
+                if (!IntervalsOverlapOrTouch(top, bottom, item.anchorTop, item.anchorTop + item.Height))
                     continue;
 
-                candidates.Add(item.Left);
-                candidates.Add(item.Left + item.Width);
-                candidates.Add(item.Left - width);
-                candidates.Add(item.Left + item.Width - width);
+                candidates.Add(item.anchorLeft);
+                candidates.Add(item.anchorLeft + item.Width);
+                candidates.Add(item.anchorLeft - width);
+                candidates.Add(item.anchorLeft + item.Width - width);
             }
 
             return FindNextCandidate(boundingBox.Left, candidates, forward);
@@ -2076,13 +2279,13 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                if (!IntervalsOverlapOrTouch(left, right, item.Left, item.Left + item.Width))
+                if (!IntervalsOverlapOrTouch(left, right, item.anchorLeft, item.anchorLeft + item.Width))
                     continue;
 
-                candidates.Add(item.Top);
-                candidates.Add(item.Top + item.Height);
-                candidates.Add(item.Top - height);
-                candidates.Add(item.Top + item.Height - height);
+                candidates.Add(item.anchorTop);
+                candidates.Add(item.anchorTop + item.Height);
+                candidates.Add(item.anchorTop - height);
+                candidates.Add(item.anchorTop + item.Height - height);
             }
 
             return FindNextCandidate(boundingBox.Top, candidates, forward);
@@ -2096,7 +2299,7 @@ namespace Binjyo
             var targetPositions = new Dictionary<Memo, System.Windows.Point>();
             foreach (Memo memo in movingMemos)
             {
-                targetPositions[memo] = new System.Windows.Point(memo.Left + deltaX, memo.Top + deltaY);
+                targetPositions[memo] = new System.Windows.Point(memo.anchorLeft + deltaX, memo.anchorTop + deltaY);
             }
 
             System.Windows.Rect boundingBox = GetBoundingBox(targetPositions);
@@ -2119,8 +2322,7 @@ namespace Binjyo
             foreach (Memo memo in movingMemos)
             {
                 var position = targetPositions[memo];
-                memo.Left = position.X + constraintOffsetX;
-                memo.Top = position.Y + constraintOffsetY;
+                memo.SetAnchorPosition(position.X + constraintOffsetX, position.Y + constraintOffsetY);
             }
         }
 
@@ -2133,7 +2335,7 @@ namespace Binjyo
 
             foreach (Memo memo in moveConnectedGroup ? GetConnectedMemoGroup() : new List<Memo> { this })
             {
-                dragStartPositions[memo] = new System.Windows.Point(memo.Left, memo.Top);
+                dragStartPositions[memo] = new System.Windows.Point(memo.anchorLeft, memo.anchorTop);
             }
         }
 
@@ -2177,10 +2379,10 @@ namespace Binjyo
                 return;
             }
 
-            if (IsEventFromButton(e.OriginalSource))
+            if (!CanInteractNormally())
                 return;
 
-            if (isResizeMode && lockmode == 0)
+            if (isResizeMode)
             {
                 ResizeHandle handle = GetResizeHandleAtMousePosition();
                 if (IsResizeHandle(handle))
@@ -2230,7 +2432,7 @@ namespace Binjyo
                     isdrag = false;
             }
 
-            if (isResizeMode && lockmode == 0)
+            if (isResizeMode)
             {
                 if (isResizing)
                 {
@@ -2281,8 +2483,7 @@ namespace Binjyo
             foreach (Memo memo in movingMemos)
             {
                 var position = targetPositions[memo];
-                memo.Left = position.X + constraintOffsetX;
-                memo.Top = position.Y + constraintOffsetY;
+                memo.SetAnchorPosition(position.X + constraintOffsetX, position.Y + constraintOffsetY);
             }
         }
 
@@ -2364,9 +2565,6 @@ namespace Binjyo
             if (isEditMode)
                 return;
 
-            if (IsEventFromButton(e.OriginalSource))
-                return;
-
             bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
             CopyMemoToClipboard(includeDrawing);
             this._Close();
@@ -2439,63 +2637,6 @@ namespace Binjyo
         {
         }
         #endregion
-
-
-        #region ========== BUTTON ==========
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            if (isEditMode)
-                return;
-
-            switch (lockmode)
-            {
-                case 2:
-                    Expand();
-                    break;
-                case 0:
-                    SetResizeMode(false);
-                    lockmode = 1;
-                    //image.Opacity = 0;
-                    button.Opacity = 1;
-                    button.Content = FindResource("lockon");
-                    break;
-                case 1:
-                    Minimize();
-                    break;
-            }
-        }
-
-        private void Button_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-        }
-
-        private void Button_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-        }
-
-        private void Button_MouseEnter(object sender, MouseEventArgs e)
-        {
-            isOverButton = true;
-            if (lockmode == 0 && !isResizeMode)
-            {
-                button.Opacity = 1;
-            }
-            RefreshHSVWheelVisibility();
-        }
-
-        private void Button_MouseLeave(object sender, MouseEventArgs e)
-        {
-            isOverButton = false;
-            if (lockmode == 0 && !isResizeMode)
-            {
-                button.Opacity = 0.005;
-            }
-            RefreshHSVWheelVisibility();
-        }
-
-        #endregion
-
 
         #region ======== UTIL ========
 

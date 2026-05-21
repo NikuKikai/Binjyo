@@ -22,18 +22,22 @@ namespace Binjyo
     {
         private Key keyScreenshot;
         private ModifierKeys modifierScreenshot;
-        private bool isSetting = false;
+        private ModifierKeys modifierDisplayMode;
+        private bool isSettingScreenshot = false;
 
         private Action<Key, ModifierKeys> callbackScreenshotKeySet;
+        private Action<ModifierKeys> callbackDisplayModeModifierSet;
 
-        public Settings(Action<Key, ModifierKeys> callbackScreenshotKeySet)
+        public Settings(Action<Key, ModifierKeys> callbackScreenshotKeySet, Action<ModifierKeys> callbackDisplayModeModifierSet)
         {
             InitializeComponent();
 
             this.callbackScreenshotKeySet = callbackScreenshotKeySet;
+            this.callbackDisplayModeModifierSet = callbackDisplayModeModifierSet;
 
             keyScreenshot = (Key)Properties.Settings.Default.KeyScreenshot;
             modifierScreenshot = (ModifierKeys)Properties.Settings.Default.ModifierScreenshot;
+            modifierDisplayMode = (ModifierKeys)Properties.Settings.Default.ModifierDisplayMode;
             KeyBoxSreenshot.Text = keyScreenshot.ToString();
             CheckSnapMemo.IsChecked = Properties.Settings.Default.SnapMemo;
             HistoryEntryLimitBox.Text = Properties.Settings.Default.HistoryEntryLimit.ToString();
@@ -47,6 +51,28 @@ namespace Binjyo
                     break;
                 case ModifierKeys.Control | ModifierKeys.Windows:
                     RadioScreenshot2.IsChecked = true;
+                    break;
+            }
+            switch (modifierDisplayMode)
+            {
+                case ModifierKeys.Control | ModifierKeys.Alt:
+                    RadioDisplayMode0.IsChecked = true;
+                    break;
+                case ModifierKeys.Control | ModifierKeys.Windows:
+                    RadioDisplayMode2.IsChecked = true;
+                    break;
+                default:
+                    RadioDisplayMode1.IsChecked = true;
+                    break;
+            }
+
+            switch ((MemoAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior)
+            {
+                case MemoAutoHideBehavior.EvadeMouse:
+                    RadioAutoHideEvade.IsChecked = true;
+                    break;
+                default:
+                    RadioAutoHideHover.IsChecked = true;
                     break;
             }
         }
@@ -64,12 +90,24 @@ namespace Binjyo
                 callbackScreenshotKeySet.Invoke(keyScreenshot, modifierScreenshot);
         }
 
+        private void UpdateDisplayModeModifier()
+        {
+            if (Properties.Settings.Default.ModifierDisplayMode == (int)modifierDisplayMode)
+                return;
+
+            Properties.Settings.Default.ModifierDisplayMode = (int)modifierDisplayMode;
+            Properties.Settings.Default.Save();
+
+            if (callbackDisplayModeModifierSet != null)
+                callbackDisplayModeModifierSet.Invoke(modifierDisplayMode);
+        }
+
         private void KeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             var key = e.Key;
             var mod = Keyboard.Modifiers;
 
-            if (isSetting)
+            if (isSettingScreenshot)
             {
                 if (mod == ModifierKeys.None)
                     ((TextBox)sender).Text = $"{key}";
@@ -82,7 +120,7 @@ namespace Binjyo
         {
             keyScreenshot = e.Key;
 
-            if (isSetting)
+            if (isSettingScreenshot)
             {
                 ((TextBox)sender).Text = $"{keyScreenshot}";
                 e.Handled = true;
@@ -91,14 +129,14 @@ namespace Binjyo
 
         private void KeyBoxSreenshot_PreviewKeyUp(object sender, KeyEventArgs e)
         {
-            isSetting = false;
+            isSettingScreenshot = false;
             ((TextBox)sender).IsReadOnly = true;
             UpdateScreenshotKey();
         }
 
         private void KeyBoxSreenshot_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
-            isSetting = true;
+            isSettingScreenshot = true;
             ((TextBox)sender).IsReadOnly = true;
             ((TextBox)sender).Text = "...";
         }
@@ -124,6 +162,27 @@ namespace Binjyo
             UpdateScreenshotKey();
         }
 
+        private void RadioDisplayMode_Checked(object sender, RoutedEventArgs e)
+        {
+            RadioButton rb = sender as RadioButton;
+            if (rb.IsChecked == true)
+            {
+                switch (rb.Content.ToString())
+                {
+                    case "Ctrl+Alt":
+                        modifierDisplayMode = ModifierKeys.Control | ModifierKeys.Alt;
+                        break;
+                    case "Ctrl+Shift":
+                        modifierDisplayMode = ModifierKeys.Control | ModifierKeys.Shift;
+                        break;
+                    case "Ctrl+Win":
+                        modifierDisplayMode = ModifierKeys.Control | ModifierKeys.Windows;
+                        break;
+                }
+            }
+            UpdateDisplayModeModifier();
+        }
+
         private void CheckSnapMemo_Changed(object sender, RoutedEventArgs e)
         {
             if (CheckSnapMemo == null || CheckSnapMemo.IsChecked == null)
@@ -133,6 +192,22 @@ namespace Binjyo
                 return;
 
             Properties.Settings.Default.SnapMemo = CheckSnapMemo.IsChecked.Value;
+            Properties.Settings.Default.Save();
+        }
+
+        private void RadioAutoHide_Checked(object sender, RoutedEventArgs e)
+        {
+            if (RadioAutoHideHover == null || RadioAutoHideEvade == null)
+                return;
+
+            MemoAutoHideBehavior behavior = RadioAutoHideEvade.IsChecked == true
+                ? MemoAutoHideBehavior.EvadeMouse
+                : MemoAutoHideBehavior.HideOnHover;
+
+            if (Properties.Settings.Default.AutoHideBehavior == (int)behavior)
+                return;
+
+            Properties.Settings.Default.AutoHideBehavior = (int)behavior;
             Properties.Settings.Default.Save();
         }
 
