@@ -55,6 +55,13 @@ namespace Binjyo
         EvadeMouse = 1
     }
 
+    public enum MemoBitmapScalingMode
+    {
+        NearestNeighbor = 0,
+        Linear = 1,
+        Fant = 2
+    }
+
     public static class BitmapExt
     {
         // https://stackoverflow.com/a/30729291
@@ -169,6 +176,7 @@ namespace Binjyo
         public Memo(Bitmap bmp, int left, int top)    // Physical coordinates
         {
             InitializeComponent();
+            ApplyConfiguredBitmapScalingMode();
             InitializeTimer();
 
             int w = bmp.Width;
@@ -298,36 +306,99 @@ namespace Binjyo
             return bmp;
         }
 
-        private Bitmap GetRenderedBitmap(bool includeDrawing)
+        private Bitmap CreateOutputBitmap(bool exportCurrentView)
         {
-            Bitmap renderedBitmap = _GetBitmapAfterEffect();
-            if (includeDrawing)
-                ApplyDrawingToBitmap(renderedBitmap);
-            return renderedBitmap;
+            if (!exportCurrentView)
+                return bitmap.Clone(new Rect(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            bool applyTransform = Properties.Settings.Default.ExportApplyTransform;
+            bool applyEffects = Properties.Settings.Default.ExportApplyEffects;
+            Bitmap baseBitmap = applyTransform ? bitmapTransformed : bitmap;
+            Bitmap outputBitmap = baseBitmap.Clone(new Rect(0, 0, baseBitmap.Width, baseBitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            if (applyEffects)
+                ApplyConfiguredEffects(outputBitmap);
+
+            DrawingDocumentData documentToRender = applyTransform
+                ? drawingDocument
+                : MapDrawingDocumentToOriginal();
+            ApplyDrawingToBitmap(outputBitmap, documentToRender);
+
+            int targetWidth = Math.Max(1, (int)Math.Round(Width * dpiFactor));
+            int targetHeight = Math.Max(1, (int)Math.Round(Height * dpiFactor));
+            if (outputBitmap.Width == targetWidth && outputBitmap.Height == targetHeight)
+                return outputBitmap;
+
+            Bitmap resizedBitmap = ResizeBitmapForExport(outputBitmap, targetWidth, targetHeight);
+            outputBitmap.Dispose();
+            return resizedBitmap;
         }
 
-        private BitmapSource GetRenderedBitmapSource(bool includeDrawing)
+        private BitmapSource CreateOutputBitmapSource(bool exportCurrentView)
         {
-            if (!includeDrawing)
-                return bitmpasource;
-
-            using (Bitmap renderedBitmap = GetRenderedBitmap(true))
+            using (Bitmap outputBitmap = CreateOutputBitmap(exportCurrentView))
             {
-                BitmapSource bitmapSource = renderedBitmap.ToBitmapSource(PixelFormats.Bgra32);
+                BitmapSource bitmapSource = outputBitmap.ToBitmapSource(PixelFormats.Bgra32);
                 bitmapSource.Freeze();
                 return bitmapSource;
             }
         }
 
-        private void CopyMemoToClipboard(bool includeDrawing)
+        private void CopyMemoToClipboard(bool exportCurrentView)
         {
-            Clipboard.SetImage(GetRenderedBitmapSource(includeDrawing));
+            Clipboard.SetImage(CreateOutputBitmapSource(exportCurrentView));
         }
 
         protected void UpdateBitmap()
         {
             var res = _GetBitmapAfterEffect();
             _ShowBitmap(res, true);
+        }
+
+        private void ApplyConfiguredEffects(Bitmap bitmapToUpdate)
+        {
+            if (isEffectGray)
+                EffectGray(bitmapToUpdate);
+
+            if (isEffectBinarize && pEffectBinarize > 0)
+                EffectBinarize(bitmapToUpdate, pEffectBinarize);
+            else if (isEffectQuantize && pEffectQuantize > 2)
+                EffectQuantize(bitmapToUpdate, pEffectQuantize);
+
+            if (isEffectHuemap)
+                EffectHuemap(bitmapToUpdate);
+
+            if (isEffectTransparent && pEffectTransparent > 0)
+                EffectTransparent(bitmapToUpdate, pEffectTransparent);
+        }
+
+        private Bitmap ResizeBitmapForExport(Bitmap sourceBitmap, int width, int height)
+        {
+            var resizedBitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (Graphics graphics = Graphics.FromImage(resizedBitmap))
+            {
+                graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                graphics.InterpolationMode = GetConfiguredInterpolationMode();
+                graphics.DrawImage(sourceBitmap, new Rect(0, 0, width, height), 0, 0, sourceBitmap.Width, sourceBitmap.Height, GraphicsUnit.Pixel);
+            }
+
+            return resizedBitmap;
+        }
+
+        private static System.Drawing.Drawing2D.InterpolationMode GetConfiguredInterpolationMode()
+        {
+            switch ((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
+            {
+                case MemoBitmapScalingMode.NearestNeighbor:
+                    return System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                case MemoBitmapScalingMode.Linear:
+                    return System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
+                default:
+                    return System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            }
         }
 
 
@@ -736,19 +807,10 @@ namespace Binjyo
                 dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
                 if (dlg.ShowDialog() == true)
                 {
-                    using (Bitmap renderedBitmap = includeDrawing ? GetRenderedBitmap(true) : null)
+                    using (Bitmap outputBitmap = CreateOutputBitmap(includeDrawing))
                     using (var stream = dlg.OpenFile())
                     {
-                        if (includeDrawing)
-                        {
-                            renderedBitmap.Save(stream, ImageFormat.Png);
-                        }
-                        else
-                        {
-                            var encoder = new PngBitmapEncoder();
-                            encoder.Frames.Add(BitmapFrame.Create(bitmpasource));
-                            encoder.Save(stream);
-                        }
+                        outputBitmap.Save(stream, ImageFormat.Png);
                     }
                 }
             }

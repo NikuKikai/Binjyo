@@ -40,7 +40,10 @@ namespace Binjyo
             modifierDisplayMode = (ModifierKeys)Properties.Settings.Default.ModifierDisplayMode;
             KeyBoxSreenshot.Text = keyScreenshot.ToString();
             CheckSnapMemo.IsChecked = Properties.Settings.Default.SnapMemo;
+            CheckExportApplyTransform.IsChecked = Properties.Settings.Default.ExportApplyTransform;
+            CheckExportApplyEffects.IsChecked = Properties.Settings.Default.ExportApplyEffects;
             HistoryEntryLimitBox.Text = Properties.Settings.Default.HistoryEntryLimit.ToString();
+            SelectBitmapScalingMode((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode);
             switch (modifierScreenshot)
             {
                 case ModifierKeys.Control | ModifierKeys.Alt:
@@ -75,6 +78,23 @@ namespace Binjyo
                     RadioAutoHideHover.IsChecked = true;
                     break;
             }
+        }
+
+        private void SelectBitmapScalingMode(MemoBitmapScalingMode mode)
+        {
+            if (BitmapScalingModeBox == null)
+                return;
+
+            foreach (ComboBoxItem item in BitmapScalingModeBox.Items)
+            {
+                if (item.Tag?.ToString() == ((int)mode).ToString())
+                {
+                    BitmapScalingModeBox.SelectedItem = item;
+                    return;
+                }
+            }
+
+            BitmapScalingModeBox.SelectedIndex = 0;
         }
 
         private void UpdateScreenshotKey()
@@ -230,6 +250,46 @@ namespace Binjyo
 
             Properties.Settings.Default.HistoryEntryLimit = value;
             Properties.Settings.Default.Save();
+        }
+
+        private void CheckExportApplyTransform_Changed(object sender, RoutedEventArgs e)
+        {
+            if (CheckExportApplyTransform?.IsChecked == null)
+                return;
+
+            if (Properties.Settings.Default.ExportApplyTransform == CheckExportApplyTransform.IsChecked.Value)
+                return;
+
+            Properties.Settings.Default.ExportApplyTransform = CheckExportApplyTransform.IsChecked.Value;
+            Properties.Settings.Default.Save();
+        }
+
+        private void CheckExportApplyEffects_Changed(object sender, RoutedEventArgs e)
+        {
+            if (CheckExportApplyEffects?.IsChecked == null)
+                return;
+
+            if (Properties.Settings.Default.ExportApplyEffects == CheckExportApplyEffects.IsChecked.Value)
+                return;
+
+            Properties.Settings.Default.ExportApplyEffects = CheckExportApplyEffects.IsChecked.Value;
+            Properties.Settings.Default.Save();
+        }
+
+        private void BitmapScalingModeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!(BitmapScalingModeBox?.SelectedItem is ComboBoxItem item) || item.Tag == null)
+                return;
+
+            if (!int.TryParse(item.Tag.ToString(), out int value))
+                return;
+
+            if (Properties.Settings.Default.BitmapScalingMode == value)
+                return;
+
+            Properties.Settings.Default.BitmapScalingMode = value;
+            Properties.Settings.Default.Save();
+            Memo.RefreshAllMemoScalingModes();
         }
     }
 }

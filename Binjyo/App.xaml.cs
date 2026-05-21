@@ -74,7 +74,7 @@ namespace Binjyo
             }
             if (modifierDisplayMode == ModifierKeys.None)
             {
-                modifierDisplayMode = ModifierKeys.Control | ModifierKeys.Shift;
+                modifierDisplayMode = ModifierKeys.Control | ModifierKeys.Alt;
                 Binjyo.Properties.Settings.Default.ModifierDisplayMode = (int)modifierDisplayMode;
                 Binjyo.Properties.Settings.Default.Save();
             }

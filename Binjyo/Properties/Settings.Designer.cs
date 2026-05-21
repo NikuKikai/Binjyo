@@ -94,5 +94,41 @@ namespace Binjyo.Properties {
                 this["HistoryEntryLimit"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ExportApplyTransform {
+            get {
+                return ((bool)(this["ExportApplyTransform"]));
+            }
+            set {
+                this["ExportApplyTransform"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ExportApplyEffects {
+            get {
+                return ((bool)(this["ExportApplyEffects"]));
+            }
+            set {
+                this["ExportApplyEffects"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int BitmapScalingMode {
+            get {
+                return ((int)(this["BitmapScalingMode"]));
+            }
+            set {
+                this["BitmapScalingMode"] = value;
+            }
+        }
     }
 }

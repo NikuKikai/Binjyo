@@ -5,104 +5,278 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Binjyo"
         mc:Ignorable="d"
-        Title="Settings" Height="560" Width="500"
-        Background="#111"
-        WindowState="Normal"
-        >
-    <StackPanel>
-        <Grid Margin="10,10,10,0">
-            <Label Content="Take screenshot (Global)" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
-        </Grid>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Margin="35,0,15,0" Grid.Column="0">
-                <RadioButton Name="RadioScreenshot0" Content="Ctrl+Alt" GroupName="RadioGroup1" Foreground="#FFD6D6D6" Margin="0,0,10,0"
-                             Checked="RadioScreenshot_Checked"/>
-                <RadioButton Name="RadioScreenshot1" Content="Ctrl+Shift" GroupName="RadioGroup1" Foreground="#FFD6D6D6" Margin="0,0,10,0" 
-                             Checked="RadioScreenshot_Checked"/>
-                <RadioButton Name="RadioScreenshot2" Content="Ctrl+Win" GroupName="RadioGroup1" Foreground="#FFD6D6D6" Margin="0,0,10,0" 
-                             Checked="RadioScreenshot_Checked"/>
-            </StackPanel>
-            <TextBox Name="KeyBoxSreenshot" TextAlignment="Center" VerticalContentAlignment="Center"
-                     Grid.Column="1" HorizontalAlignment="Right" MinWidth="40" Margin="0,0,15,0"
-                     PreviewMouseDown="KeyBoxSreenshot_PreviewMouseDown"
-                     PreviewKeyDown="KeyBoxSreenshot_PreviewKeyDown"
-                     PreviewKeyUp="KeyBoxSreenshot_PreviewKeyUp" Background="#FF3C3C3C" Foreground="#FFF3F3F3" />
-        </Grid>
+        Title="Settings"
+        Height="680"
+        Width="720"
+        Background="#111111"
+        WindowState="Normal">
+    <Window.Resources>
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#F2F2F2"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="BodyTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#D6D6D6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="DarkRadioStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#D6D6D6"/>
+            <Setter Property="Margin" Value="0,0,12,8"/>
+        </Style>
+        <Style x:Key="DarkCheckStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#D6D6D6"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="DarkTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="Foreground" Value="#F3F3F3"/>
+            <Setter Property="BorderBrush" Value="#3C3C3C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="DarkComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="Foreground" Value="#F3F3F3"/>
+            <Setter Property="BorderBrush" Value="#3C3C3C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Stretch"
+                                          Background="Transparent"
+                                          BorderThickness="0">
+                                <Border x:Name="ComboBorder"
+                                        HorizontalAlignment="Stretch"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="36"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ContentPresenter Margin="8,4,8,4"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Left"
+                                                          TextElement.Foreground="{TemplateBinding Foreground}"
+                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"/>
+                                        <Border Grid.Column="1"
+                                                Background="#242424"
+                                                BorderBrush="#3C3C3C"
+                                                BorderThickness="1,0,0,0">
+                                            <Path HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Fill="#F3F3F3"
+                                                  Data="M 0 0 L 8 0 L 4 5 Z"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <Border Margin="0,4,0,0"
+                                                MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                                Background="#1F1F1F"
+                                                BorderBrush="#3C3C3C"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                                <StackPanel IsItemsHost="True"
+                                                            KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                            </ScrollViewer>
+                                        </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="#5A8FFF"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ComboBorder" Property="Background" Value="#303030"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#777777"/>
+                                <Setter TargetName="ComboBorder" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="DarkComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#1F1F1F"/>
+            <Setter Property="Foreground" Value="#F3F3F3"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#2E2E2E"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#1F5E3B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
-        <Grid Margin="10,18,10,0">
-            <Label Content="Memo dragging" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
-        </Grid>
-        <CheckBox Name="CheckSnapMemo"
-                  Margin="35,0,15,0"
-                  Foreground="#FFD6D6D6"
-                  Content="Enable snapping to screen edges and other memos"
-                  Checked="CheckSnapMemo_Changed"
-                  Unchecked="CheckSnapMemo_Changed"/>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16">
+            <Border Background="#1B1B1B" BorderBrush="#323232" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Global shortcuts" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="70"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Take screenshot" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                            <RadioButton Name="RadioScreenshot0" Content="Ctrl+Alt" GroupName="RadioGroup1" Style="{StaticResource DarkRadioStyle}" Checked="RadioScreenshot_Checked"/>
+                            <RadioButton Name="RadioScreenshot1" Content="Ctrl+Shift" GroupName="RadioGroup1" Style="{StaticResource DarkRadioStyle}" Checked="RadioScreenshot_Checked"/>
+                            <RadioButton Name="RadioScreenshot2" Content="Ctrl+Win" GroupName="RadioGroup1" Style="{StaticResource DarkRadioStyle}" Checked="RadioScreenshot_Checked"/>
+                        </StackPanel>
+                        <TextBox Name="KeyBoxSreenshot"
+                                 Grid.Column="2"
+                                 Margin="12,0,0,0"
+                                 MinWidth="48"
+                                 TextAlignment="Center"
+                                 Style="{StaticResource DarkTextBoxStyle}"
+                                 PreviewMouseDown="KeyBoxSreenshot_PreviewMouseDown"
+                                 PreviewKeyDown="KeyBoxSreenshot_PreviewKeyDown"
+                                 PreviewKeyUp="KeyBoxSreenshot_PreviewKeyUp"/>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="70"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="View mode" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                            <RadioButton Name="RadioDisplayMode0" Content="Ctrl+Alt" GroupName="RadioGroup2" Style="{StaticResource DarkRadioStyle}" Checked="RadioDisplayMode_Checked"/>
+                            <RadioButton Name="RadioDisplayMode1" Content="Ctrl+Shift" GroupName="RadioGroup2" Style="{StaticResource DarkRadioStyle}" Checked="RadioDisplayMode_Checked"/>
+                            <RadioButton Name="RadioDisplayMode2" Content="Ctrl+Win" GroupName="RadioGroup2" Style="{StaticResource DarkRadioStyle}" Checked="RadioDisplayMode_Checked"/>
+                        </StackPanel>
+                        <TextBox Name="KeyBoxDisplayMode"
+                                 Grid.Column="2"
+                                 Margin="12,0,0,0"
+                                 MinWidth="48"
+                                 Text="X"
+                                 IsReadOnly="True"
+                                 TextAlignment="Center"
+                                 Style="{StaticResource DarkTextBoxStyle}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
 
-        <Grid Margin="10,18,10,0">
-            <Label Content="Memo display mode (Global)" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
-        </Grid>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Margin="35,0,15,0" Grid.Column="0">
-                <RadioButton Name="RadioDisplayMode0" Content="Ctrl+Alt" GroupName="RadioGroup2" Foreground="#FFD6D6D6" Margin="0,0,10,0"
-                             Checked="RadioDisplayMode_Checked"/>
-                <RadioButton Name="RadioDisplayMode1" Content="Ctrl+Shift" GroupName="RadioGroup2" Foreground="#FFD6D6D6" Margin="0,0,10,0"
-                             Checked="RadioDisplayMode_Checked"/>
-                <RadioButton Name="RadioDisplayMode2" Content="Ctrl+Win" GroupName="RadioGroup2" Foreground="#FFD6D6D6" Margin="0,0,10,0"
-                             Checked="RadioDisplayMode_Checked"/>
-            </StackPanel>
-            <TextBox Name="KeyBoxDisplayMode" TextAlignment="Center" VerticalContentAlignment="Center"
-                     Grid.Column="1" HorizontalAlignment="Right" MinWidth="40" Margin="0,0,15,0"
-                     Text="X" IsReadOnly="True" Background="#FF3C3C3C" Foreground="#FFF3F3F3" />
-        </Grid>
+            <Border Background="#1B1B1B" BorderBrush="#323232" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Memo interaction" Style="{StaticResource SectionTitleStyle}"/>
+                    <CheckBox Name="CheckSnapMemo"
+                              Style="{StaticResource DarkCheckStyle}"
+                              Content="Enable snapping to screen edges and other memos"
+                              Checked="CheckSnapMemo_Changed"
+                              Unchecked="CheckSnapMemo_Changed"/>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Scaling sampler" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+                        <ComboBox Name="BitmapScalingModeBox"
+                                  Grid.Column="1"
+                                  Margin="12,0,0,0"
+                                  Style="{StaticResource DarkComboBoxStyle}"
+                                  ItemContainerStyle="{StaticResource DarkComboBoxItemStyle}"
+                                  SelectionChanged="BitmapScalingModeBox_SelectionChanged">
+                            <ComboBoxItem Content="Fant" Tag="2"/>
+                            <ComboBoxItem Content="Linear" Tag="1"/>
+                            <ComboBoxItem Content="NearestNeighbor" Tag="0"/>
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
 
-        <Grid Margin="10,18,10,0">
-            <Label Content="Auto hide behavior" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
-        </Grid>
-        <StackPanel Margin="35,0,15,0">
-            <RadioButton Name="RadioAutoHideHover"
-                         Content="Hide only while the mouse is over a memo"
-                         GroupName="AutoHideGroup"
-                         Foreground="#FFD6D6D6"
-                         Margin="0,0,0,6"
-                         Checked="RadioAutoHide_Checked"/>
-            <RadioButton Name="RadioAutoHideEvade"
-                         Content="Evade the mouse using a soft repulsion"
-                         GroupName="AutoHideGroup"
-                         Foreground="#FFD6D6D6"
-                         Checked="RadioAutoHide_Checked"/>
+            <Border Background="#1B1B1B" BorderBrush="#323232" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Memo export" Style="{StaticResource SectionTitleStyle}"/>
+                    <TextBlock Text="Default save, copy, cut, and double-click use the current memo view. Shift still exports the original image." Style="{StaticResource BodyTextStyle}" Margin="0,0,0,10"/>
+                    <CheckBox Name="CheckExportApplyTransform"
+                              Style="{StaticResource DarkCheckStyle}"
+                              Content="Apply transform"
+                              Checked="CheckExportApplyTransform_Changed"
+                              Unchecked="CheckExportApplyTransform_Changed"/>
+                    <CheckBox Name="CheckExportApplyEffects"
+                              Style="{StaticResource DarkCheckStyle}"
+                              Content="Apply effects"
+                              Checked="CheckExportApplyEffects_Changed"
+                              Unchecked="CheckExportApplyEffects_Changed"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#1B1B1B" BorderBrush="#323232" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Auto hide behavior" Style="{StaticResource SectionTitleStyle}"/>
+                    <RadioButton Name="RadioAutoHideHover"
+                                 Content="Hide only while the mouse is over a memo"
+                                 GroupName="AutoHideGroup"
+                                 Style="{StaticResource DarkRadioStyle}"
+                                 Checked="RadioAutoHide_Checked"/>
+                    <RadioButton Name="RadioAutoHideEvade"
+                                 Content="Evade the mouse using a soft repulsion"
+                                 GroupName="AutoHideGroup"
+                                 Style="{StaticResource DarkRadioStyle}"
+                                 Checked="RadioAutoHide_Checked"/>
+                </StackPanel>
+            </Border>
+
+            <Border Background="#1B1B1B" BorderBrush="#323232" BorderThickness="1" CornerRadius="10" Padding="16">
+                <StackPanel>
+                    <TextBlock Text="History" Style="{StaticResource SectionTitleStyle}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="100"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Maximum history items" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+                        <TextBox Name="HistoryEntryLimitBox"
+                                 Grid.Column="1"
+                                 Margin="12,0,0,0"
+                                 HorizontalContentAlignment="Center"
+                                 Style="{StaticResource DarkTextBoxStyle}"
+                                 TextChanged="HistoryEntryLimitBox_TextChanged"
+                                 PreviewTextInput="HistoryEntryLimitBox_PreviewTextInput"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
         </StackPanel>
-
-        <Grid Margin="10,18,10,0">
-            <Label Content="History" Foreground="#FFD6D6D6" FontSize="14" FontWeight="Bold" HorizontalAlignment="Left" />
-        </Grid>
-        <Grid Margin="35,0,15,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="80" />
-            </Grid.ColumnDefinitions>
-            <Label Grid.Column="0"
-                   VerticalAlignment="Center"
-                   Foreground="#FFD6D6D6"
-                   Content="Maximum history items"/>
-            <TextBox Name="HistoryEntryLimitBox"
-                     Grid.Column="1"
-                     Margin="12,0,0,0"
-                     HorizontalContentAlignment="Center"
-                     VerticalContentAlignment="Center"
-                     TextChanged="HistoryEntryLimitBox_TextChanged"
-                     PreviewTextInput="HistoryEntryLimitBox_PreviewTextInput"
-                     Background="#FF3C3C3C"
-                     Foreground="#FFF3F3F3" />
-        </Grid>
-    </StackPanel>
-
+    </ScrollViewer>
 </Window>

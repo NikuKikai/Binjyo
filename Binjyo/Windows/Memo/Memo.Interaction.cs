@@ -384,7 +384,14 @@ namespace Binjyo
             switch(actualKey)
             {
                 case Key.Escape:
-                    this._Close();
+                    if (isResizeMode)
+                    {
+                        SetResizeMode(false);
+                    }
+                    else
+                    {
+                        this._Close();
+                    }
                     e.Handled = true;
                     break;
                 case Key.S:
@@ -921,6 +928,13 @@ namespace Binjyo
 
         private void Window_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
+            if (isResizeMode)
+            {
+                SetResizeMode(false);
+                e.Handled = true;
+                return;
+            }
+
             if (isEditMode)
             {
                 e.Handled = true;
@@ -1148,6 +1162,8 @@ namespace Binjyo
         {
             if (isEditMode)
                 ExitEditMode();
+            if (isResizeMode)
+                SetResizeMode(false);
 
             isdrag = false;
             dragStartPositions.Clear();

@@ -89,6 +89,14 @@ namespace Binjyo
             }
         }
 
+        public static void RefreshAllMemoScalingModes()
+        {
+            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>())
+            {
+                memo.ApplyConfiguredBitmapScalingMode();
+            }
+        }
+
         private int ClampToPixelIndex(int value, int length)
         {
             if (length <= 0)
@@ -129,6 +137,27 @@ namespace Binjyo
             return new System.Drawing.Point(
                 ClampToPixelIndex(x, bitmap.Width),
                 ClampToPixelIndex(y, bitmap.Height));
+        }
+
+        private void ApplyConfiguredBitmapScalingMode()
+        {
+            if (image == null)
+                return;
+
+            RenderOptions.SetBitmapScalingMode(image, GetConfiguredBitmapScalingMode());
+        }
+
+        private static BitmapScalingMode GetConfiguredBitmapScalingMode()
+        {
+            switch ((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
+            {
+                case MemoBitmapScalingMode.NearestNeighbor:
+                    return BitmapScalingMode.NearestNeighbor;
+                case MemoBitmapScalingMode.Linear:
+                    return BitmapScalingMode.Linear;
+                default:
+                    return BitmapScalingMode.Fant;
+            }
         }
 
         private void ApplySnap(ref double nextLeft, ref double nextTop)
@@ -491,14 +520,19 @@ namespace Binjyo
 
         private void ApplyDrawingToBitmap(Bitmap targetBitmap)
         {
-            if (drawingDocument == null || drawingDocument.Strokes.Count == 0)
+            ApplyDrawingToBitmap(targetBitmap, drawingDocument);
+        }
+
+        private void ApplyDrawingToBitmap(Bitmap targetBitmap, DrawingDocumentData document)
+        {
+            if (document == null || document.Strokes.Count == 0)
                 return;
 
             using (Graphics graphics = Graphics.FromImage(targetBitmap))
             {
                 graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-                foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+                foreach (DrawingStrokeData stroke in document.Strokes)
                 {
                     if (stroke.Points.Count == 0)
                         continue;
@@ -525,6 +559,65 @@ namespace Binjyo
                     }
                 }
             }
+        }
+
+        private DrawingDocumentData MapDrawingDocumentToOriginal()
+        {
+            var mapped = new DrawingDocumentData();
+            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
+            {
+                var mappedStroke = new DrawingStrokeData
+                {
+                    Size = stroke.Size
+                };
+
+                foreach (DrawingPointData point in stroke.Points)
+                {
+                    var originalPoint = MapTransformedPointToOriginal(point.X, point.Y);
+                    mappedStroke.Points.Add(new DrawingPointData
+                    {
+                        X = Clamp(originalPoint.X, 0, bitmap.Width - 1),
+                        Y = Clamp(originalPoint.Y, 0, bitmap.Height - 1)
+                    });
+                }
+
+                mapped.Strokes.Add(mappedStroke);
+            }
+
+            return mapped;
+        }
+
+        private System.Windows.Point MapTransformedPointToOriginal(double transformedX, double transformedY)
+        {
+            int currentWidth = bitmapTransformed.Width;
+            int currentHeight = bitmapTransformed.Height;
+            double x = transformedX;
+            double y = transformedY;
+
+            for (int i = geometryTransformHistory.Count - 1; i >= 0; i--)
+            {
+                switch (geometryTransformHistory[i])
+                {
+                    case 'H':
+                        x = currentWidth - 1 - x;
+                        break;
+                    case 'V':
+                        y = currentHeight - 1 - y;
+                        break;
+                    case 'R':
+                        int previousWidth = currentHeight;
+                        int previousHeight = currentWidth;
+                        double rotatedX = y;
+                        double rotatedY = currentWidth - 1 - x;
+                        x = rotatedX;
+                        y = rotatedY;
+                        currentWidth = previousWidth;
+                        currentHeight = previousHeight;
+                        break;
+                }
+            }
+
+            return new System.Windows.Point(x, y);
         }
 
         public void RestoreDrawingData(DrawingDocumentData data)
