@@ -24,6 +24,7 @@ namespace Binjyo
         private HotKey _screenshotHotKey;
         private HotKey _displayModeHotKey;
         private ContextMenu _trayContextMenu;
+        private Window _trayMenuHostWindow;
 
         // single-instance
         static Mutex mutex = new Mutex(true, "{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}");
@@ -122,6 +123,7 @@ namespace Binjyo
             {
                 FlowDirection = FlowDirection.LeftToRight
             };
+            menu.Closed += TrayContextMenu_Closed;
 
             MenuItem viewModeItem = new MenuItem { Header = "View mode" };
             MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => SetViewMode(MemoDisplayMode.Expanded));
@@ -155,12 +157,54 @@ namespace Binjyo
             if (_trayContextMenu == null)
                 return;
 
+            EnsureTrayMenuHostWindow();
             var mousePosition = System.Windows.Forms.Control.MousePosition;
-            _trayContextMenu.Placement = PlacementMode.AbsolutePoint;
-            _trayContextMenu.PlacementTarget = mainWindow;
-            _trayContextMenu.HorizontalOffset = mousePosition.X;
-            _trayContextMenu.VerticalOffset = mousePosition.Y;
+            _trayMenuHostWindow.Left = mousePosition.X;
+            _trayMenuHostWindow.Top = mousePosition.Y;
+            if (!_trayMenuHostWindow.IsVisible)
+                _trayMenuHostWindow.Show();
+            _trayMenuHostWindow.Activate();
+
+            _trayContextMenu.Placement = PlacementMode.RelativePoint;
+            _trayContextMenu.PlacementTarget = _trayMenuHostWindow;
+            _trayContextMenu.HorizontalOffset = 0;
+            _trayContextMenu.VerticalOffset = 0;
+            _trayContextMenu.IsOpen = false;
             _trayContextMenu.IsOpen = true;
+        }
+
+        private void EnsureTrayMenuHostWindow()
+        {
+            if (_trayMenuHostWindow != null)
+                return;
+
+            _trayMenuHostWindow = new Window
+            {
+                Width = 1,
+                Height = 1,
+                WindowStyle = WindowStyle.None,
+                ResizeMode = ResizeMode.NoResize,
+                ShowInTaskbar = false,
+                ShowActivated = true,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                Opacity = 0.01,
+                Topmost = true
+            };
+            _trayMenuHostWindow.Deactivated += TrayMenuHostWindow_Deactivated;
+            _trayMenuHostWindow.Closed += (s, e) => _trayMenuHostWindow = null;
+        }
+
+        private void TrayMenuHostWindow_Deactivated(object sender, EventArgs e)
+        {
+            if (_trayContextMenu != null)
+                _trayContextMenu.IsOpen = false;
+        }
+
+        private void TrayContextMenu_Closed(object sender, RoutedEventArgs e)
+        {
+            if (_trayMenuHostWindow != null && _trayMenuHostWindow.IsVisible)
+                _trayMenuHostWindow.Hide();
         }
 
         private static MenuItem CreateMenuItem(string header, string inputGestureText, RoutedEventHandler onClick)
@@ -252,23 +296,28 @@ namespace Binjyo
         }
         public void CloseAll()
         {
-            foreach (Window item in Application.Current.Windows)
+            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>().ToList())
             {
-                if (item.Title == "Memo") item.Close();
+                memo.CloseMemo();
             }
         }
 
         public void ExitApplication()
         {
             _isExit = true;
-            foreach (Window item in Application.Current.Windows)
+            foreach (Window item in Application.Current.Windows.Cast<Window>().ToList())
             {
                 if (item.Title == "") continue;
-                if (item.Title != "MainWindow") item.Close();
+                if (item is Memo memo)
+                    memo.CloseMemo();
+                else if (item.Title != "MainWindow")
+                    item.Close();
             }
             MainWindow.Close();
             if (_trayContextMenu != null)
                 _trayContextMenu.IsOpen = false;
+            if (_trayMenuHostWindow != null)
+                _trayMenuHostWindow.Close();
             _notifyIcon.Dispose();
             _notifyIcon = null;
         }

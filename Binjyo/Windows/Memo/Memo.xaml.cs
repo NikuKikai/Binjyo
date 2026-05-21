@@ -130,6 +130,7 @@ namespace Binjyo
         private bool isResizeMode = false;
         private bool isResizing = false;
         private bool isSaving = false;
+        private bool isClosing = false;
         private bool isSuspendingDisplayPosition = false;
         private const double SnapDistance = 12;
         private const double MinVisiblePixels = 2;
@@ -242,6 +243,10 @@ namespace Binjyo
 
         protected void _Close()
         {
+            if (isClosing)
+                return;
+
+            isClosing = true;
             SaveToHistory();
             ExitEditMode();
             if (this.bitmap != null) this.bitmap.Dispose();
@@ -252,6 +257,11 @@ namespace Binjyo
             if (Mouse.Captured == this) Mouse.Capture(null);
             this.Close();
             GC.Collect();
+        }
+
+        public void CloseMemo()
+        {
+            _Close();
         }
 
         private void SaveToHistory()
@@ -605,6 +615,9 @@ namespace Binjyo
 
         private void ApplyCurrentDisplayMode()
         {
+            if (isClosing)
+                return;
+
             if (!hasAnchorPosition)
                 return;
 
@@ -660,6 +673,9 @@ namespace Binjyo
 
         private void EnsureMemoVisible()
         {
+            if (isClosing)
+                return;
+
             if (!IsVisible)
                 Show();
         }
