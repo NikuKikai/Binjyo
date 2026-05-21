@@ -89,37 +89,43 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Screenshot.xaml.cs">
+    <Compile Include="Windows\Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DrawingData.cs" />
-    <Compile Include="EditModePanel.xaml.cs">
+    <Compile Include="Models\DrawingData.cs" />
+    <Compile Include="Windows\EditModePanel.xaml.cs">
       <DependentUpon>EditModePanel.xaml</DependentUpon>
     </Compile>
-    <Compile Include="HistoryStore.cs" />
-    <Compile Include="HistoryWindow.xaml.cs">
+    <Compile Include="Services\HistoryStore.cs" />
+    <Compile Include="Windows\HistoryWindow.xaml.cs">
       <DependentUpon>HistoryWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ShortcutHelp.xaml.cs">
+    <Compile Include="Windows\ShortcutHelp.xaml.cs">
       <DependentUpon>ShortcutHelp.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Settings.xaml.cs">
+    <Compile Include="Windows\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Shaders.cs" />
-    <Compile Include="WinService.cs" />
-    <Compile Include="Memo.xaml.cs">
+    <Compile Include="Graphics\DarkToolStripColorTable.cs" />
+    <Compile Include="Graphics\Shaders.cs" />
+    <Compile Include="Services\WinService.cs" />
+    <Compile Include="Windows\Memo\Memo.xaml.cs">
       <DependentUpon>Memo.xaml</DependentUpon>
     </Compile>
-    <Page Include="MainWindow.xaml">
+    <Compile Include="Windows\Memo\Memo.Resize.cs" />
+    <Compile Include="Windows\Memo\Memo.ContextMenu.cs" />
+    <Compile Include="Windows\Memo\Memo.Drawing.cs" />
+    <Compile Include="Windows\Memo\Memo.Interaction.cs" />
+    <Compile Include="Windows\Memo\Memo.Imaging.cs" />
+    <Page Include="Windows\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="EditModePanel.xaml">
+    <Page Include="Windows\EditModePanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="HistoryWindow.xaml">
+    <Page Include="Windows\HistoryWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -127,24 +133,24 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="hotkey.cs" />
-    <Compile Include="MainWindow.xaml.cs">
+    <Compile Include="Interop\hotkey.cs" />
+    <Compile Include="Windows\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="Memo.xaml">
+    <Page Include="Windows\Memo\Memo.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Screenshot.xaml">
+    <Page Include="Windows\Screenshot.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ShortcutHelp.xaml">
+    <Page Include="Windows\ShortcutHelp.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Settings.xaml">
+    <Page Include="Windows\Settings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

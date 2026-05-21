@@ -8,6 +8,8 @@ using System.Windows;
 using System.ComponentModel;
 using System.Windows.Input;
 using System.Threading;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 
 
 namespace Binjyo
@@ -21,6 +23,7 @@ namespace Binjyo
         private bool _isExit;
         private HotKey _screenshotHotKey;
         private HotKey _displayModeHotKey;
+        private ContextMenu _trayContextMenu;
 
         // single-instance
         static Mutex mutex = new Mutex(true, "{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}");
@@ -109,29 +112,96 @@ namespace Binjyo
 
         private void CreateContextMenu()
         {
-            var menu = new System.Windows.Forms.ContextMenuStrip();
-            //_notifyIcon.ContextMenuStrip.Items.Add("MainWindow...").Click += (s, e) => ShowMainWindow();
+            _trayContextMenu = BuildTrayContextMenu();
+            _notifyIcon.MouseUp += NotifyIcon_MouseUp;
+        }
 
-            var viewModeItem = new System.Windows.Forms.ToolStripMenuItem("View mode");
-            var expandedItem = new System.Windows.Forms.ToolStripMenuItem("Expanded");
-            var autoHideItem = new System.Windows.Forms.ToolStripMenuItem("Auto Hide");
-            var minimizedItem = new System.Windows.Forms.ToolStripMenuItem("Minimized");
+        private ContextMenu BuildTrayContextMenu()
+        {
+            ContextMenu menu = new ContextMenu
+            {
+                FlowDirection = FlowDirection.LeftToRight
+            };
 
-            expandedItem.Click += (s, e) => SetViewMode(MemoDisplayMode.Expanded);
-            autoHideItem.Click += (s, e) => SetViewMode(MemoDisplayMode.AutoHide);
-            minimizedItem.Click += (s, e) => SetViewMode(MemoDisplayMode.Minimized);
-            viewModeItem.DropDownOpening += (s, e) => UpdateViewModeMenuChecks(expandedItem, autoHideItem, minimizedItem);
-            viewModeItem.DropDownItems.Add(expandedItem);
-            viewModeItem.DropDownItems.Add(autoHideItem);
-            viewModeItem.DropDownItems.Add(minimizedItem);
+            MenuItem viewModeItem = new MenuItem { Header = "View mode" };
+            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => SetViewMode(MemoDisplayMode.Expanded));
+            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => SetViewMode(MemoDisplayMode.AutoHide));
+            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => SetViewMode(MemoDisplayMode.Minimized));
+            viewModeItem.SubmenuOpened += (s, e) => UpdateViewModeMenuChecks(expandedItem, autoHideItem, minimizedItem);
+            viewModeItem.Items.Add(expandedItem);
+            viewModeItem.Items.Add(autoHideItem);
+            viewModeItem.Items.Add(minimizedItem);
 
             menu.Items.Add(viewModeItem);
-            menu.Items.Add("Close All").Click += (s, e) => CloseAll();
-            menu.Items.Add("History...").Click += (s, e) => OpenHistory();
-            menu.Items.Add("Shortcut Help").Click += (s, e) => OpenShortcutHelp();
-            menu.Items.Add("Settings...").Click += (s, e) => OpenSettings();
-            menu.Items.Add("Exit").Click += (s, e) => ExitApplication();
-            _notifyIcon.ContextMenuStrip = menu;
+            menu.Items.Add(CreateMenuItem("Close All", null, (s, e) => CloseAll()));
+            menu.Items.Add(CreateMenuItem("History...", null, (s, e) => OpenHistory()));
+            menu.Items.Add(CreateMenuItem("Shortcut Help", null, (s, e) => OpenShortcutHelp()));
+            menu.Items.Add(CreateMenuItem("Settings...", null, (s, e) => OpenSettings()));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(CreateMenuItem("Exit", null, (s, e) => ExitApplication()));
+            return menu;
+        }
+
+        private void NotifyIcon_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            if (e.Button != System.Windows.Forms.MouseButtons.Right || _trayContextMenu == null)
+                return;
+
+            Dispatcher.BeginInvoke(new Action(OpenTrayContextMenu));
+        }
+
+        private void OpenTrayContextMenu()
+        {
+            if (_trayContextMenu == null)
+                return;
+
+            var mousePosition = System.Windows.Forms.Control.MousePosition;
+            _trayContextMenu.Placement = PlacementMode.AbsolutePoint;
+            _trayContextMenu.PlacementTarget = mainWindow;
+            _trayContextMenu.HorizontalOffset = mousePosition.X;
+            _trayContextMenu.VerticalOffset = mousePosition.Y;
+            _trayContextMenu.IsOpen = true;
+        }
+
+        private static MenuItem CreateMenuItem(string header, string inputGestureText, RoutedEventHandler onClick)
+        {
+            MenuItem item = new MenuItem
+            {
+                Header = header,
+                InputGestureText = inputGestureText,
+                FlowDirection = FlowDirection.LeftToRight
+            };
+            item.Click += onClick;
+            return item;
+        }
+
+        private static MenuItem CreateCheckableMenuItem(string header, string inputGestureText, RoutedEventHandler onClick)
+        {
+            MenuItem item = new MenuItem
+            {
+                Header = header,
+                InputGestureText = inputGestureText,
+                IsCheckable = true,
+                StaysOpenOnClick = false,
+                FlowDirection = FlowDirection.LeftToRight
+            };
+            item.Click += onClick;
+            return item;
+        }
+
+        private static string FormatDisplayModeGestureText()
+        {
+            ModifierKeys modifiers = (ModifierKeys)Binjyo.Properties.Settings.Default.ModifierDisplayMode;
+            string result = string.Empty;
+            if ((modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                result += "Ctrl+";
+            if ((modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+                result += "Alt+";
+            if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+                result += "Shift+";
+            if ((modifiers & ModifierKeys.Windows) == ModifierKeys.Windows)
+                result += "Win+";
+            return $"{result}X";
         }
 
         public void SetViewMode(MemoDisplayMode mode)
@@ -140,14 +210,14 @@ namespace Binjyo
         }
 
         private void UpdateViewModeMenuChecks(
-            System.Windows.Forms.ToolStripMenuItem expandedItem,
-            System.Windows.Forms.ToolStripMenuItem autoHideItem,
-            System.Windows.Forms.ToolStripMenuItem minimizedItem)
+            MenuItem expandedItem,
+            MenuItem autoHideItem,
+            MenuItem minimizedItem)
         {
             MemoDisplayMode currentMode = Memo.GetGlobalDisplayMode();
-            expandedItem.Checked = currentMode == MemoDisplayMode.Expanded;
-            autoHideItem.Checked = currentMode == MemoDisplayMode.AutoHide;
-            minimizedItem.Checked = currentMode == MemoDisplayMode.Minimized;
+            expandedItem.IsChecked = currentMode == MemoDisplayMode.Expanded;
+            autoHideItem.IsChecked = currentMode == MemoDisplayMode.AutoHide;
+            minimizedItem.IsChecked = currentMode == MemoDisplayMode.Minimized;
         }
         public void OpenHistory()
         {
@@ -197,6 +267,8 @@ namespace Binjyo
                 if (item.Title != "MainWindow") item.Close();
             }
             MainWindow.Close();
+            if (_trayContextMenu != null)
+                _trayContextMenu.IsOpen = false;
             _notifyIcon.Dispose();
             _notifyIcon = null;
         }
