@@ -90,6 +90,7 @@ namespace Binjyo
     {
         private static long focusSequence = 0;
         private static MemoDisplayMode globalDisplayMode = MemoDisplayMode.Expanded;
+        private static bool isFeaturePointModeEnabled = false;
         private static readonly FieldInfo menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", BindingFlags.NonPublic | BindingFlags.Static);
         private DispatcherTimer timer = null;
 
@@ -98,6 +99,8 @@ namespace Binjyo
         private BitmapSource bitmpasource;
         private Bitmap bitmap;
         private Bitmap bitmapTransformed = null;
+        private int originalBitmapWidth = 0;
+        private int originalBitmapHeight = 0;
 
         // effect
         private double scale = 1;
@@ -131,6 +134,7 @@ namespace Binjyo
         private bool isResizing = false;
         private bool isSaving = false;
         private bool isClosing = false;
+        private bool flashOnNextActivation = false;
         private bool isSuspendingDisplayPosition = false;
         private EventHandler centerInfoFadeCompletedHandler = null;
         private const double SnapDistance = 12;
@@ -164,6 +168,8 @@ namespace Binjyo
         private ContextMenu memoContextMenu = null;
         private MenuItem resizeModeMenuItem = null;
         private MenuItem editModeMenuItem = null;
+        private MenuItem featurePointsMenuItem = null;
+        private MenuItem combineMenuItem = null;
         private MenuItem grayscaleMenuItem = null;
         private MenuItem hueMapMenuItem = null;
         private MenuItem binarizeOffMenuItem = null;
@@ -173,6 +179,9 @@ namespace Binjyo
         private MenuItem transparencyOffMenuItem = null;
         private Dictionary<int, MenuItem> transparencyMenuItems = null;
         private bool? originalMenuDropAlignment = null;
+        private bool isCombinePreviewHighlighted = false;
+        private double lastContextMenuScreenX = 0;
+        private double lastContextMenuScreenY = 0;
 
 
         public Memo(Bitmap bmp, int left, int top)    // Physical coordinates
@@ -203,12 +212,17 @@ namespace Binjyo
 
             this.bitmap = bmp;
             this.bitmapTransformed = (Bitmap)this.bitmap.Clone();
+            this.originalBitmapWidth = bmp.Width;
+            this.originalBitmapHeight = bmp.Height;
+            this.showFeaturePoints = isFeaturePointModeEnabled;
             this._ShowBitmap(bmp);
             InitializeContextMenu();
-            LocationChanged += MemoBoundsChanged;
-            SizeChanged += MemoBoundsChanged;
+            LocationChanged += MemoLocationChanged;
+            SizeChanged += MemoSizeChanged;
             UpdateResizeModeVisuals();
             ApplyCurrentDisplayMode();
+            if (showFeaturePoints)
+                RefreshAllMemoFeatureOverlays();
         }
 
         public static MemoDisplayMode GetGlobalDisplayMode()
@@ -252,6 +266,8 @@ namespace Binjyo
             ExitEditMode();
             if (this.bitmap != null) this.bitmap.Dispose();
             if (this.bitmapTransformed != null) this.bitmapTransformed.Dispose();
+            this.bitmap = null;
+            this.bitmapTransformed = null;
             this.image.Source = null;
             this.bitmpasource = null;
             if (this.timer != null) this.timer.Stop();
@@ -285,6 +301,7 @@ namespace Binjyo
 
                 this.image.Source = this.bitmpasource;
                 RenderDrawingOverlay();
+                HandleDisplayedBitmapUpdated(bmp);
                 Show();
             }
             finally
@@ -674,7 +691,7 @@ namespace Binjyo
         private void ApplyExpandedDisplayMode()
         {
             EnsureMemoVisible();
-            image.Opacity = 1;
+            image.Opacity = GetCurrentImageOpacity();
             ApplyDisplayPosition(anchorLeft, anchorTop);
         }
 
@@ -684,13 +701,13 @@ namespace Binjyo
 
             if ((MemoAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == MemoAutoHideBehavior.EvadeMouse)
             {
-                image.Opacity = 1;
+                image.Opacity = GetCurrentImageOpacity();
                 UpdateEvadeDisplayPosition();
                 return;
             }
 
             ApplyDisplayPosition(anchorLeft, anchorTop);
-            image.Opacity = IsMouseInsideMemoBounds() ? 0 : 1;
+            image.Opacity = IsMouseInsideMemoBounds() ? 0 : GetCurrentImageOpacity();
         }
 
         private void ApplyMinimizedDisplayMode()
@@ -836,6 +853,11 @@ namespace Binjyo
             double x = mouse.X / dpiFactor;
             double y = mouse.Y / dpiFactor;
             return Left <= x && x <= Left + Width && Top <= y && y <= Top + Height;
+        }
+
+        private double GetCurrentImageOpacity()
+        {
+            return isFeaturePointModeEnabled && isdrag ? 0.5 : 1.0;
         }
 
         private static double Lerp(double current, double target, double amount)

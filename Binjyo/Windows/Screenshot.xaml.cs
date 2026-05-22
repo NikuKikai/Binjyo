@@ -349,7 +349,8 @@ namespace Binjyo
                 }
 
                 // Create Memo from cropped bitmap
-                new Memo(croppedImage, this.selectedLeft + 1 + l, this.selectedTop + 1 + t);    // Physical coordinates
+                Memo memo = new Memo(croppedImage, this.selectedLeft + 1 + l, this.selectedTop + 1 + t);    // Physical coordinates
+                memo.BringToMemoFocus();
             }
         }
 
@@ -386,6 +387,7 @@ namespace Binjyo
             _HideSelectionPopup();
             _HideCross();
 
+            Opacity = 0;
             _CreateMemo();
 
             _Hide();

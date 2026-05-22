@@ -47,6 +47,12 @@ namespace Binjyo
             memoContextMenu.Items.Add(resizeModeMenuItem);
             editModeMenuItem = CreateMenuItem("Edit Mode", "E", (s, e) => EnterEditMode());
             memoContextMenu.Items.Add(editModeMenuItem);
+            featurePointsMenuItem = CreateCheckableMenuItem("Feature Points", "P", (s, e) => ToggleFeaturePoints());
+            memoContextMenu.Items.Add(featurePointsMenuItem);
+            combineMenuItem = CreateMenuItem("Combine", null, (s, e) => CombineMemosAtLastContextMenuPoint());
+            combineMenuItem.MouseEnter += CombineMenuItem_MouseEnter;
+            combineMenuItem.MouseLeave += CombineMenuItem_MouseLeave;
+            memoContextMenu.Items.Add(combineMenuItem);
             memoContextMenu.Items.Add(new Separator());
 
             MenuItem transformMenu = new MenuItem { Header = "Transform" };
@@ -197,6 +203,15 @@ namespace Binjyo
             }
             if (editModeMenuItem != null)
                 editModeMenuItem.IsEnabled = isInteractive && globalDisplayMode != MemoDisplayMode.Minimized;
+            if (featurePointsMenuItem != null)
+            {
+                featurePointsMenuItem.IsChecked = isFeaturePointModeEnabled;
+                featurePointsMenuItem.IsEnabled = globalDisplayMode != MemoDisplayMode.Minimized;
+            }
+            if (combineMenuItem != null)
+            {
+                combineMenuItem.IsEnabled = GetMemosAtContextMenuPoint().Count >= 2;
+            }
             if (grayscaleMenuItem != null)
             {
                 grayscaleMenuItem.IsChecked = isEffectGray;
@@ -242,6 +257,7 @@ namespace Binjyo
 
         private void MemoContextMenu_Closed(object sender, RoutedEventArgs e)
         {
+            ClearCombinePreviewHighlights();
             RestoreMenuDropAlignment();
         }
 
@@ -269,6 +285,107 @@ namespace Binjyo
         {
             ModifierKeys modifiers = (ModifierKeys)Properties.Settings.Default.ModifierDisplayMode;
             return $"{FormatModifiers(modifiers)}X";
+        }
+
+        private void CombineMenuItem_MouseEnter(object sender, MouseEventArgs e)
+        {
+            HighlightCombinePreviewTargets(GetMemosAtContextMenuPoint());
+        }
+
+        private void CombineMenuItem_MouseLeave(object sender, MouseEventArgs e)
+        {
+            ClearCombinePreviewHighlights();
+        }
+
+        private List<Memo> GetMemosAtContextMenuPoint()
+        {
+            return GetMemosAtScreenPoint(lastContextMenuScreenX, lastContextMenuScreenY);
+        }
+
+        private List<Memo> GetMemosAtScreenPoint(double screenX, double screenY)
+        {
+            return GetVisibleMemos()
+                .Where(memo => memo.ContainsScreenPoint(screenX, screenY))
+                .OrderBy(memo => memo.lastFocusOrder)
+                .ToList();
+        }
+
+        private void HighlightCombinePreviewTargets(IEnumerable<Memo> memos)
+        {
+            HashSet<Memo> targetSet = new HashSet<Memo>(memos ?? Enumerable.Empty<Memo>());
+            foreach (Memo memo in GetVisibleMemos())
+            {
+                memo.SetCombinePreviewHighlight(targetSet.Contains(memo));
+            }
+        }
+
+        private void ClearCombinePreviewHighlights()
+        {
+            HighlightCombinePreviewTargets(Enumerable.Empty<Memo>());
+        }
+
+        private void SetCombinePreviewHighlight(bool enabled)
+        {
+            if (focusFlashOverlay == null || isCombinePreviewHighlighted == enabled)
+                return;
+
+            isCombinePreviewHighlighted = enabled;
+            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+            focusFlashOverlay.Opacity = enabled ? 0.35 : 0;
+        }
+
+        private void CombineMemosAtLastContextMenuPoint()
+        {
+            List<Memo> memosToCombine = GetMemosAtContextMenuPoint();
+            if (memosToCombine.Count < 2)
+                return;
+
+            ClearCombinePreviewHighlights();
+
+            var renderedItems = memosToCombine
+                .Select(memo => new
+                {
+                    Memo = memo,
+                    Bitmap = memo.CreateOutputBitmap(true),
+                    Left = (int)Math.Round(memo.Left * memo.dpiFactor),
+                    Top = (int)Math.Round(memo.Top * memo.dpiFactor)
+                })
+                .ToList();
+
+            try
+            {
+                int unionLeft = renderedItems.Min(item => item.Left);
+                int unionTop = renderedItems.Min(item => item.Top);
+                int unionRight = renderedItems.Max(item => item.Left + item.Bitmap.Width);
+                int unionBottom = renderedItems.Max(item => item.Top + item.Bitmap.Height);
+                int combinedWidth = Math.Max(1, unionRight - unionLeft);
+                int combinedHeight = Math.Max(1, unionBottom - unionTop);
+
+                Bitmap combinedBitmap = new Bitmap(combinedWidth, combinedHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                using (Graphics graphics = Graphics.FromImage(combinedBitmap))
+                {
+                    graphics.Clear(System.Drawing.Color.Transparent);
+                    foreach (var item in renderedItems)
+                    {
+                        graphics.DrawImage(item.Bitmap, item.Left - unionLeft, item.Top - unionTop, item.Bitmap.Width, item.Bitmap.Height);
+                    }
+                }
+
+                Memo combinedMemo = new Memo(combinedBitmap, unionLeft, unionTop);
+                combinedMemo.BringToMemoFocus();
+
+                foreach (Memo memo in memosToCombine)
+                {
+                    memo._Close();
+                }
+            }
+            finally
+            {
+                foreach (var item in renderedItems)
+                {
+                    item.Bitmap.Dispose();
+                }
+            }
         }
 
         private static string FormatModifiers(ModifierKeys modifiers)

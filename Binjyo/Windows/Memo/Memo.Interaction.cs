@@ -142,7 +142,15 @@ namespace Binjyo
             return new System.Windows.Rect(left, top, right - left, bottom - top);
         }
 
-        private void GetMoveSnapAdjustment(ICollection<Memo> movingMemos, double nextLeft, double nextTop, double width, double height, out double offsetX, out double offsetY)
+        private void GetMoveSnapAdjustment(
+            ICollection<Memo> movingMemos,
+            IDictionary<Memo, System.Windows.Point> targetPositions,
+            double nextLeft,
+            double nextTop,
+            double width,
+            double height,
+            out double offsetX,
+            out double offsetY)
         {
             offsetX = 0;
             offsetY = 0;
@@ -155,6 +163,7 @@ namespace Binjyo
             double bestDistanceX = SnapDistance + 1;
             double bestDistanceY = SnapDistance + 1;
             var movingSet = new HashSet<Memo>(movingMemos);
+            bool disableMemoEdgeSnap = isFeaturePointModeEnabled && isdrag;
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
@@ -169,12 +178,22 @@ namespace Binjyo
                 TrySnapValue(nextTop, screenBottom - height, ref snappedTop, ref bestDistanceY);
             }
 
-            TrySnapAgainstMemosForX(nextLeft, nextTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
-            TrySnapAgainstMemosForY(nextLeft, snappedLeft, nextTop, width, height, movingSet, ref snappedTop, ref bestDistanceY);
-            TrySnapAgainstMemosForX(nextLeft, snappedTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
+            if (!disableMemoEdgeSnap)
+            {
+                TrySnapAgainstMemosForX(nextLeft, nextTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
+                TrySnapAgainstMemosForY(nextLeft, snappedLeft, nextTop, width, height, movingSet, ref snappedTop, ref bestDistanceY);
+                TrySnapAgainstMemosForX(nextLeft, snappedTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
+            }
 
             offsetX = snappedLeft - nextLeft;
             offsetY = snappedTop - nextTop;
+
+            if (targetPositions != null &&
+                TryGetFeatureAlignmentSnapOffset(targetPositions, movingSet, out double alignmentOffsetX, out double alignmentOffsetY))
+            {
+                offsetX = alignmentOffsetX;
+                offsetY = alignmentOffsetY;
+            }
         }
 
         private void TrySnapAgainstMemosForX(double nextLeft, double currentTop, double width, double height, HashSet<Memo> movingSet, ref double snappedLeft, ref double bestDistanceX)
@@ -464,6 +483,11 @@ namespace Binjyo
                     if (!e.IsRepeat)
                         ToggleHueMap();
                     break;
+                case Key.P:
+                    if (!e.IsRepeat)
+                        ToggleFeaturePoints();
+                    e.Handled = true;
+                    break;
                 case Key.CapsLock:
                     if (!e.IsRepeat)
                     {
@@ -609,15 +633,22 @@ namespace Binjyo
             return localX >= 0 && localX < Width && localY >= 0 && localY < Height;
         }
 
+        public void BringToMemoFocus()
+        {
+            BringIntoMemoFocus();
+        }
+
         private void BringIntoMemoFocus()
         {
             if (!IsActive)
             {
+                flashOnNextActivation = true;
                 Activate();
                 Focus();
                 return;
             }
 
+            flashOnNextActivation = false;
             Focus();
             MarkAsFocused();
             FlashFocusCue();
@@ -812,7 +843,7 @@ namespace Binjyo
             System.Windows.Rect boundingBox = GetBoundingBox(targetPositions);
             if (allowSnap)
             {
-                GetMoveSnapAdjustment(movingMemos, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
+                GetMoveSnapAdjustment(movingMemos, targetPositions, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
                 if (snapOffsetX != 0 || snapOffsetY != 0)
                 {
                     foreach (Memo memo in movingMemos)
@@ -881,6 +912,9 @@ namespace Binjyo
             if (e.ChangedButton == MouseButton.Right)
                 return;
 
+            if (!IsActive)
+                flashOnNextActivation = true;
+
             if (isEditMode)
             {
                 if (e.ChangedButton == MouseButton.Left)
@@ -906,11 +940,16 @@ namespace Binjyo
             dragStartLeft = Left;
             dragStartTop = Top;
             BeginDragAnchor(IsMoveGroupModifierDown());
+            if (isFeaturePointModeEnabled)
+                image.Opacity = 0.5;
             Mouse.Capture(this);
         }
 
         private void Window_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
+            lastContextMenuScreenX = System.Windows.Forms.Control.MousePosition.X;
+            lastContextMenuScreenY = System.Windows.Forms.Control.MousePosition.Y;
+
             if (isResizeMode)
             {
                 SetResizeMode(false);
@@ -995,7 +1034,7 @@ namespace Binjyo
             }
 
             System.Windows.Rect boundingBox = GetBoundingBox(targetPositions);
-            GetMoveSnapAdjustment(movingMemos, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
+            GetMoveSnapAdjustment(movingMemos, targetPositions, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
             if (snapOffsetX != 0 || snapOffsetY != 0)
             {
                 foreach (Memo memo in movingMemos)
@@ -1083,6 +1122,8 @@ namespace Binjyo
 
             isdrag = false;
             dragStartPositions.Clear();
+            if (isFeaturePointModeEnabled)
+                image.Opacity = 1;
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
@@ -1153,6 +1194,8 @@ namespace Binjyo
 
             isdrag = false;
             dragStartPositions.Clear();
+            if (isFeaturePointModeEnabled)
+                image.Opacity = 1;
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
@@ -1162,7 +1205,12 @@ namespace Binjyo
         private void Window_Activated(object sender, EventArgs e)
         {
             MarkAsFocused();
-            FlashFocusCue();
+            RefreshAllMemoFeatureOverlays();
+            if (flashOnNextActivation)
+            {
+                flashOnNextActivation = false;
+                FlashFocusCue();
+            }
             RefreshHSVWheelVisibility();
         }
 

@@ -96,7 +96,9 @@
     <Compile Include="Windows\EditModePanel.xaml.cs">
       <DependentUpon>EditModePanel.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Windows\FeatureMatchOverlayWindow.cs" />
     <Compile Include="Services\HistoryStore.cs" />
+    <Compile Include="Services\FastCornerDetector.cs" />
     <Compile Include="Windows\HistoryWindow.xaml.cs">
       <DependentUpon>HistoryWindow.xaml</DependentUpon>
     </Compile>
@@ -115,6 +117,7 @@
     <Compile Include="Windows\Memo\Memo.Resize.cs" />
     <Compile Include="Windows\Memo\Memo.ContextMenu.cs" />
     <Compile Include="Windows\Memo\Memo.Drawing.cs" />
+    <Compile Include="Windows\Memo\Memo.Features.cs" />
     <Compile Include="Windows\Memo\Memo.Interaction.cs" />
     <Compile Include="Windows\Memo\Memo.Imaging.cs" />
     <Page Include="Windows\MainWindow.xaml">

@@ -103,6 +103,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Action"/>
@@ -163,41 +164,45 @@
                             <TextBlock Grid.Row="16" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="H / CapsLock"/>
                             <TextBlock Grid.Row="16" Grid.Column="2" Margin="0,6,0,0" Text="H toggles hue map. CapsLock toggles the color wheel display state while the mouse is over the memo." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="17" Grid.Column="0" Margin="0,6,0,0" Text="Move memo"/>
-                            <TextBlock Grid.Row="17" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Arrow keys"/>
-                            <TextBlock Grid.Row="17" Grid.Column="2" Margin="0,6,0,0" Text="Moves by 1 pixel. Hold to repeat and accelerate. This does not snap." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="17" Grid.Column="0" Margin="0,6,0,0" Text="Feature points"/>
+                            <TextBlock Grid.Row="17" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="P"/>
+                            <TextBlock Grid.Row="17" Grid.Column="2" Margin="0,6,0,0" Text="Toggles FAST keypoint markers on the current displayed image." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="18" Grid.Column="0" Margin="0,6,0,0" Text="Move connected memos"/>
-                            <TextBlock Grid.Row="18" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Alt + drag / Arrow keys"/>
-                            <TextBlock Grid.Row="18" Grid.Column="2" Margin="0,6,0,0" Text="Moves this memo together with all recursively overlapping or touching memos." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="18" Grid.Column="0" Margin="0,6,0,0" Text="Move memo"/>
+                            <TextBlock Grid.Row="18" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Arrow keys"/>
+                            <TextBlock Grid.Row="18" Grid.Column="2" Margin="0,6,0,0" Text="Moves by 1 pixel. Hold to repeat and accelerate. This does not snap." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="19" Grid.Column="0" Margin="0,6,0,0" Text="Move memo faster"/>
-                            <TextBlock Grid.Row="19" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Shift + Arrow keys"/>
-                            <TextBlock Grid.Row="19" Grid.Column="2" Margin="0,6,0,0" Text="Multiplies the movement step by 10. Can be combined with Alt group move." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="19" Grid.Column="0" Margin="0,6,0,0" Text="Move connected memos"/>
+                            <TextBlock Grid.Row="19" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Alt + drag / Arrow keys"/>
+                            <TextBlock Grid.Row="19" Grid.Column="2" Margin="0,6,0,0" Text="Moves this memo together with all recursively overlapping or touching memos." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="20" Grid.Column="0" Margin="0,6,0,0" Text="Jump to next snap"/>
-                            <TextBlock Grid.Row="20" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Ctrl + Arrow keys"/>
-                            <TextBlock Grid.Row="20" Grid.Column="2" Margin="0,6,0,0" Text="Jumps to the next snappable position in that direction. With Alt, the connected memo group uses its bounding box." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="20" Grid.Column="0" Margin="0,6,0,0" Text="Move memo faster"/>
+                            <TextBlock Grid.Row="20" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Shift + Arrow keys"/>
+                            <TextBlock Grid.Row="20" Grid.Column="2" Margin="0,6,0,0" Text="Multiplies the movement step by 10. Can be combined with Alt group move." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="21" Grid.Column="0" Margin="0,6,0,0" Text="Resize mode"/>
-                            <TextBlock Grid.Row="21" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="T"/>
-                            <TextBlock Grid.Row="21" Grid.Column="2" Margin="0,6,0,0" Text="Shows corner resize markers and enables drag resizing from the corners." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="21" Grid.Column="0" Margin="0,6,0,0" Text="Jump to next snap"/>
+                            <TextBlock Grid.Row="21" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Ctrl + Arrow keys"/>
+                            <TextBlock Grid.Row="21" Grid.Column="2" Margin="0,6,0,0" Text="Jumps to the next snappable position in that direction. With Alt, the connected memo group uses its bounding box." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="22" Grid.Column="0" Margin="0,6,0,0" Text="Toggle snapping temporarily"/>
-                            <TextBlock Grid.Row="22" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Space + drag"/>
-                            <TextBlock Grid.Row="22" Grid.Column="2" Margin="0,6,0,0" Text="Temporarily inverts the snap setting while moving or resizing." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="22" Grid.Column="0" Margin="0,6,0,0" Text="Resize mode"/>
+                            <TextBlock Grid.Row="22" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="T"/>
+                            <TextBlock Grid.Row="22" Grid.Column="2" Margin="0,6,0,0" Text="Shows corner resize markers and enables drag resizing from the corners." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="23" Grid.Column="0" Margin="0,6,0,0" Text="Focus memo under mouse"/>
-                            <TextBlock Grid.Row="23" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Tab"/>
-                            <TextBlock Grid.Row="23" Grid.Column="2" Margin="0,6,0,0" Text="Focuses the memo under the mouse, cycles through overlapping memos, or cycles all memos if the mouse is outside them." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="23" Grid.Column="0" Margin="0,6,0,0" Text="Toggle snapping temporarily"/>
+                            <TextBlock Grid.Row="23" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Space + drag"/>
+                            <TextBlock Grid.Row="23" Grid.Column="2" Margin="0,6,0,0" Text="Temporarily inverts the snap setting while moving or resizing." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="24" Grid.Column="0" Margin="0,6,0,0" Text="Resize snapping"/>
-                            <TextBlock Grid.Row="24" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Space + drag"/>
-                            <TextBlock Grid.Row="24" Grid.Column="2" Margin="0,6,0,0" Text="In resize mode, snapping follows the memo snap setting. Hold Space to temporarily invert it." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="24" Grid.Column="0" Margin="0,6,0,0" Text="Focus memo under mouse"/>
+                            <TextBlock Grid.Row="24" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Tab"/>
+                            <TextBlock Grid.Row="24" Grid.Column="2" Margin="0,6,0,0" Text="Focuses the memo under the mouse, cycles through overlapping memos, or cycles all memos if the mouse is outside them." TextWrapping="Wrap"/>
 
-                            <TextBlock Grid.Row="25" Grid.Column="0" Margin="0,6,0,0" Text="Global display mode"/>
-                            <TextBlock Grid.Row="25" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Configurable + X"/>
-                            <TextBlock Grid.Row="25" Grid.Column="2" Margin="0,6,0,0" Text="Cycles all memos through expanded, auto hide, and minimized modes." TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="25" Grid.Column="0" Margin="0,6,0,0" Text="Resize snapping"/>
+                            <TextBlock Grid.Row="25" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Space + drag"/>
+                            <TextBlock Grid.Row="25" Grid.Column="2" Margin="0,6,0,0" Text="In resize mode, snapping follows the memo snap setting. Hold Space to temporarily invert it." TextWrapping="Wrap"/>
+
+                            <TextBlock Grid.Row="26" Grid.Column="0" Margin="0,6,0,0" Text="Global display mode"/>
+                            <TextBlock Grid.Row="26" Grid.Column="1" Margin="0,6,0,0" FontFamily="Consolas" Text="Configurable + X"/>
+                            <TextBlock Grid.Row="26" Grid.Column="2" Margin="0,6,0,0" Text="Cycles all memos through expanded, auto hide, and minimized modes." TextWrapping="Wrap"/>
                         </Grid>
                     </StackPanel>
                 </Border>

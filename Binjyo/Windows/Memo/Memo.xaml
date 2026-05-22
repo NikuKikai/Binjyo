@@ -29,6 +29,8 @@
         >
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
+        <Canvas Name="featureOverlay"
+                IsHitTestVisible="False"/>
         <Canvas Name="drawingOverlay"
                 IsHitTestVisible="False"/>
         <Rectangle Name="focusFlashOverlay"

@@ -222,6 +222,12 @@
                             <ComboBoxItem Content="NearestNeighbor" Tag="0"/>
                         </ComboBox>
                     </Grid>
+                    <CheckBox Name="CheckShowFeatureMatchLines"
+                              Margin="0,12,0,0"
+                              Style="{StaticResource DarkCheckStyle}"
+                              Content="Show feature match lines in P mode"
+                              Checked="CheckShowFeatureMatchLines_Changed"
+                              Unchecked="CheckShowFeatureMatchLines_Changed"/>
                 </StackPanel>
             </Border>
 

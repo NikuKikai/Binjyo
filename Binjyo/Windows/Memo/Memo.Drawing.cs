@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -163,12 +164,16 @@ namespace Binjyo
         private void ApplySnap(ref double nextLeft, ref double nextTop)
         {
             var movingMemos = new List<Memo> { this };
-            GetMoveSnapAdjustment(movingMemos, nextLeft, nextTop, Width, Height, out double offsetX, out double offsetY);
+            var targetPositions = new Dictionary<Memo, System.Windows.Point>
+            {
+                [this] = new System.Windows.Point(nextLeft, nextTop)
+            };
+            GetMoveSnapAdjustment(movingMemos, targetPositions, nextLeft, nextTop, Width, Height, out double offsetX, out double offsetY);
             nextLeft += offsetX;
             nextTop += offsetY;
         }
 
-        private void MemoBoundsChanged(object sender, EventArgs e)
+        private void MemoLocationChanged(object sender, EventArgs e)
         {
             if (!isSuspendingDisplayPosition)
             {
@@ -176,8 +181,25 @@ namespace Binjyo
                 anchorTop = Top;
                 hasAnchorPosition = true;
             }
+
             UpdateEditPanelPlacement();
+            RefreshAllMemoFeatureOverlays();
+        }
+
+        private void MemoSizeChanged(object sender, EventArgs e)
+        {
+            if (!isSuspendingDisplayPosition)
+            {
+                anchorLeft = Left;
+                anchorTop = Top;
+                hasAnchorPosition = true;
+            }
+
+            UpdateEditPanelPlacement();
+            InvalidateFeatureAlignmentCachesFor(this);
+            UpdateFeatureOverlayTransform();
             RenderDrawingOverlay();
+            RefreshAllMemoFeatureOverlays();
         }
 
         private void EnterEditMode()

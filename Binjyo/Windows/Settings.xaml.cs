@@ -42,6 +42,7 @@ namespace Binjyo
             CheckSnapMemo.IsChecked = Properties.Settings.Default.SnapMemo;
             CheckExportApplyTransform.IsChecked = Properties.Settings.Default.ExportApplyTransform;
             CheckExportApplyEffects.IsChecked = Properties.Settings.Default.ExportApplyEffects;
+            CheckShowFeatureMatchLines.IsChecked = Properties.Settings.Default.ShowFeatureMatchLines;
             HistoryEntryLimitBox.Text = Properties.Settings.Default.HistoryEntryLimit.ToString();
             SelectBitmapScalingMode((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode);
             switch (modifierScreenshot)
@@ -290,6 +291,19 @@ namespace Binjyo
             Properties.Settings.Default.BitmapScalingMode = value;
             Properties.Settings.Default.Save();
             Memo.RefreshAllMemoScalingModes();
+        }
+
+        private void CheckShowFeatureMatchLines_Changed(object sender, RoutedEventArgs e)
+        {
+            if (CheckShowFeatureMatchLines?.IsChecked == null)
+                return;
+
+            if (Properties.Settings.Default.ShowFeatureMatchLines == CheckShowFeatureMatchLines.IsChecked.Value)
+                return;
+
+            Properties.Settings.Default.ShowFeatureMatchLines = CheckShowFeatureMatchLines.IsChecked.Value;
+            Properties.Settings.Default.Save();
+            Memo.RefreshAllFeatureVisuals();
         }
     }
 }
