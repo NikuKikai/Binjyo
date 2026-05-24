@@ -29,6 +29,12 @@ namespace Binjyo
 
     public partial class Memo
     {
+        private double resizeStartScale = 1;
+        private double resizeStartLeft = 0;
+        private double resizeStartTop = 0;
+        private double resizeStartRight = 0;
+        private double resizeStartBottom = 0;
+
         private bool IsResizeHandle(ResizeHandle handle)
         {
             return handle != ResizeHandle.None;

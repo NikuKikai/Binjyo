@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 using Rect = System.Drawing.Rectangle;
+using System.Diagnostics;
 
 namespace Binjyo
 {
@@ -584,7 +585,7 @@ namespace Binjyo
             if (target == null)
                 return;
 
-            target.BringIntoMemoFocus();
+            Scene.Focus(target.Id);
         }
 
         private Memo GetNextFocusTarget(List<Memo> allMemos, List<Memo> candidates)
@@ -624,31 +625,6 @@ namespace Binjyo
             return localX >= 0 && localX < Width && localY >= 0 && localY < Height;
         }
 
-        public void BringToMemoFocus()
-        {
-            BringIntoMemoFocus();
-        }
-
-        private void BringIntoMemoFocus()
-        {
-            if (!IsActive)
-            {
-                flashOnNextActivation = true;
-                Activate();
-                Focus();
-                return;
-            }
-
-            flashOnNextActivation = false;
-            Focus();
-            MarkAsFocused();
-            FlashFocusCue();
-        }
-
-        private void MarkAsFocused()
-        {
-            lastFocusOrder = ++focusSequence;
-        }
 
         private void FlashFocusCue()
         {
@@ -1195,7 +1171,6 @@ namespace Binjyo
 
         private void Window_Activated(object sender, EventArgs e)
         {
-            MarkAsFocused();
             RefreshAllMemoFeatureOverlays();
             if (flashOnNextActivation)
             {

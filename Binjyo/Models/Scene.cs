@@ -7,21 +7,8 @@ namespace Binjyo
 
     public class Scene
     {
+        #region ======== Create / CLose ========
         public static Dictionary<Guid, SceneItem> Items { get; } = new Dictionary<Guid, SceneItem>();
-
-        public static List<ISceneItemView> views = new List<ISceneItemView>();
-
-        public static void RegisterView(ISceneItemView view)
-        {
-            if (!views.Contains(view))
-                views.Add(view);
-        }
-        public static void UnregisterView(ISceneItemView view)
-        {
-            if (views.Contains(view))
-                views.Remove(view);
-        }
-
         public static SceneItem CreateItem(Bitmap bmp, int left, int top)
         {
             var item = new SceneItem(bmp, left, top);
@@ -33,6 +20,7 @@ namespace Binjyo
         {
             if (Items.ContainsKey(id))
             {
+                UnregisterView(views[id]);
                 Items[id].Close();
                 Items.Remove(id);
             }
@@ -44,6 +32,33 @@ namespace Binjyo
                 item.Close();
             Items.Clear();
         }
+        #endregion
+
+
+        #region ======== Views registration ========
+        public static Dictionary<Guid, ISceneItemView> views = new Dictionary<Guid, ISceneItemView>();
+
+        public static void RegisterView(ISceneItemView view)
+        {
+            if (!views.ContainsKey(view.Id))
+                views.Add(view.Id, view);
+        }
+        private static void UnregisterView(ISceneItemView view)
+        {
+            if (views.ContainsKey(view.Id))
+                views.Remove(view.Id);
+        }
+        #endregion
+
+
+        private static long focusOrderAll = 0;
+
+        public static void Focus(Guid id)
+        {
+            if (!views.ContainsKey(id)) return;
+            Items[id].focusOrder = ++focusOrderAll;
+            views[id].NotifiedFocus();
+        }
 
 
         public static EDisplayMode DisplayMode { get; private set; } = EDisplayMode.Expanded;
@@ -51,8 +66,10 @@ namespace Binjyo
         public static void SetDisplayMode(EDisplayMode mode)
         {
             DisplayMode = mode;
-            foreach (ISceneItemView view in views)
+            foreach (ISceneItemView view in views.Values)
+            {
                 view.NotifiedDisplayMode();
+            }
         }
         public static void CycleDisplayMode()
         {

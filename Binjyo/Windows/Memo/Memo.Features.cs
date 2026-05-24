@@ -713,7 +713,7 @@ namespace Binjyo
         public static Memo GetFocusedMemo()
         {
             return GetAllMemos()
-                .OrderByDescending(memo => memo.lastFocusOrder)
+                .OrderByDescending(memo => memo.sceneItem.focusOrder)
                 .FirstOrDefault();
         }
 

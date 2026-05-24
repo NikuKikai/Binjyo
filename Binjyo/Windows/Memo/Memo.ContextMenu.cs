@@ -315,7 +315,7 @@ namespace Binjyo
         {
             return GetVisibleMemos()
                 .Where(memo => memo.ContainsScreenPoint(screenX, screenY))
-                .OrderBy(memo => memo.lastFocusOrder)
+                .OrderBy(memo => memo.sceneItem.focusOrder)
                 .ToList();
         }
 
@@ -382,7 +382,7 @@ namespace Binjyo
 
                 var sceneItem = Scene.CreateItem(combinedBitmap, unionLeft, unionTop);
                 Memo combinedMemo = new Memo(sceneItem);
-                combinedMemo.BringToMemoFocus();
+                Scene.Focus(sceneItem.Id);
 
                 foreach (Memo memo in memosToCombine)
                 {

@@ -347,7 +347,7 @@ namespace Binjyo
                 // Create Memo from cropped bitmap
                 var item = Scene.CreateItem(croppedImage, selectedLeft + 1 + l, selectedTop + 1 + t);
                 Memo memo = new Memo(item);
-                memo.BringToMemoFocus();
+                Scene.Focus(item.Id);
             }
         }
 

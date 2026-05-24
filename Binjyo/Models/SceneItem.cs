@@ -6,7 +6,9 @@ namespace Binjyo
 {
     public interface ISceneItemView
     {
+        Guid Id { get; }
         void NotifiedClose();
+        void NotifiedFocus();
 
         void NotifiedDisplayMode();
 
@@ -40,6 +42,7 @@ namespace Binjyo
         public double AnchorLeft { get; internal set; }
         public double AnchorTop { get; internal set; }
         public bool HasAnchorPosition { get; internal set; }
+        public long focusOrder { get; internal set; } = 0;
 
 
         public SceneItem(Bitmap bmp, int left, int top)
@@ -63,7 +66,6 @@ namespace Binjyo
             BitmapTransformed.Dispose();
             BitmapTransformed = null;
         }
-
 
         public void RegisterView(ISceneItemView view)
         {

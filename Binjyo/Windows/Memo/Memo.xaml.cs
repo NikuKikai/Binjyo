@@ -91,12 +91,6 @@ namespace Binjyo
         private bool dragMovesConnectedGroup = false;
         private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
         private ResizeHandle activeResizeHandle = ResizeHandle.None;
-        private double resizeStartScale = 1;
-        private double resizeStartLeft = 0;
-        private double resizeStartTop = 0;
-        private double resizeStartRight = 0;
-        private double resizeStartBottom = 0;
-        private long lastFocusOrder = 0;
         private double anchorLeft { get => sceneItem.AnchorLeft; set => sceneItem.AnchorLeft = value; }
         private double anchorTop { get => sceneItem.AnchorTop; set => sceneItem.AnchorTop = value; }
         private bool hasAnchorPosition { get => sceneItem.HasAnchorPosition; set => sceneItem.HasAnchorPosition = value; }
@@ -150,6 +144,8 @@ namespace Binjyo
 
 
         #region ======= ISceneItemView Implementation ========
+        public Guid Id => sceneItem.Id;
+
         public void NotifiedDisplayMode()
         {
             if (isClosing)
@@ -180,8 +176,6 @@ namespace Binjyo
                 return;
             isClosing = true;
 
-            Scene.UnregisterView(this);
-
             SaveToHistory();
             ExitEditMode();
 
@@ -192,6 +186,21 @@ namespace Binjyo
             Close();
 
             GC.Collect();
+        }
+
+        public void NotifiedFocus()
+        {
+            if (!IsActive)
+            {
+                flashOnNextActivation = true;
+                Activate();
+                Focus();
+                return;
+            }
+
+            flashOnNextActivation = false;
+            Focus();
+            FlashFocusCue();
         }
         #endregion
 
@@ -726,11 +735,6 @@ namespace Binjyo
             return isFeaturePointModeEnabled && isdrag ? 0.5 : 1.0;
         }
 
-        private static double Lerp(double current, double target, double amount)
-        {
-            return current + (target - current) * amount;
-        }
-
         private static double GetRectSignedDistance(System.Windows.Rect rect, double x, double y, out double normalX, out double normalY)
         {
             double leftDistance = x - rect.Left;
@@ -787,13 +791,7 @@ namespace Binjyo
             return distance;
         }
 
-
-        public void Save()
-        {
-            Save(true);
-        }
-
-        public void Save(bool includeDrawing)
+        public void Save(bool includeDrawing = true)
         {
             if (isSaving)
                 return;
