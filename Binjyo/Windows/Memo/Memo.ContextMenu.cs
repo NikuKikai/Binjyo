@@ -4,21 +4,30 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
-using Rect = System.Drawing.Rectangle;
 
 namespace Binjyo
 {
     public partial class Memo
     {
+        private ContextMenu memoContextMenu = null;
+        private MenuItem resizeModeMenuItem = null;
+        private MenuItem editModeMenuItem = null;
+        private MenuItem featurePointsMenuItem = null;
+        private MenuItem combineMenuItem = null;
+        private MenuItem grayscaleMenuItem = null;
+        private MenuItem hueMapMenuItem = null;
+        private MenuItem binarizeOffMenuItem = null;
+        private Dictionary<int, MenuItem> binarizeMenuItems = null;
+        private MenuItem quantizeOffMenuItem = null;
+        private Dictionary<int, MenuItem> quantizeMenuItems = null;
+        private MenuItem transparencyOffMenuItem = null;
+        private Dictionary<int, MenuItem> transparencyMenuItems = null;
+        private bool? originalMenuDropAlignment = null;
+        private bool isCombinePreviewHighlighted = false;
+        private double lastContextMenuScreenX = 0;
+        private double lastContextMenuScreenY = 0;
         private void InitializeContextMenu()
         {
             memoContextMenu = new ContextMenu();
@@ -31,12 +40,12 @@ namespace Binjyo
             memoContextMenu.Items.Add(CreateMenuItem("Cut", "X / Ctrl+X", (s, e) =>
             {
                 CopyMemoToClipboard(true);
-                CloseMemo();
+                Scene.CloseItem(sceneItem.Id);
             }));
             memoContextMenu.Items.Add(CreateMenuItem("Cut Original", "Shift+X", (s, e) =>
             {
                 CopyMemoToClipboard(false);
-                CloseMemo();
+                Scene.CloseItem(sceneItem.Id);
             }));
             memoContextMenu.Items.Add(CreateMenuItem("Save...", "S", (s, e) => Save(true)));
             memoContextMenu.Items.Add(CreateMenuItem("Save Original...", "Shift+S", (s, e) => Save(false)));
@@ -72,7 +81,7 @@ namespace Binjyo
             memoContextMenu.Items.Add(effectsMenu);
 
             memoContextMenu.Items.Add(new Separator());
-            memoContextMenu.Items.Add(CreateMenuItem("Close", "Esc", (s, e) => CloseMemo()));
+            memoContextMenu.Items.Add(CreateMenuItem("Close", "Esc", (s, e) => Scene.CloseItem(sceneItem.Id)));
             memoContextMenu.Items.Add(new Separator());
             memoContextMenu.Items.Add(CreateTrayMirrorMenu());
             ContextMenu = memoContextMenu;
@@ -141,15 +150,15 @@ namespace Binjyo
             App app = (App)Application.Current;
 
             MenuItem viewModeMenu = new MenuItem { Header = "View mode", FlowDirection = FlowDirection.LeftToRight };
-            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => app.SetViewMode(MemoDisplayMode.Expanded));
-            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => app.SetViewMode(MemoDisplayMode.AutoHide));
-            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => app.SetViewMode(MemoDisplayMode.Minimized));
+            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => app.SetViewMode(EDisplayMode.Expanded));
+            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => app.SetViewMode(EDisplayMode.AutoHide));
+            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => app.SetViewMode(EDisplayMode.Minimized));
             viewModeMenu.SubmenuOpened += (s, e) =>
             {
-                MemoDisplayMode mode = GetGlobalDisplayMode();
-                expandedItem.IsChecked = mode == MemoDisplayMode.Expanded;
-                autoHideItem.IsChecked = mode == MemoDisplayMode.AutoHide;
-                minimizedItem.IsChecked = mode == MemoDisplayMode.Minimized;
+                EDisplayMode mode = Scene.DisplayMode;
+                expandedItem.IsChecked = mode == EDisplayMode.Expanded;
+                autoHideItem.IsChecked = mode == EDisplayMode.AutoHide;
+                minimizedItem.IsChecked = mode == EDisplayMode.Minimized;
             };
             viewModeMenu.Items.Add(expandedItem);
             viewModeMenu.Items.Add(autoHideItem);
@@ -202,11 +211,11 @@ namespace Binjyo
                 resizeModeMenuItem.IsEnabled = isInteractive;
             }
             if (editModeMenuItem != null)
-                editModeMenuItem.IsEnabled = isInteractive && globalDisplayMode != MemoDisplayMode.Minimized;
+                editModeMenuItem.IsEnabled = isInteractive && Scene.DisplayMode != EDisplayMode.Minimized;
             if (featurePointsMenuItem != null)
             {
                 featurePointsMenuItem.IsChecked = isFeaturePointModeEnabled;
-                featurePointsMenuItem.IsEnabled = globalDisplayMode != MemoDisplayMode.Minimized;
+                featurePointsMenuItem.IsEnabled = Scene.DisplayMode != EDisplayMode.Minimized;
             }
             if (combineMenuItem != null)
             {
@@ -371,12 +380,13 @@ namespace Binjyo
                     }
                 }
 
-                Memo combinedMemo = new Memo(combinedBitmap, unionLeft, unionTop);
+                var sceneItem = Scene.CreateItem(combinedBitmap, unionLeft, unionTop);
+                Memo combinedMemo = new Memo(sceneItem);
                 combinedMemo.BringToMemoFocus();
 
                 foreach (Memo memo in memosToCombine)
                 {
-                    memo.CloseMemo();
+                    Scene.CloseItem(memo.sceneItem.Id);
                 }
             }
             finally

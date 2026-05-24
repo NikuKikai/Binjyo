@@ -13,7 +13,7 @@ using System.Windows.Interop;
 
 namespace Binjyo
 {
-    
+
     public class HotKey : IDisposable
     {
         private static Dictionary<int, HotKey> _dictHotKeyToCalBackProc;

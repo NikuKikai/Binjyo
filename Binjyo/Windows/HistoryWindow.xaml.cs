@@ -95,7 +95,9 @@ namespace Binjyo
         private void RestoreEntry(HistoryEntryViewModel viewModel)
         {
             Bitmap bitmap = HistoryStore.LoadBitmap(viewModel.Entry);
-            var memo = new Memo(bitmap, 0, 0);
+            var item = Scene.CreateItem(bitmap, 0, 0);
+            var memo = new Memo(item);
+
             memo.RestoreDrawingData(HistoryStore.LoadDrawingData(viewModel.Entry));
             GetAdjustedBounds(
                 viewModel.Entry.Left,

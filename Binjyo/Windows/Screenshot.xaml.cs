@@ -28,7 +28,7 @@ namespace Binjyo
     }
     public static class ScreenExtensions
     {
-        public static System.Drawing.Point GetDpi(this Screen screen, DpiType dpiType=DpiType.Effective)
+        public static System.Drawing.Point GetDpi(this Screen screen, DpiType dpiType = DpiType.Effective)
         {
             uint x, y;
             var pnt = new System.Drawing.Point(screen.Bounds.Left + 1, screen.Bounds.Top + 1);
@@ -39,11 +39,11 @@ namespace Binjyo
 
         //https://msdn.microsoft.com/en-us/library/windows/desktop/dd145062(v=vs.85).aspx
         [DllImport("User32.dll")]
-        private static extern IntPtr MonitorFromPoint([In]System.Drawing.Point pt, [In]uint dwFlags);
+        private static extern IntPtr MonitorFromPoint([In] System.Drawing.Point pt, [In] uint dwFlags);
 
         //https://msdn.microsoft.com/en-us/library/windows/desktop/dn280510(v=vs.85).aspx
         [DllImport("Shcore.dll")]
-        private static extern IntPtr GetDpiForMonitor([In]IntPtr hmonitor, [In]DpiType dpiType, [Out]out uint dpiX, [Out]out uint dpiY);
+        private static extern IntPtr GetDpiForMonitor([In] IntPtr hmonitor, [In] DpiType dpiType, [Out] out uint dpiX, [Out] out uint dpiY);
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ namespace Binjyo
             this.rectBitmap.Height = Height;
             Canvas.SetLeft(this.rectBitmap, 0);
             Canvas.SetTop(this.rectBitmap, 0);
-            _HideSelectionRect();
+            HideSelectionRect();
 
             _Show();
         }
@@ -200,23 +200,23 @@ namespace Binjyo
             Thread.Sleep(10);
             //canvas.Opacity = 1;
 
-            _UpdateCross();
+            UpdateCross();
             Activate();
             isshot = true;
         }
 
-        private void _Hide()
+        private void CloseThis()
         {
             if (isshot)
             {
                 Opacity = 0;
-                _HideCross();
-                _HideSelectionRect();
-                _HideSelectionPopup();
+                HideCross();
+                HideSelectionRect();
+                HideSelectionPopup();
                 Width = 10; Height = 10;
 
                 ReleaseScreenshotResources();
-                _HideSelectionRect();
+                HideSelectionRect();
 
                 isshot = false;
                 isdrag = false;
@@ -240,15 +240,11 @@ namespace Binjyo
             }
 
             screenshotSource = null;
-
-            if (this.bitmap != null)
-            {
-                this.bitmap.Dispose();
-                this.bitmap = null;
-            }
+            this.bitmap?.Dispose();
+            this.bitmap = null;
         }
 
-        private void _UpdateCross()
+        private void UpdateCross()
         {
             double x = System.Windows.Forms.Control.MousePosition.X - l;
             double y = System.Windows.Forms.Control.MousePosition.Y - t;
@@ -257,24 +253,24 @@ namespace Binjyo
             linew.X1 = x; linew.X2 = x; linew.Y1 = 0; linew.Y2 = Height; linew.Opacity = 0.7;
             lineh.Y1 = y; lineh.Y2 = y; lineh.X1 = 0; lineh.X2 = Width; lineh.Opacity = 0.7;
         }
-        private void _HideCross()
+        private void HideCross()
         {
             linew.Opacity = 0; lineh.Opacity = 0;
         }
 
-        
-        private void _UpdateSelectionRect()
+
+        private void UpdateSelectionRect()
         {
             double x = System.Windows.Forms.Control.MousePosition.X - l;
             double y = System.Windows.Forms.Control.MousePosition.Y - t;
             x /= dpiFactor; y /= dpiFactor;
-            int xint = (int)(x+0.499); int yint = (int)(y+0.499);
+            int xint = (int)(x + 0.499); int yint = (int)(y + 0.499);
 
             this.selectedWidth = xint > startx ? xint - startx + 2 : startx - xint + 2;
             this.selectedHeight = yint > starty ? yint - starty + 2 : starty - yint + 2;
             this.selectedLeft = xint > startx ? startx - 1 : xint - 1;
             this.selectedTop = yint > starty ? starty - 1 : yint - 1;
-            
+
             double selectionLeft = selectedLeft / dpiFactor;
             double selectionTop = selectedTop / dpiFactor;
             double selectionWidth = selectedWidth / dpiFactor;
@@ -301,7 +297,7 @@ namespace Binjyo
             Canvas.SetTop(maskBottom, selectionTop + selectionHeight);
         }
 
-        private void _HideSelectionRect()
+        private void HideSelectionRect()
         {
             maskTop.Width = Width;
             maskTop.Height = Height;
@@ -317,7 +313,7 @@ namespace Binjyo
         }
 
 
-        private void _UpdateSelectionPopup()
+        private void UpdateSelectionPopup()
         {
             double x = System.Windows.Forms.Control.MousePosition.X - l;
             double y = System.Windows.Forms.Control.MousePosition.Y - t;
@@ -328,13 +324,13 @@ namespace Binjyo
             popup.IsOpen = true;
         }
 
-        private void _HideSelectionPopup()
+        private void HideSelectionPopup()
         {
             popup.IsOpen = false;
         }
 
 
-        private void _CreateMemo()
+        private void CreateMemo()
         {
             if (this.selectedWidth > 20 && this.selectedHeight > 20)
             {
@@ -349,7 +345,8 @@ namespace Binjyo
                 }
 
                 // Create Memo from cropped bitmap
-                Memo memo = new Memo(croppedImage, this.selectedLeft + 1 + l, this.selectedTop + 1 + t);    // Physical coordinates
+                var item = Scene.CreateItem(croppedImage, selectedLeft + 1 + l, selectedTop + 1 + t);
+                Memo memo = new Memo(item);
                 memo.BringToMemoFocus();
             }
         }
@@ -369,33 +366,33 @@ namespace Binjyo
 
             if (isdrag)
             {
-                _HideCross();
-                _UpdateSelectionRect();
-                _UpdateSelectionPopup();
+                HideCross();
+                UpdateSelectionRect();
+                UpdateSelectionPopup();
             }
             else
             {
-                _HideSelectionRect();
-                _HideSelectionPopup();
-                _UpdateCross();
+                HideSelectionRect();
+                HideSelectionPopup();
+                UpdateCross();
             }
         }
 
         private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            _HideSelectionRect();
-            _HideSelectionPopup();
-            _HideCross();
+            HideSelectionRect();
+            HideSelectionPopup();
+            HideCross();
 
             Opacity = 0;
-            _CreateMemo();
+            CreateMemo();
 
-            _Hide();
+            CloseThis();
         }
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            _Hide();
+            CloseThis();
         }
 
         private void Window_StateChanged(object sender, EventArgs e)
@@ -410,17 +407,17 @@ namespace Binjyo
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             // Console.WriteLine(e.Key);
-            if (e.Key == Key.Escape || e.Key == Key.System || e.Key == Key.LeftAlt || 
+            if (e.Key == Key.Escape || e.Key == Key.System || e.Key == Key.LeftAlt ||
                 e.Key == Key.RightAlt || e.Key == Key.LWin || e.Key == Key.RWin)
             {
-                _Hide();
+                CloseThis();
                 e.Handled = true;
             }
         }
 
         private void Window_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _Hide();
+            CloseThis();
             e.Handled = true;
         }
 

@@ -1,23 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
-using Rect = System.Drawing.Rectangle;
 
 namespace Binjyo
 {
+    public enum EditTool
+    {
+        Brush,
+        Eraser
+    }
+
     public partial class Memo
     {
         private void _UpdateHSVWheel()
@@ -71,7 +69,7 @@ namespace Binjyo
 
         private bool ShouldShowHSVWheel()
         {
-            return isHSVWheelPinnedGlobally && !isEditMode && !isdrag && !isResizing && globalDisplayMode != MemoDisplayMode.Minimized;
+            return isHSVWheelPinnedGlobally && !isEditMode && !isdrag && !isResizing && Scene.DisplayMode != EDisplayMode.Minimized;
         }
 
         private void RefreshHSVWheelVisibility()
@@ -150,11 +148,11 @@ namespace Binjyo
 
         private static BitmapScalingMode GetConfiguredBitmapScalingMode()
         {
-            switch ((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
+            switch ((EBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
             {
-                case MemoBitmapScalingMode.NearestNeighbor:
+                case EBitmapScalingMode.NearestNeighbor:
                     return BitmapScalingMode.NearestNeighbor;
-                case MemoBitmapScalingMode.Linear:
+                case EBitmapScalingMode.Linear:
                     return BitmapScalingMode.Linear;
                 default:
                     return BitmapScalingMode.Fant;
@@ -204,7 +202,7 @@ namespace Binjyo
 
         private void EnterEditMode()
         {
-            if (isEditMode || !CanInteractNormally())
+            if (isEditMode || !CanInteract)
                 return;
 
             SetResizeMode(false);

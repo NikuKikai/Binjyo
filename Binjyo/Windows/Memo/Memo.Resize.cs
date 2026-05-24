@@ -17,6 +17,16 @@ using Rect = System.Drawing.Rectangle;
 
 namespace Binjyo
 {
+    public enum ResizeHandle
+    {
+        None,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
+    }
+
+
     public partial class Memo
     {
         private bool IsResizeHandle(ResizeHandle handle)

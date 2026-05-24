@@ -75,7 +75,7 @@ namespace Binjyo
         private void ToggleFeaturePoints()
         {
             isFeaturePointModeEnabled = !isFeaturePointModeEnabled;
-            foreach (Memo memo in GetVisibleAndHiddenMemos())
+            foreach (Memo memo in GetAllMemos())
             {
                 memo.showFeaturePoints = isFeaturePointModeEnabled;
                 if (memo.showFeaturePoints)
@@ -208,7 +208,7 @@ namespace Binjyo
 
             if (ReferenceEquals(this, focusedMemo))
             {
-                foreach (Memo other in GetVisibleAndHiddenMemos())
+                foreach (Memo other in GetAllMemos())
                 {
                     if (ReferenceEquals(other, this) || !other.CanParticipateInFeatureMatching())
                         continue;
@@ -242,7 +242,7 @@ namespace Binjyo
                    bitmap != null &&
                    bitmapTransformed != null &&
                    geometryTransformHistory.Count == 0 &&
-                   globalDisplayMode != MemoDisplayMode.Minimized;
+                   Scene.DisplayMode != EDisplayMode.Minimized;
         }
 
         private bool ShouldShowFeaturePointsOnThisMemo()
@@ -291,7 +291,7 @@ namespace Binjyo
         private static void RefreshAllMemoFeatureOverlays()
         {
             EnsureFeatureAlignmentCachesForVisibleMemos();
-            foreach (Memo memo in GetVisibleAndHiddenMemos())
+            foreach (Memo memo in GetAllMemos())
             {
                 if (memo.isClosing)
                     continue;
@@ -308,7 +308,7 @@ namespace Binjyo
             if (focusedMemo == null || !focusedMemo.CanParticipateInFeatureMatching())
                 return;
 
-            foreach (Memo other in GetVisibleAndHiddenMemos())
+            foreach (Memo other in GetAllMemos())
             {
                 if (ReferenceEquals(other, focusedMemo) || !other.CanParticipateInFeatureMatching())
                     continue;
@@ -680,7 +680,7 @@ namespace Binjyo
                 Memo movingMemo = movingItem.Key;
                 System.Windows.Point proposedPosition = movingItem.Value;
 
-                foreach (Memo stationaryMemo in GetVisibleAndHiddenMemos())
+                foreach (Memo stationaryMemo in GetAllMemos())
                 {
                     if (movingSet.Contains(stationaryMemo) || ReferenceEquals(movingMemo, stationaryMemo))
                         continue;
@@ -710,16 +710,11 @@ namespace Binjyo
             return found;
         }
 
-        private static Memo GetFocusedMemo()
+        public static Memo GetFocusedMemo()
         {
-            return GetVisibleAndHiddenMemos()
+            return GetAllMemos()
                 .OrderByDescending(memo => memo.lastFocusOrder)
                 .FirstOrDefault();
-        }
-
-        public static Memo GetFocusedMemoInstance()
-        {
-            return GetFocusedMemo();
         }
 
         private static void RefreshFeatureMatchOverlayWindow()
@@ -738,7 +733,7 @@ namespace Binjyo
             }
 
             var lines = new List<Tuple<System.Windows.Point, System.Windows.Point>>();
-            foreach (Memo other in GetVisibleAndHiddenMemos())
+            foreach (Memo other in GetAllMemos())
             {
                 if (ReferenceEquals(other, focusedMemo) || !other.CanParticipateInFeatureMatching())
                     continue;
@@ -847,7 +842,7 @@ namespace Binjyo
 
         private static bool IsAnyMemoDragging()
         {
-            return GetVisibleAndHiddenMemos().Any(memo => memo.isdrag);
+            return GetAllMemos().Any(memo => memo.isdrag);
         }
 
         private System.Windows.Point MapOriginalPointToDisplayed(double originalX, double originalY)

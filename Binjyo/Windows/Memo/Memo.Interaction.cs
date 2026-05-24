@@ -42,23 +42,9 @@ namespace Binjyo
             return Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
         }
 
-        private static List<Memo> GetVisibleAndHiddenMemos()
-        {
-            return Application.Current.Windows
-                .OfType<Window>()
-                .Where(item => item.Title == "Memo")
-                .Cast<Memo>()
-                .ToList();
-        }
-
-        public static IReadOnlyList<Memo> GetAllMemos()
-        {
-            return GetVisibleAndHiddenMemos();
-        }
-
         private List<Memo> GetVisibleMemos()
         {
-            return GetVisibleAndHiddenMemos()
+            return GetAllMemos()
                 .Where(item => item.IsVisible)
                 .ToList();
         }
@@ -414,7 +400,7 @@ namespace Binjyo
                     }
                     else
                     {
-                        this.CloseMemo();
+                        Scene.CloseItem(sceneItem.Id);
                     }
                     e.Handled = true;
                     break;
@@ -441,7 +427,7 @@ namespace Binjyo
                     {
                         bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
                         CopyMemoToClipboard(includeDrawing);
-                        this.CloseMemo();
+                        Scene.CloseItem(sceneItem.Id);
                         e.Handled = true;
                     }
                     break;
@@ -928,7 +914,7 @@ namespace Binjyo
                 return;
             }
 
-            if (!CanInteractNormally())
+            if (!CanInteract)
                 return;
 
             if (isResizeMode)
@@ -1141,7 +1127,7 @@ namespace Binjyo
 
             bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
             CopyMemoToClipboard(includeDrawing);
-            this.CloseMemo();
+            Scene.CloseItem(sceneItem.Id);
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)

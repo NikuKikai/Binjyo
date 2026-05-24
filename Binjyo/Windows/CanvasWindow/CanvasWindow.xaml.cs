@@ -49,7 +49,7 @@ namespace Binjyo
 
         public Bitmap GetFocusedMemoImage()
         {
-            Memo memo = selectedMemo ?? Memo.GetFocusedMemoInstance();
+            Memo memo = selectedMemo ?? Memo.GetFocusedMemo();
             return memo?.CreateDisplayBitmap();
         }
 
@@ -105,7 +105,14 @@ namespace Binjyo
         {
             foreach (Screen screen in Screen.AllScreens)
             {
-                Rect bounds = ConvertScreenBounds(screen);
+                var dpi = screen.GetDpi(DpiType.Effective);
+                double dpiFactor = Math.Max(1.0, dpi.X / 96.0);
+                Rect bounds = new Rect(
+                screen.Bounds.Left / dpiFactor,
+                screen.Bounds.Top / dpiFactor,
+                screen.Bounds.Width / dpiFactor,
+                screen.Bounds.Height / dpiFactor);
+
                 var outline = new Rectangle
                 {
                     Width = bounds.Width,
@@ -122,27 +129,12 @@ namespace Binjyo
             }
         }
 
-        private Rect ConvertScreenBounds(Screen screen)
-        {
-            double dpiFactor = GetScreenDpiFactor(screen);
-            return new Rect(
-                screen.Bounds.Left / dpiFactor,
-                screen.Bounds.Top / dpiFactor,
-                screen.Bounds.Width / dpiFactor,
-                screen.Bounds.Height / dpiFactor);
-        }
-
-        private static double GetScreenDpiFactor(Screen screen)
-        {
-            var dpi = screen.GetDpi(DpiType.Effective);
-            return Math.Max(1.0, dpi.X / 96.0);
-        }
-
         private void RefreshMemos()
         {
             IReadOnlyList<Memo> memos = Memo.GetAllMemos();
             var aliveSet = new HashSet<Memo>(memos);
 
+            // Remove visuals for memos that no longer exist
             foreach (Memo memo in memoVisuals.Keys.Where(item => !aliveSet.Contains(item)).ToList())
             {
                 RemoveMemoVisual(memo);
@@ -225,7 +217,7 @@ namespace Binjyo
 
         private void UpdateFocusedMemo()
         {
-            Memo focusedMemo = Memo.GetFocusedMemoInstance();
+            Memo focusedMemo = Memo.GetFocusedMemo();
             if (focusedMemo != null)
                 selectedMemo = focusedMemo;
 
@@ -271,6 +263,26 @@ namespace Binjyo
             sceneCanvas.RenderTransform = new MatrixTransform(sceneMatrix);
         }
 
+        private void ZoomAt(System.Windows.Point pivot, double factor)
+        {
+            double nextZoom = ClampZoom(currentZoom * factor);
+            factor = nextZoom / currentZoom;
+            currentZoom = nextZoom;
+
+            sceneMatrix.Translate(-pivot.X, -pivot.Y);
+            sceneMatrix.Scale(factor, factor);
+            sceneMatrix.Translate(pivot.X, pivot.Y);
+            ApplySceneTransform();
+            UpdateStatusText();
+        }
+
+        private double ClampZoom(double zoom)
+        {
+            return Math.Max(MinimumZoom, Math.Min(MaximumZoom, zoom));
+        }
+
+
+        #region Window Event Handlers
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Escape)
@@ -293,24 +305,6 @@ namespace Binjyo
             double factor = e.Delta > 0 ? ZoomStep : 1.0 / ZoomStep;
             ZoomAt(pivot, factor);
             e.Handled = true;
-        }
-
-        private void ZoomAt(System.Windows.Point pivot, double factor)
-        {
-            double nextZoom = ClampZoom(currentZoom * factor);
-            factor = nextZoom / currentZoom;
-            currentZoom = nextZoom;
-
-            sceneMatrix.Translate(-pivot.X, -pivot.Y);
-            sceneMatrix.Scale(factor, factor);
-            sceneMatrix.Translate(pivot.X, pivot.Y);
-            ApplySceneTransform();
-            UpdateStatusText();
-        }
-
-        private double ClampZoom(double zoom)
-        {
-            return Math.Max(MinimumZoom, Math.Min(MaximumZoom, zoom));
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -341,7 +335,10 @@ namespace Binjyo
             if (Mouse.Captured == rootGrid)
                 Mouse.Capture(null);
         }
+        #endregion
 
+
+        #region Memo Event Handlers
         private void MemoContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             Grid container = sender as Grid;
@@ -380,17 +377,6 @@ namespace Binjyo
                 HandleMemoImageMouseMove(CreateInteractionContext(visual), e);
             }
         }
-
-        private CanvasMemoInteractionContext CreateInteractionContext(CanvasMemoVisual visual)
-        {
-            return new CanvasMemoInteractionContext
-            {
-                Memo = visual.Memo,
-                Bounds = visual.Bounds,
-                BitmapSource = visual.Image.Source as BitmapSource
-            };
-        }
-
         private void HandleMemoImageMouseClick(CanvasMemoInteractionContext context, MouseButtonEventArgs e)
         {
         }
@@ -402,6 +388,19 @@ namespace Binjyo
         private void HandleMemoImageKeyDown(CanvasMemoInteractionContext context, KeyEventArgs e)
         {
         }
+        #endregion
+
+
+        private CanvasMemoInteractionContext CreateInteractionContext(CanvasMemoVisual visual)
+        {
+            return new CanvasMemoInteractionContext
+            {
+                Memo = visual.Memo,
+                Bounds = visual.Bounds,
+                BitmapSource = visual.Image.Source as BitmapSource
+            };
+        }
+
 
         private sealed class CanvasMemoVisual
         {

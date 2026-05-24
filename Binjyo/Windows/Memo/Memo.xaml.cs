@@ -1,84 +1,28 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Reflection;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
 
 using Rect = System.Drawing.Rectangle;
 
 
 namespace Binjyo
 {
-    public enum ResizeHandle
-    {
-        None,
-        TopLeft,
-        TopRight,
-        BottomLeft,
-        BottomRight
-    }
-
-    public enum EditTool
-    {
-        Brush,
-        Eraser
-    }
-
-    public enum MemoDisplayMode
-    {
-        Expanded,
-        AutoHide,
-        Minimized
-    }
-
-    public enum MemoAutoHideBehavior
-    {
-        HideOnHover = 0,
-        EvadeMouse = 1
-    }
-
-    public enum MemoBitmapScalingMode
-    {
-        NearestNeighbor = 0,
-        Linear = 1,
-        Fant = 2
-    }
-
-    public static class BitmapExt
-    {
-        // https://stackoverflow.com/a/30729291
-        public static BitmapSource ToBitmapSource(this Bitmap bitmap, System.Windows.Media.PixelFormat pixelFormat)
-        {
-            var bitmapData = bitmap.LockBits(
-                new Rect(0, 0, bitmap.Width, bitmap.Height),
-                System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
-
-            var bitmapSource = BitmapSource.Create(
-                bitmapData.Width, bitmapData.Height,
-                bitmap.HorizontalResolution, bitmap.VerticalResolution,
-                pixelFormat, null,
-                bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
-
-            bitmap.UnlockBits(bitmapData);
-
-            return bitmapSource;
-        }
-    }
 
     /// <summary>
     /// Memo.xaml の相互作用ロジック
     /// </summary>
-    public partial class Memo : System.Windows.Window
+    public partial class Memo : Window, ISceneItemView
     {
         private static long focusSequence = 0;
-        private static MemoDisplayMode globalDisplayMode = MemoDisplayMode.Expanded;
         private static bool isFeaturePointModeEnabled = false;
         private static readonly FieldInfo menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", BindingFlags.NonPublic | BindingFlags.Static);
         private DispatcherTimer timer = null;
@@ -86,31 +30,33 @@ namespace Binjyo
         private double dpiFactor = 1;
 
         private BitmapSource bitmapsource;
-        private Bitmap bitmap;
-        private Bitmap bitmapTransformed = null;
-        private int originalBitmapWidth = 0;
-        private int originalBitmapHeight = 0;
+        public SceneItem sceneItem { get; private set; }
+
+        private Bitmap bitmap { get => sceneItem.Bitmap; set => sceneItem.Bitmap = value; }
+        private Bitmap bitmapTransformed { get => sceneItem.BitmapTransformed; set => sceneItem.BitmapTransformed = value; }
+        private int originalBitmapWidth { get => sceneItem.OriginalBitmapWidth; set => sceneItem.OriginalBitmapWidth = value; }
+        private int originalBitmapHeight { get => sceneItem.OriginalBitmapHeight; set => sceneItem.OriginalBitmapHeight = value; }
 
         // effect
-        private double scale = 1;
-        private bool isEffectGray = false;
-        private bool isEffectBinarize = false;
-        private int pEffectBinarize = 128;
-        private bool isEffectQuantize = false;  // exclusive to isEffectBinarize
-        private int pEffectQuantize = 3;
-        private bool isEffectTransparent = false;
-        private int pEffectTransparent = 128;
-        private bool isEffectHuemap = false;
+        private double scale { get => sceneItem.Scale; set => sceneItem.Scale = value; }
+        private bool isEffectGray { get => sceneItem.IsEffectGray; set => sceneItem.IsEffectGray = value; }
+        private bool isEffectBinarize { get => sceneItem.IsEffectBinarize; set => sceneItem.IsEffectBinarize = value; }
+        private int pEffectBinarize { get => sceneItem.PEffectBinarize; set => sceneItem.PEffectBinarize = value; }
+        private bool isEffectQuantize { get => sceneItem.IsEffectQuantize; set => sceneItem.IsEffectQuantize = value; }  // exclusive to isEffectBinarize
+        private int pEffectQuantize { get => sceneItem.PEffectQuantize; set => sceneItem.PEffectQuantize = value; }
+        private bool isEffectTransparent { get => sceneItem.IsEffectTransparent; set => sceneItem.IsEffectTransparent = value; }
+        private int pEffectTransparent { get => sceneItem.PEffectTransparent; set => sceneItem.PEffectTransparent = value; }
+        private bool isEffectHuemap { get => sceneItem.IsEffectHuemap; set => sceneItem.IsEffectHuemap = value; }
         private static bool isHSVWheelPinnedGlobally = false;
-        private readonly List<char> geometryTransformHistory = new List<char>();
-        private DrawingDocumentData drawingDocument = new DrawingDocumentData();
+        private List<char> geometryTransformHistory => sceneItem.GeometryTransformHistory;
+        private DrawingDocumentData drawingDocument { get => sceneItem.DrawingDocument; set => sceneItem.DrawingDocument = value; }
         private DrawingStrokeData activeDrawingStroke = null;
         private EditModePanel editModePanel = null;
         private bool isEditMode = false;
         private bool isDrawingStroke = false;
         private EditTool currentEditTool = EditTool.Brush;
         private double drawingBrushSize = 5;
-        private readonly Stack<DrawingDocumentData> drawingUndoStack = new Stack<DrawingDocumentData>();
+        private Stack<DrawingDocumentData> drawingUndoStack => sceneItem.DrawingUndoStack;
         private DrawingDocumentData pendingDrawingOperationSnapshot = null;
         private bool pendingDrawingOperationChanged = false;
         private const double MinimumDrawingBrushSize = 1;
@@ -151,119 +97,104 @@ namespace Binjyo
         private double resizeStartRight = 0;
         private double resizeStartBottom = 0;
         private long lastFocusOrder = 0;
-        private double anchorLeft = 0;
-        private double anchorTop = 0;
-        private bool hasAnchorPosition = false;
-        private ContextMenu memoContextMenu = null;
-        private MenuItem resizeModeMenuItem = null;
-        private MenuItem editModeMenuItem = null;
-        private MenuItem featurePointsMenuItem = null;
-        private MenuItem combineMenuItem = null;
-        private MenuItem grayscaleMenuItem = null;
-        private MenuItem hueMapMenuItem = null;
-        private MenuItem binarizeOffMenuItem = null;
-        private Dictionary<int, MenuItem> binarizeMenuItems = null;
-        private MenuItem quantizeOffMenuItem = null;
-        private Dictionary<int, MenuItem> quantizeMenuItems = null;
-        private MenuItem transparencyOffMenuItem = null;
-        private Dictionary<int, MenuItem> transparencyMenuItems = null;
-        private bool? originalMenuDropAlignment = null;
-        private bool isCombinePreviewHighlighted = false;
-        private double lastContextMenuScreenX = 0;
-        private double lastContextMenuScreenY = 0;
+        private double anchorLeft { get => sceneItem.AnchorLeft; set => sceneItem.AnchorLeft = value; }
+        private double anchorTop { get => sceneItem.AnchorTop; set => sceneItem.AnchorTop = value; }
+        private bool hasAnchorPosition { get => sceneItem.HasAnchorPosition; set => sceneItem.HasAnchorPosition = value; }
 
 
-        public Memo(Bitmap bmp, int left, int top)    // Physical coordinates
+        public Memo(SceneItem item)    // Physical coordinates
         {
+            this.sceneItem = item;
+
             InitializeComponent();
             ApplyConfiguredBitmapScalingMode();
             InitializeTimer();
 
-            int w = bmp.Width;
-            int h = bmp.Height;  // Physical pixel
+            int w = item.OriginalBitmapWidth;  // Physical pixel
+            int h = item.OriginalBitmapHeight;  // Physical pixel
 
-            var centerx = left + w / 2;
-            var centery = top + h / 2;
+            var centerx = (int)item.AnchorLeft + w / 2;
+            var centery = (int)item.AnchorTop + h / 2;
 
             //var scr = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
             var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(centerx, centery));
-
             var dpi = scr.GetDpi(DpiType.Effective);
-            dpiFactor = (double)dpi.X / 96.0;
+            dpiFactor = dpi.X / 96.0;
             Console.WriteLine(dpiFactor);
 
-            //this.dpiFactor = VisualTreeHelper.GetDpi(this as Visual).DpiScaleX;
-            //Console.WriteLine("Memo init  " + dpiFactor.ToString());
-            Left = left / dpiFactor; Top = top / dpiFactor;
-            anchorLeft = Left;
-            anchorTop = Top;
-            hasAnchorPosition = true;
+            Left = item.AnchorLeft / dpiFactor; Top = item.AnchorTop / dpiFactor;
 
-            this.bitmap = bmp;
-            this.bitmapTransformed = (Bitmap)this.bitmap.Clone();
-            this.originalBitmapWidth = bmp.Width;
-            this.originalBitmapHeight = bmp.Height;
             this.showFeaturePoints = isFeaturePointModeEnabled;
-            this._ShowBitmap(bmp);
-            InitializeContextMenu();
+            this.ShowBitmap(item.Bitmap);
+
             LocationChanged += MemoLocationChanged;
             SizeChanged += MemoSizeChanged;
+            InitializeContextMenu();
             UpdateResizeModeVisuals();
-            ApplyCurrentDisplayMode();
+
+            NotifiedDisplayMode();
             if (showFeaturePoints)
                 RefreshAllMemoFeatureOverlays();
+
+            // Register
+            item.RegisterView(this);
+            Scene.RegisterView(this);
         }
 
-        public static MemoDisplayMode GetGlobalDisplayMode()
+        private static bool CanInteract => Scene.DisplayMode == EDisplayMode.Expanded;
+
+        public static IReadOnlyList<Memo> GetAllMemos()
         {
-            return globalDisplayMode;
+            return Application.Current.Windows.OfType<Window>().OfType<Memo>().ToList();
         }
 
-        public static void SetGlobalDisplayMode(MemoDisplayMode mode)
-        {
-            globalDisplayMode = mode;
-            foreach (Memo memo in GetVisibleAndHiddenMemos())
-                memo.ApplyCurrentDisplayMode();
-        }
 
-        public static void CycleGlobalDisplayMode()
-        {
-            MemoDisplayMode nextMode;
-            switch (globalDisplayMode)
-            {
-                case MemoDisplayMode.Expanded:
-                    nextMode = MemoDisplayMode.AutoHide;
-                    break;
-                case MemoDisplayMode.AutoHide:
-                    nextMode = MemoDisplayMode.Minimized;
-                    break;
-                default:
-                    nextMode = MemoDisplayMode.Expanded;
-                    break;
-            }
-
-            SetGlobalDisplayMode(nextMode);
-        }
-
-        public void CloseMemo()
+        #region ======= ISceneItemView Implementation ========
+        public void NotifiedDisplayMode()
         {
             if (isClosing)
                 return;
 
+            if (!hasAnchorPosition)
+                return;
+
+            switch (Scene.DisplayMode)
+            {
+                case EDisplayMode.Minimized:
+                    DisplayMinimized();
+                    break;
+                case EDisplayMode.AutoHide:
+                    DisplayAutoHide();
+                    break;
+                default:
+                    DisplayExpanded();
+                    break;
+            }
+
+            UpdateResizeModeVisuals();
+        }
+
+        public void NotifiedClose()
+        {
+            if (isClosing)
+                return;
             isClosing = true;
+
+            Scene.UnregisterView(this);
+
             SaveToHistory();
             ExitEditMode();
-            this.bitmap?.Dispose();
-            this.bitmapTransformed?.Dispose();
-            this.bitmap = null;
-            this.bitmapTransformed = null;
+
             this.image.Source = null;
-            this.bitmapsource = null;
-            this.timer?.Stop();
+            bitmapsource = null;
+            timer?.Stop();
             if (Mouse.Captured == this) Mouse.Capture(null);
-            this.Close();
+            Close();
+
             GC.Collect();
         }
+        #endregion
+
 
         private void SaveToHistory()
         {
@@ -273,7 +204,7 @@ namespace Binjyo
             HistoryStore.Save(bitmapsource, Left, Top, Width, Height, drawingDocument.Clone());
         }
 
-        private void _ShowBitmap(Bitmap bmp, bool disposeBitmapAfterRender = false)
+        private void ShowBitmap(Bitmap bmp, bool disposeBitmapAfterRender = false)
         {
             try
             {
@@ -295,7 +226,7 @@ namespace Binjyo
             }
         }
 
-        private Bitmap _GetBitmapAfterEffect()
+        private Bitmap GetBitmapAfterEffect()
         {
             Bitmap bmp = this.bitmapTransformed;
             bmp = bmp.Clone(new Rect(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -363,8 +294,8 @@ namespace Binjyo
 
         protected void UpdateBitmap()
         {
-            var res = _GetBitmapAfterEffect();
-            _ShowBitmap(res, true);
+            var res = GetBitmapAfterEffect();
+            ShowBitmap(res, true);
         }
 
         private void ApplyConfiguredEffects(Bitmap bitmapToUpdate)
@@ -402,11 +333,11 @@ namespace Binjyo
 
         private static System.Drawing.Drawing2D.InterpolationMode GetConfiguredInterpolationMode()
         {
-            switch ((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
+            switch ((EBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
             {
-                case MemoBitmapScalingMode.NearestNeighbor:
+                case EBitmapScalingMode.NearestNeighbor:
                     return System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                case MemoBitmapScalingMode.Linear:
+                case EBitmapScalingMode.Linear:
                     return System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
                 default:
                     return System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
@@ -430,24 +361,12 @@ namespace Binjyo
 
         private void TimerHandler()
         {
-            ApplyCurrentDisplayMode();
+            NotifiedDisplayMode();
         }
 
         #endregion
 
-        public void Minimize()
-        {
-            SetGlobalDisplayMode(MemoDisplayMode.Minimized);
-        }
-        public void Expand()
-        {
-            SetGlobalDisplayMode(MemoDisplayMode.Expanded);
-        }
 
-        public void SetAutoHide()
-        {
-            SetGlobalDisplayMode(MemoDisplayMode.AutoHide);
-        }
         public void Resize(double s)
         {
             if (!isdrag && !isResizing)
@@ -627,7 +546,7 @@ namespace Binjyo
             if (isEditMode)
                 return;
 
-            isResizeMode = enabled && CanInteractNormally();
+            isResizeMode = enabled && CanInteract;
             if (!isResizeMode)
                 StopResize();
             UpdateResizeModeVisuals();
@@ -638,52 +557,24 @@ namespace Binjyo
             if (resizeOverlay == null)
                 return;
 
-            resizeOverlay.Visibility = isResizeMode && CanInteractNormally() && !isEditMode
+            resizeOverlay.Visibility = isResizeMode && CanInteract && !isEditMode
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
 
-        private bool CanInteractNormally()
+
+        private void DisplayExpanded()
         {
-            return globalDisplayMode == MemoDisplayMode.Expanded;
-        }
-
-        private void ApplyCurrentDisplayMode()
-        {
-            if (isClosing)
-                return;
-
-            if (!hasAnchorPosition)
-                return;
-
-            switch (globalDisplayMode)
-            {
-                case MemoDisplayMode.Minimized:
-                    ApplyMinimizedDisplayMode();
-                    break;
-                case MemoDisplayMode.AutoHide:
-                    ApplyAutoHideDisplayMode();
-                    break;
-                default:
-                    ApplyExpandedDisplayMode();
-                    break;
-            }
-
-            UpdateResizeModeVisuals();
-        }
-
-        private void ApplyExpandedDisplayMode()
-        {
-            EnsureMemoVisible();
+            if (!IsVisible) Show();
             image.Opacity = GetCurrentImageOpacity();
             ApplyDisplayPosition(anchorLeft, anchorTop);
         }
 
-        private void ApplyAutoHideDisplayMode()
+        private void DisplayAutoHide()
         {
-            EnsureMemoVisible();
+            if (!IsVisible) Show();
 
-            if ((MemoAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == MemoAutoHideBehavior.EvadeMouse)
+            if ((EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == EAutoHideBehavior.EvadeMouse)
             {
                 image.Opacity = GetCurrentImageOpacity();
                 UpdateEvadeDisplayPosition();
@@ -694,7 +585,7 @@ namespace Binjyo
             image.Opacity = IsMouseInsideMemoBounds() ? 0 : GetCurrentImageOpacity();
         }
 
-        private void ApplyMinimizedDisplayMode()
+        private void DisplayMinimized()
         {
             isdrag = false;
             dragStartPositions.Clear();
@@ -702,18 +593,9 @@ namespace Binjyo
             if (isResizeMode)
                 isResizeMode = false;
             _HideHSVWheel();
-            if (IsVisible)
-                Hide();
+            if (IsVisible) Hide();
         }
 
-        private void EnsureMemoVisible()
-        {
-            if (isClosing)
-                return;
-
-            if (!IsVisible)
-                Show();
-        }
 
         private void ApplyDisplayPosition(double left, double top)
         {
@@ -731,7 +613,7 @@ namespace Binjyo
             anchorLeft = left;
             anchorTop = top;
             hasAnchorPosition = true;
-            ApplyCurrentDisplayMode();
+            NotifiedDisplayMode();
         }
 
         private void SetCenterInfoText(string title, string detail)

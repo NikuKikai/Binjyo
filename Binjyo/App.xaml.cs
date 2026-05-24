@@ -1,15 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
 using System.ComponentModel;
+using System.Windows;
 using System.Windows.Input;
-using System.Threading;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Threading;
 
 
 namespace Binjyo
@@ -36,7 +33,7 @@ namespace Binjyo
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            
+
             /*if (mutex.WaitOne(TimeSpan.Zero, true))
             {
                 mutex.ReleaseMutex();
@@ -109,7 +106,7 @@ namespace Binjyo
 
         private void OnDisplayModeHotKeyHandler(HotKey hotKey)
         {
-            Memo.CycleGlobalDisplayMode();
+            Scene.CycleDisplayMode();
         }
 
         private void CreateContextMenu()
@@ -127,9 +124,9 @@ namespace Binjyo
             menu.Closed += TrayContextMenu_Closed;
 
             MenuItem viewModeItem = new MenuItem { Header = "View mode" };
-            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => SetViewMode(MemoDisplayMode.Expanded));
-            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => SetViewMode(MemoDisplayMode.AutoHide));
-            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => SetViewMode(MemoDisplayMode.Minimized));
+            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => SetViewMode(EDisplayMode.Expanded));
+            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => SetViewMode(EDisplayMode.AutoHide));
+            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => SetViewMode(EDisplayMode.Minimized));
             viewModeItem.SubmenuOpened += (s, e) => UpdateViewModeMenuChecks(expandedItem, autoHideItem, minimizedItem);
             viewModeItem.Items.Add(expandedItem);
             viewModeItem.Items.Add(autoHideItem);
@@ -250,9 +247,9 @@ namespace Binjyo
             return $"{result}X";
         }
 
-        public void SetViewMode(MemoDisplayMode mode)
+        public void SetViewMode(EDisplayMode mode)
         {
-            Memo.SetGlobalDisplayMode(mode);
+            Scene.SetDisplayMode(mode);
         }
 
         private void UpdateViewModeMenuChecks(
@@ -260,10 +257,10 @@ namespace Binjyo
             MenuItem autoHideItem,
             MenuItem minimizedItem)
         {
-            MemoDisplayMode currentMode = Memo.GetGlobalDisplayMode();
-            expandedItem.IsChecked = currentMode == MemoDisplayMode.Expanded;
-            autoHideItem.IsChecked = currentMode == MemoDisplayMode.AutoHide;
-            minimizedItem.IsChecked = currentMode == MemoDisplayMode.Minimized;
+            EDisplayMode currentMode = Scene.DisplayMode;
+            expandedItem.IsChecked = currentMode == EDisplayMode.Expanded;
+            autoHideItem.IsChecked = currentMode == EDisplayMode.AutoHide;
+            minimizedItem.IsChecked = currentMode == EDisplayMode.Minimized;
         }
         public void OpenHistory()
         {
@@ -313,28 +310,24 @@ namespace Binjyo
         }
         public void CloseAll()
         {
-            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>().ToList())
-            {
-                memo.CloseMemo();
-            }
+            Scene.ClearItems();
         }
 
         public void ExitApplication()
         {
             _isExit = true;
+            Scene.ClearItems();
+
             foreach (Window item in Application.Current.Windows.Cast<Window>().ToList())
             {
                 if (item.Title == "") continue;
-                if (item is Memo memo)
-                    memo.CloseMemo();
                 else if (item.Title != "MainWindow")
                     item.Close();
             }
             MainWindow.Close();
             if (_trayContextMenu != null)
                 _trayContextMenu.IsOpen = false;
-            if (_trayMenuHostWindow != null)
-                _trayMenuHostWindow.Close();
+            _trayMenuHostWindow?.Close();
             _notifyIcon.Dispose();
             _notifyIcon = null;
         }

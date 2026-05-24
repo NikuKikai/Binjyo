@@ -89,10 +89,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Models\Scene.cs" />
+    <Compile Include="Utils\BitmapExt.cs" />
     <Compile Include="Windows\Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>
     <Compile Include="Models\DrawingData.cs" />
+    <Compile Include="Models\SceneItem.cs" />
     <Compile Include="Windows\EditModePanel.xaml.cs">
       <DependentUpon>EditModePanel.xaml</DependentUpon>
     </Compile>
@@ -144,7 +147,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Interop\hotkey.cs" />
+    <Compile Include="Utils\hotkey.cs" />
     <Compile Include="Windows\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

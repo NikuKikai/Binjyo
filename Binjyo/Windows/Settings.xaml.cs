@@ -44,7 +44,7 @@ namespace Binjyo
             CheckExportApplyEffects.IsChecked = Properties.Settings.Default.ExportApplyEffects;
             CheckShowFeatureMatchLines.IsChecked = Properties.Settings.Default.ShowFeatureMatchLines;
             HistoryEntryLimitBox.Text = Properties.Settings.Default.HistoryEntryLimit.ToString();
-            SelectBitmapScalingMode((MemoBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode);
+            SelectBitmapScalingMode((EBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode);
             switch (modifierScreenshot)
             {
                 case ModifierKeys.Control | ModifierKeys.Alt:
@@ -70,9 +70,9 @@ namespace Binjyo
                     break;
             }
 
-            switch ((MemoAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior)
+            switch ((EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior)
             {
-                case MemoAutoHideBehavior.EvadeMouse:
+                case EAutoHideBehavior.EvadeMouse:
                     RadioAutoHideEvade.IsChecked = true;
                     break;
                 default:
@@ -81,7 +81,7 @@ namespace Binjyo
             }
         }
 
-        private void SelectBitmapScalingMode(MemoBitmapScalingMode mode)
+        private void SelectBitmapScalingMode(EBitmapScalingMode mode)
         {
             if (BitmapScalingModeBox == null)
                 return;
@@ -221,9 +221,9 @@ namespace Binjyo
             if (RadioAutoHideHover == null || RadioAutoHideEvade == null)
                 return;
 
-            MemoAutoHideBehavior behavior = RadioAutoHideEvade.IsChecked == true
-                ? MemoAutoHideBehavior.EvadeMouse
-                : MemoAutoHideBehavior.HideOnHover;
+            EAutoHideBehavior behavior = RadioAutoHideEvade.IsChecked == true
+                ? EAutoHideBehavior.EvadeMouse
+                : EAutoHideBehavior.HideOnHover;
 
             if (Properties.Settings.Default.AutoHideBehavior == (int)behavior)
                 return;
