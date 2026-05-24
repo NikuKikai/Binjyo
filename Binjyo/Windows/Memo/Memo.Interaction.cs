@@ -400,7 +400,7 @@ namespace Binjyo
                 return;
             }
 
-            switch(actualKey)
+            switch (actualKey)
             {
                 case Key.Escape:
                     if (isResizeMode)
@@ -409,7 +409,7 @@ namespace Binjyo
                     }
                     else
                     {
-                        this._Close();
+                        this.CloseMemo();
                     }
                     e.Handled = true;
                     break;
@@ -436,7 +436,7 @@ namespace Binjyo
                     {
                         bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
                         CopyMemoToClipboard(includeDrawing);
-                        this._Close();
+                        this.CloseMemo();
                         e.Handled = true;
                     }
                     break;
@@ -1136,7 +1136,7 @@ namespace Binjyo
 
             bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
             CopyMemoToClipboard(includeDrawing);
-            this._Close();
+            this.CloseMemo();
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)

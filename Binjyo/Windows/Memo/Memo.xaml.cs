@@ -1,26 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Drawing;
-using System.Windows.Interop;
-//using System.Threading;
-using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
 using System.Reflection;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
-// using OpenCvSharp;
-// using OpenCvSharp.Extensions;
 
 using Rect = System.Drawing.Rectangle;
 
@@ -96,7 +85,7 @@ namespace Binjyo
 
         private double dpiFactor = 1;
 
-        private BitmapSource bitmpasource;
+        private BitmapSource bitmapsource;
         private Bitmap bitmap;
         private Bitmap bitmapTransformed = null;
         private int originalBitmapWidth = 0;
@@ -256,7 +245,7 @@ namespace Binjyo
             SetGlobalDisplayMode(nextMode);
         }
 
-        protected void _Close()
+        public void CloseMemo()
         {
             if (isClosing)
                 return;
@@ -264,29 +253,24 @@ namespace Binjyo
             isClosing = true;
             SaveToHistory();
             ExitEditMode();
-            if (this.bitmap != null) this.bitmap.Dispose();
-            if (this.bitmapTransformed != null) this.bitmapTransformed.Dispose();
+            this.bitmap?.Dispose();
+            this.bitmapTransformed?.Dispose();
             this.bitmap = null;
             this.bitmapTransformed = null;
             this.image.Source = null;
-            this.bitmpasource = null;
-            if (this.timer != null) this.timer.Stop();
+            this.bitmapsource = null;
+            this.timer?.Stop();
             if (Mouse.Captured == this) Mouse.Capture(null);
             this.Close();
             GC.Collect();
         }
 
-        public void CloseMemo()
-        {
-            _Close();
-        }
-
         private void SaveToHistory()
         {
-            if (bitmpasource == null)
+            if (bitmapsource == null)
                 return;
 
-            HistoryStore.Save(bitmpasource, Left, Top, Width, Height, drawingDocument.Clone());
+            HistoryStore.Save(bitmapsource, Left, Top, Width, Height, drawingDocument.Clone());
         }
 
         private void _ShowBitmap(Bitmap bmp, bool disposeBitmapAfterRender = false)
@@ -294,12 +278,12 @@ namespace Binjyo
             try
             {
                 // NOTES: correct transparent rendering, and quicker
-                this.bitmpasource = bmp.ToBitmapSource(PixelFormats.Bgra32);
-                this.bitmpasource.Freeze();
+                this.bitmapsource = bmp.ToBitmapSource(PixelFormats.Bgra32);
+                this.bitmapsource.Freeze();
 
                 Resize(scale);
 
-                this.image.Source = this.bitmpasource;
+                this.image.Source = this.bitmapsource;
                 RenderDrawingOverlay();
                 HandleDisplayedBitmapUpdated(bmp);
                 Show();

@@ -31,12 +31,12 @@ namespace Binjyo
             memoContextMenu.Items.Add(CreateMenuItem("Cut", "X / Ctrl+X", (s, e) =>
             {
                 CopyMemoToClipboard(true);
-                _Close();
+                CloseMemo();
             }));
             memoContextMenu.Items.Add(CreateMenuItem("Cut Original", "Shift+X", (s, e) =>
             {
                 CopyMemoToClipboard(false);
-                _Close();
+                CloseMemo();
             }));
             memoContextMenu.Items.Add(CreateMenuItem("Save...", "S", (s, e) => Save(true)));
             memoContextMenu.Items.Add(CreateMenuItem("Save Original...", "Shift+S", (s, e) => Save(false)));
@@ -72,7 +72,7 @@ namespace Binjyo
             memoContextMenu.Items.Add(effectsMenu);
 
             memoContextMenu.Items.Add(new Separator());
-            memoContextMenu.Items.Add(CreateMenuItem("Close", "Esc", (s, e) => _Close()));
+            memoContextMenu.Items.Add(CreateMenuItem("Close", "Esc", (s, e) => CloseMemo()));
             memoContextMenu.Items.Add(new Separator());
             memoContextMenu.Items.Add(CreateTrayMirrorMenu());
             ContextMenu = memoContextMenu;
@@ -376,7 +376,7 @@ namespace Binjyo
 
                 foreach (Memo memo in memosToCombine)
                 {
-                    memo._Close();
+                    memo.CloseMemo();
                 }
             }
             finally
