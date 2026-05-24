@@ -51,6 +51,11 @@ namespace Binjyo
                 .ToList();
         }
 
+        public static IReadOnlyList<Memo> GetAllMemos()
+        {
+            return GetVisibleAndHiddenMemos();
+        }
+
         private List<Memo> GetVisibleMemos()
         {
             return GetVisibleAndHiddenMemos()

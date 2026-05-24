@@ -1,0 +1,39 @@
+<Window x:Class="Binjyo.CanvasWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="CanvasWindow"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="#CC111111"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Focusable="True"
+        KeyDown="Window_KeyDown"
+        MouseWheel="Window_MouseWheel"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        MouseLeftButtonUp="Window_MouseLeftButtonUp"
+        MouseMove="Window_MouseMove">
+    <Grid Name="rootGrid"
+          Background="Transparent">
+        <Canvas Name="sceneCanvas"
+                ClipToBounds="False"
+                SnapsToDevicePixels="True"
+                RenderTransformOrigin="0,0" />
+        <Border HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="16"
+                Padding="10,6"
+                Background="#A0000000"
+                CornerRadius="6"
+                IsHitTestVisible="False">
+            <TextBlock Name="statusText"
+                       Foreground="White"
+                       FontSize="12"
+                       Text="Drag: Pan  Wheel: Zoom  Esc: Close" />
+        </Border>
+    </Grid>
+</Window>

@@ -32,6 +32,7 @@ namespace Binjyo
         private Settings settings;
         private ShortcutHelp shortcutHelp;
         private HistoryWindow historyWindow;
+        private CanvasWindow canvasWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -135,6 +136,7 @@ namespace Binjyo
             viewModeItem.Items.Add(minimizedItem);
 
             menu.Items.Add(viewModeItem);
+            menu.Items.Add(CreateMenuItem("Canvas Window", null, (s, e) => OpenCanvasWindow()));
             menu.Items.Add(CreateMenuItem("Close All", null, (s, e) => CloseAll()));
             menu.Items.Add(CreateMenuItem("History...", null, (s, e) => OpenHistory()));
             menu.Items.Add(CreateMenuItem("Shortcut Help", null, (s, e) => OpenShortcutHelp()));
@@ -273,6 +275,21 @@ namespace Binjyo
             historyWindow.ReloadEntries();
             historyWindow.Show();
             historyWindow.Activate();
+        }
+
+        public void OpenCanvasWindow()
+        {
+            if (canvasWindow == null)
+            {
+                canvasWindow = new CanvasWindow();
+                canvasWindow.Closed += (s, e) => canvasWindow = null;
+            }
+
+            if (!canvasWindow.IsVisible)
+                canvasWindow.Show();
+
+            canvasWindow.Activate();
+            canvasWindow.Focus();
         }
         public void OpenShortcutHelp()
         {

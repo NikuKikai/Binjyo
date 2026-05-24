@@ -717,6 +717,11 @@ namespace Binjyo
                 .FirstOrDefault();
         }
 
+        public static Memo GetFocusedMemoInstance()
+        {
+            return GetFocusedMemo();
+        }
+
         private static void RefreshFeatureMatchOverlayWindow()
         {
             if (!isFeaturePointModeEnabled || !Properties.Settings.Default.ShowFeatureMatchLines)
