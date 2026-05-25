@@ -4,18 +4,9 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
-using Rect = System.Drawing.Rectangle;
-using System.Diagnostics;
 
 namespace Binjyo
 {
@@ -79,27 +70,6 @@ namespace Binjyo
             }
 
             return result;
-        }
-
-        private System.Windows.Rect GetBoundingBox(IEnumerable<Memo> memos)
-        {
-            double left = double.PositiveInfinity;
-            double top = double.PositiveInfinity;
-            double right = double.NegativeInfinity;
-            double bottom = double.NegativeInfinity;
-
-            foreach (Memo memo in memos)
-            {
-                left = Math.Min(left, memo.anchorLeft);
-                top = Math.Min(top, memo.anchorTop);
-                right = Math.Max(right, memo.anchorLeft + memo.Width);
-                bottom = Math.Max(bottom, memo.anchorTop + memo.Height);
-            }
-
-            if (double.IsInfinity(left) || double.IsInfinity(top))
-                return new System.Windows.Rect(0, 0, 0, 0);
-
-            return new System.Windows.Rect(left, top, right - left, bottom - top);
         }
 
         private System.Windows.Rect GetBoundingBox(IDictionary<Memo, System.Windows.Point> positions)
@@ -482,7 +452,7 @@ namespace Binjyo
                 case Key.Up:
                 case Key.Down:
                     HideHSVWheel();
-                    MoveByKeyboard(actualKey, e.IsRepeat);
+                    Scene.MoveByKey(Id, actualKey, e.IsRepeat);
                     e.Handled = true;
                     break;
                 case Key.Tab:
@@ -575,102 +545,6 @@ namespace Binjyo
             focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
         }
 
-        private void MoveByKeyboard(Key key, bool isRepeat)
-        {
-            bool moveConnectedGroup = IsMoveGroupModifierDown();
-            List<Memo> movingMemos = moveConnectedGroup ? GetConnectedMemoGroup() : new List<Memo> { this };
-
-            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
-            {
-                Scene.MoveToNextSnap(movingMemos.Select(memo => memo.sceneItem.Id).ToList(), key);
-                return;
-            }
-
-            int repeatCount = UpdateArrowRepeatCount(key, isRepeat);
-            double multiplier = (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) ? 10 : 1;
-            double acceleratedStep = multiplier * (1 + repeatCount / 4);
-            double deltaX = 0;
-            double deltaY = 0;
-
-            switch (key)
-            {
-                case Key.Left:
-                    deltaX = -acceleratedStep;
-                    break;
-                case Key.Right:
-                    deltaX = acceleratedStep;
-                    break;
-                case Key.Up:
-                    deltaY = -acceleratedStep;
-                    break;
-                case Key.Down:
-                    deltaY = acceleratedStep;
-                    break;
-                default:
-                    break;
-            }
-
-            ApplyMoveDelta(movingMemos, deltaX, deltaY, false);
-        }
-
-        private int UpdateArrowRepeatCount(Key key, bool isRepeat)
-        {
-            int repeatCount = isRepeat ? 1 : 0;
-            switch (key)
-            {
-                case Key.Left:
-                    leftArrowRepeatCount = isRepeat ? leftArrowRepeatCount + 1 : 0;
-                    repeatCount = leftArrowRepeatCount;
-                    break;
-                case Key.Right:
-                    rightArrowRepeatCount = isRepeat ? rightArrowRepeatCount + 1 : 0;
-                    repeatCount = rightArrowRepeatCount;
-                    break;
-                case Key.Up:
-                    upArrowRepeatCount = isRepeat ? upArrowRepeatCount + 1 : 0;
-                    repeatCount = upArrowRepeatCount;
-                    break;
-                case Key.Down:
-                    downArrowRepeatCount = isRepeat ? downArrowRepeatCount + 1 : 0;
-                    repeatCount = downArrowRepeatCount;
-                    break;
-            }
-            return repeatCount;
-        }
-
-        private void ApplyMoveDelta(List<Memo> movingMemos, double deltaX, double deltaY, bool allowSnap)
-        {
-            if (movingMemos == null || movingMemos.Count == 0)
-                return;
-
-            var targetPositions = new Dictionary<Memo, System.Windows.Point>();
-            foreach (Memo memo in movingMemos)
-            {
-                targetPositions[memo] = new System.Windows.Point(memo.anchorLeft + deltaX, memo.anchorTop + deltaY);
-            }
-
-            System.Windows.Rect boundingBox = GetBoundingBox(targetPositions);
-            if (allowSnap)
-            {
-                GetMoveSnapAdjustment(movingMemos, targetPositions, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
-                if (snapOffsetX != 0 || snapOffsetY != 0)
-                {
-                    foreach (Memo memo in movingMemos)
-                    {
-                        var position = targetPositions[memo];
-                        targetPositions[memo] = new System.Windows.Point(position.X + snapOffsetX, position.Y + snapOffsetY);
-                    }
-                }
-            }
-
-            GetPerMemoReachabilityOffset(targetPositions, out double constraintOffsetX, out double constraintOffsetY);
-
-            foreach (Memo memo in movingMemos)
-            {
-                var position = targetPositions[memo];
-                memo.SetAnchorPosition(position.X + constraintOffsetX, position.Y + constraintOffsetY);
-            }
-        }
 
         private void BeginDragAnchor(bool moveConnectedGroup)
         {
@@ -692,28 +566,6 @@ namespace Binjyo
                 BeginDragAnchor(shouldMoveConnectedGroup);
         }
 
-        private static double? FindNextCandidate(double currentValue, IEnumerable<double> candidates, bool forward)
-        {
-            double? bestCandidate = null;
-            foreach (double candidate in candidates)
-            {
-                if (forward)
-                {
-                    if (candidate <= currentValue + SnapDistance)
-                        continue;
-                    if (!bestCandidate.HasValue || candidate < bestCandidate.Value)
-                        bestCandidate = candidate;
-                }
-                else
-                {
-                    if (candidate >= currentValue - SnapDistance)
-                        continue;
-                    if (!bestCandidate.HasValue || candidate > bestCandidate.Value)
-                        bestCandidate = candidate;
-                }
-            }
-            return bestCandidate;
-        }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {

@@ -51,6 +51,41 @@ namespace Binjyo
                 .ToList();
         }
 
+        public static List<Guid> GetConnectedIds(Guid id)
+        {
+            if (DisplayMode != EDisplayMode.Expanded)
+                return new List<Guid>();
+
+            var result = new List<Guid>();
+            var queue = new Queue<Guid>();
+            var visited = new HashSet<Guid>();
+            queue.Enqueue(id);
+            visited.Add(id);
+
+            while (queue.Count > 0)
+            {
+                Guid current = queue.Dequeue();
+                result.Add(current);
+                Rect currentBounds = Items[current].GetBounds();
+
+                foreach (Guid candidate in Items.Keys)
+                {
+                    if (visited.Contains(candidate))
+                        continue;
+
+                    if (Geo.DoRectsOverlap(currentBounds, Items[candidate].GetBounds()))
+                    {
+                        visited.Add(candidate);
+                        queue.Enqueue(candidate);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+
+        #region ======== Snap ========
         public static double? GetNextSnapPositionX(List<Guid> movingIds, Rect boundingBox, bool forward)
         {
             List<double> candidates = new List<double>();
@@ -141,7 +176,7 @@ namespace Binjyo
             }
             return bestCandidate;
         }
-
+        #endregion
     }
 
 }
