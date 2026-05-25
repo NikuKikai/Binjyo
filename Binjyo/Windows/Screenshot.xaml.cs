@@ -1,51 +1,17 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using System.Runtime.InteropServices;
 using Screen = System.Windows.Forms.Screen;
 
 
 namespace Binjyo
 {
-    public enum DpiType
-    {
-        Effective = 0,
-        Angular = 1,
-        Raw = 2,
-    }
-    public static class ScreenExtensions
-    {
-        public static System.Drawing.Point GetDpi(this Screen screen, DpiType dpiType = DpiType.Effective)
-        {
-            uint x, y;
-            var pnt = new System.Drawing.Point(screen.Bounds.Left + 1, screen.Bounds.Top + 1);
-            var mon = MonitorFromPoint(pnt, 2/*MONITOR_DEFAULTTONEAREST*/);
-            GetDpiForMonitor(mon, dpiType, out x, out y);
-            return new System.Drawing.Point((int)x, (int)y);
-        }
-
-        //https://msdn.microsoft.com/en-us/library/windows/desktop/dd145062(v=vs.85).aspx
-        [DllImport("User32.dll")]
-        private static extern IntPtr MonitorFromPoint([In] System.Drawing.Point pt, [In] uint dwFlags);
-
-        //https://msdn.microsoft.com/en-us/library/windows/desktop/dn280510(v=vs.85).aspx
-        [DllImport("Shcore.dll")]
-        private static extern IntPtr GetDpiForMonitor([In] IntPtr hmonitor, [In] DpiType dpiType, [Out] out uint dpiX, [Out] out uint dpiY);
-    }
-
     /// <summary>
     /// Interaction logic for Screenshot.xaml
     /// </summary>
@@ -96,8 +62,7 @@ namespace Binjyo
 
             // Get DPI
             var scr = Screen.FromPoint(new System.Drawing.Point(l + 1, t + 1));
-            var dpi = scr.GetDpi(DpiType.Effective);
-            dpiFactor = dpi.X / 96.0;
+            dpiFactor = scr.GetDpiFactor();
 
             // Get DPI another method
             // var curr_dpiFactor = VisualTreeHelper.GetDpi(this).DpiScaleX; // Only works under per-monitor DPI mode > https://github.com/microsoft/WPF-Samples/tree/master/

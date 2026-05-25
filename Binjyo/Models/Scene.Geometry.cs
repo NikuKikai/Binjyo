@@ -33,6 +33,28 @@ namespace Binjyo
 
             return new Rect(left, top, right - left, bottom - top);
         }
+        public static Rect GetTargetBounds(IDictionary<Guid, Point> targetPts)
+        {
+            double left = double.PositiveInfinity;
+            double top = double.PositiveInfinity;
+            double right = double.NegativeInfinity;
+            double bottom = double.NegativeInfinity;
+
+
+            foreach (var kvp in targetPts)
+            {
+                var item = Items[kvp.Key];
+                left = Math.Min(left, kvp.Value.X);
+                top = Math.Min(top, kvp.Value.Y);
+                right = Math.Max(right, kvp.Value.X + item.GetWidth());
+                bottom = Math.Max(bottom, kvp.Value.Y + item.GetHeight());
+            }
+
+            if (double.IsInfinity(left) || double.IsInfinity(top))
+                return Rect.Empty;
+
+            return new Rect(left, top, right - left, bottom - top);
+        }
 
         public static List<Guid> GetIdsAtMouse()
         {
@@ -40,7 +62,8 @@ namespace Binjyo
             double mouseY = System.Windows.Forms.Control.MousePosition.Y;
 
             return Items.Keys.ToList()
-                .Where(id => {
+                .Where(id =>
+                {
                     if (!Items.ContainsKey(id))
                         return false;
                     var item = Items[id];
@@ -96,7 +119,7 @@ namespace Binjyo
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
-                var dpiFactor = screen.GetDpi(DpiType.Effective).X / 96.0;
+                var dpiFactor = screen.GetDpiFactor();
                 double screenLeft = screen.Bounds.Left / dpiFactor;
                 double screenRight = screen.Bounds.Right / dpiFactor;
                 candidates.Add(screenLeft);
@@ -130,7 +153,7 @@ namespace Binjyo
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
-                var dpiFactor = screen.GetDpi(DpiType.Effective).X / 96.0;
+                var dpiFactor = screen.GetDpiFactor();
                 double screenTop = screen.Bounds.Top / dpiFactor;
                 double screenBottom = screen.Bounds.Bottom / dpiFactor;
                 candidates.Add(screenTop);
@@ -175,6 +198,62 @@ namespace Binjyo
                 }
             }
             return bestCandidate;
+        }
+
+        private static void GetLeftSnapToOthers(
+            HashSet<Guid> otherIdSet,
+            double left,
+            double top,
+            double width,
+            double height,
+            ref double snappedLeft,
+            ref double bestDistanceX
+            )
+        {
+            foreach (var other in otherIdSet)
+            {
+                var item = Items[other];
+
+                double otherLeft = item.Left;
+                double otherTop = item.Top;
+                double otherRight = item.Left + item.GetWidth();
+                double otherBottom = item.Top + item.GetHeight();
+
+                if (!Geo.DoSegmentsOverlap(top, top + height, otherTop, otherBottom))
+                    continue;
+
+                Geo.SnapValue(left, otherLeft, SnapDistance, ref snappedLeft, ref bestDistanceX);
+                Geo.SnapValue(left, otherRight, SnapDistance, ref snappedLeft, ref bestDistanceX);
+                Geo.SnapValue(left, otherLeft - width, SnapDistance, ref snappedLeft, ref bestDistanceX);
+                Geo.SnapValue(left, otherRight - width, SnapDistance, ref snappedLeft, ref bestDistanceX);
+            }
+        }
+        private static void GetTopSnapToOthers(
+            HashSet<Guid> otherIdSet,
+            double left,
+            double top,
+            double width,
+            double height,
+            ref double snappedTop,
+            ref double bestDistanceY
+            )
+        {
+            foreach (var other in otherIdSet)
+            {
+                var item = Items[other];
+                double otherLeft = item.Left;
+                double otherTop = item.Top;
+                double otherRight = item.Left + item.GetWidth();
+                double otherBottom = item.Top + item.GetHeight();
+
+                if (!Geo.DoSegmentsOverlap(left, left + width, otherLeft, otherRight))
+                    continue;
+
+                Geo.SnapValue(top, otherTop, SnapDistance, ref snappedTop, ref bestDistanceY);
+                Geo.SnapValue(top, otherBottom, SnapDistance, ref snappedTop, ref bestDistanceY);
+                Geo.SnapValue(top, otherTop - height, SnapDistance, ref snappedTop, ref bestDistanceY);
+                Geo.SnapValue(top, otherBottom - height, SnapDistance, ref snappedTop, ref bestDistanceY);
+            }
         }
         #endregion
     }

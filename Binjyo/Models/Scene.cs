@@ -11,6 +11,15 @@ namespace Binjyo
 
     public partial class Scene
     {
+        public static bool IsStitchMode { get; internal set; } = false;
+
+
+        public static HashSet<Guid> GetIdsExcept(IEnumerable<Guid> ids)
+        {
+            return new HashSet<Guid>(Items.Keys.Where(id => !ids.Contains(id)));
+        }
+
+
         #region ======== Create / CLose ========
         public static Dictionary<Guid, SceneItem> Items { get; } = new Dictionary<Guid, SceneItem>();
         public static SceneItem CreateItem(Bitmap bmp, int left, int top)

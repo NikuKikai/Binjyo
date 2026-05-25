@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Input;
 
 
@@ -9,6 +11,10 @@ namespace Binjyo
     public partial class Scene
     {
         private static double moveSpeed = 1; // for key repeat acceleration
+        public static bool IsDragMoving { get; private set; } = false;
+        private static bool isDragMovingGroup = false;
+        private static double dragStartMouseX, dragStartMouseY;
+        private static Dictionary<Guid, Point> dragMoveStartPts = new Dictionary<Guid, Point>();
 
         public static void MoveByKey(Guid id, Key key, bool isRepeat)
         {
@@ -30,7 +36,7 @@ namespace Binjyo
             MoveBy(targetIds, deltaX, deltaY);
         }
 
-        public static void MoveToNextSnap(List<Guid> ids, Key key)
+        private static void MoveToNextSnap(List<Guid> ids, Key key)
         {
             if (ids.Count == 0) return;
             if (DisplayMode != EDisplayMode.Expanded) return;
@@ -68,34 +74,126 @@ namespace Binjyo
             if (movingItems.Count == 0)
                 return;
 
-            var targetPositions = new Dictionary<SceneItem, System.Windows.Point>();
+            var targetPositions = new Dictionary<SceneItem, Point>();
             foreach (var item in movingItems)
             {
-                targetPositions[item] = new System.Windows.Point(item.Left + deltaX, item.Top + deltaY);
+                targetPositions[item] = new Point(item.Left + deltaX, item.Top + deltaY);
             }
-
-            // Rect boundingBox = GetBounds(targetPositions);
-            // if (snap)
-            // {
-            //     GetMoveSnapAdjustment(movingItems, targetPositions, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
-            //     if (snapOffsetX != 0 || snapOffsetY != 0)
-            //     {
-            //         foreach (var item in movingItems)
-            //         {
-            //             var position = targetPositions[item];
-            //             targetPositions[item] = new System.Windows.Point(position.X + snapOffsetX, position.Y + snapOffsetY);
-            //         }
-            //         boundingBox = GetBounds(targetPositions);
-            //     }
-            // }
-
-            // GetPerMemoReachabilityOffset(targetPositions, out double constraintOffsetX, out double constraintOffsetY);
 
             foreach (var item in movingItems)
             {
                 var position = targetPositions[item];
                 item.MoveTo(position.X, position.Y);
             }
+        }
+
+        public static void DragMoveStart(Guid id)
+        {
+            IsDragMoving = true;
+            isDragMovingGroup = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
+            List<Guid> targetIds = isDragMovingGroup ? GetConnectedIds(id) : new List<Guid> { id };
+
+            dragStartMouseX = Control.MousePosition.X;
+            dragStartMouseY = Control.MousePosition.Y;
+            foreach (var tid in targetIds)
+            {
+                var item = Items[tid];
+                dragMoveStartPts[tid] = new Point(item.Left, item.Top);
+            }
+        }
+
+        public static void DragMoveUpdate()
+        {
+            var mousePt = Control.MousePosition;
+            var dpiFactor = Screen.FromPoint(mousePt).GetDpiFactor();
+            double x = Control.MousePosition.X;
+            double y = Control.MousePosition.Y;
+            double deltaX = (x - dragStartMouseX) / dpiFactor;
+            double deltaY = (y - dragStartMouseY) / dpiFactor;
+            Console.WriteLine($"DragMoveUpdate: mouse=({x},{y}), delta=({deltaX},{deltaY})");
+
+            var movingIds = dragMoveStartPts.Keys.ToList();
+            var targetPts = new Dictionary<Guid, Point>();
+
+            // Calculate target positions w/o snap
+            foreach (var kv in dragMoveStartPts)
+                targetPts[kv.Key] = new Point(kv.Value.X + deltaX, kv.Value.Y + deltaY);
+
+            // Predict bounds of the group after moved
+            Rect bounds = GetTargetBounds(targetPts);
+
+            // Snap
+            if (Keyboard.IsKeyDown(Key.Space) != Properties.Settings.Default.SnapMemo)
+            {
+                SnapTargetPts(movingIds, targetPts, bounds);
+            }
+
+            // Move items to target positions
+            foreach (var kv in targetPts)
+                Items[kv.Key].MoveTo(kv.Value.X, kv.Value.Y);
+        }
+
+        public static void DragMoveEnd()
+        {
+            IsDragMoving = false;
+            isDragMovingGroup = false;
+            dragMoveStartPts.Clear();
+        }
+
+        private static void SnapTargetPts(
+            ICollection<Guid> ids,
+            IDictionary<Guid, Point> targetPts,
+            Rect bounds
+        )
+        {
+            double snappedLeft = bounds.Left;
+            double snappedTop = bounds.Top;
+            double bestDistanceX = SnapDistance + 1;
+            double bestDistanceY = SnapDistance + 1;
+            var otherIdSet = GetIdsExcept(ids);
+
+            // Snap to screen edges
+            foreach (var screen in Screen.AllScreens)
+            {
+                var dpiFactor = screen.GetDpiFactor();
+                double screenLeft = screen.Bounds.Left / dpiFactor;
+                double screenTop = screen.Bounds.Top / dpiFactor;
+                double screenRight = screen.Bounds.Right / dpiFactor;
+                double screenBottom = screen.Bounds.Bottom / dpiFactor;
+
+                Geo.SnapValue(bounds.Left, screenLeft, SnapDistance, ref snappedLeft, ref bestDistanceX);
+                Geo.SnapValue(bounds.Left, screenRight - bounds.Width, SnapDistance, ref snappedLeft, ref bestDistanceX);
+                Geo.SnapValue(bounds.Top, screenTop, SnapDistance, ref snappedTop, ref bestDistanceY);
+                Geo.SnapValue(bounds.Top, screenBottom - bounds.Height, SnapDistance, ref snappedTop, ref bestDistanceY);
+            }
+            Console.WriteLine($"snappedTop={snappedTop}, bounds.Top={bounds.Top}, bestDistanceY={bestDistanceY}");
+
+            // Snap to other items
+            if (!IsStitchMode)
+            {
+                GetLeftSnapToOthers(
+                    otherIdSet, bounds.Left, bounds.Top, bounds.Width, bounds.Height, ref snappedLeft, ref bestDistanceX
+                );
+                GetTopSnapToOthers(
+                    otherIdSet, snappedLeft, bounds.Top, bounds.Width, bounds.Height, ref snappedTop, ref bestDistanceY
+                );
+                GetLeftSnapToOthers(
+                    otherIdSet, bounds.Left, snappedTop, bounds.Width, bounds.Height, ref snappedLeft, ref bestDistanceX
+                );
+            }
+
+            var offsetX = snappedLeft - bounds.Left;
+            var offsetY = snappedTop - bounds.Top;
+
+            // if (targetPts != null &&
+            //     TryGetFeatureAlignmentSnapOffset(targetPts, movingIdSet, out double alignmentOffsetX, out double alignmentOffsetY))
+            // {
+            //     offsetX = alignmentOffsetX;
+            //     offsetY = alignmentOffsetY;
+            // }
+
+            foreach (var id in ids)
+                targetPts[id] = new Point(targetPts[id].X + offsetX, targetPts[id].Y + offsetY);
         }
     }
 }

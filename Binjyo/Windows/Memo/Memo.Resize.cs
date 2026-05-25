@@ -104,7 +104,6 @@ namespace Binjyo
         {
             activeResizeHandle = handle;
             isResizing = true;
-            isdrag = false;
             resizeStartScale = scale;
             resizeStartLeft = Left;
             resizeStartTop = Top;

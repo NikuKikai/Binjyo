@@ -105,8 +105,7 @@ namespace Binjyo
         {
             foreach (Screen screen in Screen.AllScreens)
             {
-                var dpi = screen.GetDpi(DpiType.Effective);
-                double dpiFactor = Math.Max(1.0, dpi.X / 96.0);
+                double dpiFactor = screen.GetDpiFactor();
                 Rect bounds = new Rect(
                 screen.Bounds.Left / dpiFactor,
                 screen.Bounds.Top / dpiFactor,

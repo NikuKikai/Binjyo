@@ -23,7 +23,7 @@ namespace Binjyo
     public partial class Memo : Window, ISceneItemView
     {
         private static long focusSequence = 0;
-        private static bool isFeaturePointModeEnabled = false;
+        private static bool isFeaturePointModeEnabled { get => Scene.IsStitchMode; set => Scene.IsStitchMode = value; }
         private static readonly FieldInfo menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", BindingFlags.NonPublic | BindingFlags.Static);
         private DispatcherTimer timer = null;
 
@@ -62,9 +62,6 @@ namespace Binjyo
         private const double MinimumDrawingBrushSize = 1;
         private const double MaximumDrawingBrushSize = 64;
 
-        private double dragStartMouseX, dragStartMouseY;
-        private double dragStartLeft, dragStartTop;
-        private bool isdrag = false;
         private bool isResizeMode = false;
         private bool isResizing = false;
         private bool isSaving = false;
@@ -84,12 +81,6 @@ namespace Binjyo
         private readonly int[] binarizePercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
         private readonly int[] quantizeLevelOptions = new[] { 3, 4, 5, 6, 8, 12, 16 };
         private readonly int[] transparencyPercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
-        private int leftArrowRepeatCount = 0;
-        private int rightArrowRepeatCount = 0;
-        private int upArrowRepeatCount = 0;
-        private int downArrowRepeatCount = 0;
-        private bool dragMovesConnectedGroup = false;
-        private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
         private ResizeHandle activeResizeHandle = ResizeHandle.None;
         private double anchorLeft { get => sceneItem.Left; set => sceneItem.Left = value; }
         private double anchorTop { get => sceneItem.Top; set => sceneItem.Top = value; }
@@ -112,8 +103,7 @@ namespace Binjyo
 
             //var scr = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
             var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(centerx, centery));
-            var dpi = scr.GetDpi(DpiType.Effective);
-            dpiFactor = dpi.X / 96.0;
+            dpiFactor = scr.GetDpiFactor();
             Console.WriteLine(dpiFactor);
 
             Left = item.Left / dpiFactor; Top = item.Top / dpiFactor;
@@ -591,7 +581,8 @@ namespace Binjyo
 
         private void DisplayMinimized()
         {
-            isdrag = false;
+            Scene.DragMoveEnd();
+
             dragStartPositions.Clear();
             StopResize();
             if (isResizeMode)

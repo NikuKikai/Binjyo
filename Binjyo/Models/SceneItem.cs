@@ -45,7 +45,7 @@ namespace Binjyo
         public Stack<DrawingDocumentData> DrawingUndoStack { get; } = new Stack<DrawingDocumentData>();
 
         public double Left { get; internal set; }
-        public double Top { get; internal set; }
+        public double Top { get; internal set; } // Logical pixels (WPF units)
         public bool HasAnchorPosition { get; internal set; }
         public long focusOrder { get; internal set; } = 0;
 
