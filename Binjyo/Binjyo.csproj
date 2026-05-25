@@ -90,7 +90,10 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Models\Scene.cs" />
+    <Compile Include="Models\Scene.Focus.cs" />
+    <Compile Include="Models\Scene.Geometry.cs" />
     <Compile Include="Utils\BitmapExt.cs" />
+    <Compile Include="Utils\Geometry.cs" />
     <Compile Include="Windows\Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>

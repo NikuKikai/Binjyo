@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Input;
+using System.Linq;
+using System.Windows;
+
 
 namespace Binjyo
 {
 
-    public class Scene
+    public partial class Scene
     {
         #region ======== Create / CLose ========
         public static Dictionary<Guid, SceneItem> Items { get; } = new Dictionary<Guid, SceneItem>();
@@ -20,7 +24,6 @@ namespace Binjyo
         {
             if (Items.ContainsKey(id))
             {
-                UnregisterView(views[id]);
                 Items[id].Close();
                 Items.Remove(id);
             }
@@ -35,40 +38,86 @@ namespace Binjyo
         #endregion
 
 
-        #region ======== Views registration ========
-        public static Dictionary<Guid, ISceneItemView> views = new Dictionary<Guid, ISceneItemView>();
+        #region ======== Move ========
+        public static void MoveToNextSnap(List<Guid> ids, Key key)
+        {
+            if (ids.Count == 0) return;
+            if (DisplayMode != EDisplayMode.Expanded) return;
 
-        public static void RegisterView(ISceneItemView view)
-        {
-            if (!views.ContainsKey(view.Id))
-                views.Add(view.Id, view);
+            var boundingBox = GetBounds(ids);
+            double? target = null;
+            switch (key)
+            {
+                case Key.Left:
+                    target = GetNextSnapPositionX(ids, boundingBox, false);
+                    if (target.HasValue)
+                        MoveBy(ids, target.Value - boundingBox.Left, 0);
+                    break;
+                case Key.Right:
+                    target = GetNextSnapPositionX(ids, boundingBox, true);
+                    if (target.HasValue)
+                        MoveBy(ids, target.Value - boundingBox.Left, 0);
+                    break;
+                case Key.Up:
+                    target = GetNextSnapPositionY(ids, boundingBox, false);
+                    if (target.HasValue)
+                        MoveBy(ids, 0, target.Value - boundingBox.Top);
+                    break;
+                case Key.Down:
+                    target = GetNextSnapPositionY(ids, boundingBox, true);
+                    if (target.HasValue)
+                        MoveBy(ids, 0, target.Value - boundingBox.Top);
+                    break;
+            }
         }
-        private static void UnregisterView(ISceneItemView view)
+
+        private static void MoveBy(List<Guid> movingIds, double deltaX, double deltaY, bool snap = false)
         {
-            if (views.ContainsKey(view.Id))
-                views.Remove(view.Id);
+            var movingItems = movingIds.Select(id => Items[id]).Where(item => item != null).ToList();
+            if (movingItems.Count == 0)
+                return;
+
+            var targetPositions = new Dictionary<SceneItem, System.Windows.Point>();
+            foreach (var item in movingItems)
+            {
+                targetPositions[item] = new System.Windows.Point(item.Left + deltaX, item.Top + deltaY);
+            }
+
+            // Rect boundingBox = GetBounds(targetPositions);
+            // if (snap)
+            // {
+            //     GetMoveSnapAdjustment(movingItems, targetPositions, boundingBox.Left, boundingBox.Top, boundingBox.Width, boundingBox.Height, out double snapOffsetX, out double snapOffsetY);
+            //     if (snapOffsetX != 0 || snapOffsetY != 0)
+            //     {
+            //         foreach (var item in movingItems)
+            //         {
+            //             var position = targetPositions[item];
+            //             targetPositions[item] = new System.Windows.Point(position.X + snapOffsetX, position.Y + snapOffsetY);
+            //         }
+            //         boundingBox = GetBounds(targetPositions);
+            //     }
+            // }
+
+            // GetPerMemoReachabilityOffset(targetPositions, out double constraintOffsetX, out double constraintOffsetY);
+
+            foreach (var item in movingItems)
+            {
+                var position = targetPositions[item];
+                item.MoveTo(position.X, position.Y);
+            }
         }
+
+
         #endregion
-
-
-        private static long focusOrderAll = 0;
-
-        public static void Focus(Guid id)
-        {
-            if (!views.ContainsKey(id)) return;
-            Items[id].focusOrder = ++focusOrderAll;
-            views[id].NotifiedFocus();
-        }
-
 
         public static EDisplayMode DisplayMode { get; private set; } = EDisplayMode.Expanded;
 
         public static void SetDisplayMode(EDisplayMode mode)
         {
             DisplayMode = mode;
-            foreach (ISceneItemView view in views.Values)
+            foreach (var item in Items.Values)
             {
-                view.NotifiedDisplayMode();
+                item.views.ForEach(view => view.NotifiedDisplayMode());
             }
         }
         public static void CycleDisplayMode()

@@ -35,9 +35,30 @@ namespace Binjyo
         private double resizeStartRight = 0;
         private double resizeStartBottom = 0;
 
+        private void SetResizeMode(bool enabled)
+        {
+            if (isEditMode)
+                return;
+
+            isResizeMode = enabled && CanInteract;
+            if (!isResizeMode)
+                StopResize();
+            UpdateResizeModeVisuals();
+        }
+
         private bool IsResizeHandle(ResizeHandle handle)
         {
             return handle != ResizeHandle.None;
+        }
+
+        private void UpdateResizeModeVisuals()
+        {
+            if (resizeOverlay == null)
+                return;
+
+            resizeOverlay.Visibility = isResizeMode && CanInteract && !isEditMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private ResizeHandle GetResizeHandleAtMousePosition()
@@ -214,14 +235,14 @@ namespace Binjyo
                     continue;
 
                 if (MovesLeftOrRightEdge() &&
-                    IntervalsOverlapOrTouch(rawTop, rawBottom, item.Top, item.Top + item.Height))
+                    Geo.DoSegmentsOverlap(rawTop, rawBottom, item.Top, item.Top + item.Height))
                 {
                     TryResizeSnapCandidate(rawScale, item.Left, true, ref bestScale, ref bestDistance);
                     TryResizeSnapCandidate(rawScale, item.Left + item.Width, true, ref bestScale, ref bestDistance);
                 }
 
                 if (MovesTopOrBottomEdge() &&
-                    IntervalsOverlapOrTouch(rawLeft, rawRight, item.Left, item.Left + item.Width))
+                    Geo.DoSegmentsOverlap(rawLeft, rawRight, item.Left, item.Left + item.Width))
                 {
                     TryResizeSnapCandidate(rawScale, item.Top, false, ref bestScale, ref bestDistance);
                     TryResizeSnapCandidate(rawScale, item.Top + item.Height, false, ref bestScale, ref bestDistance);

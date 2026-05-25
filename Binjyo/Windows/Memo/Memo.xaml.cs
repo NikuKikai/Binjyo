@@ -27,7 +27,7 @@ namespace Binjyo
         private static readonly FieldInfo menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", BindingFlags.NonPublic | BindingFlags.Static);
         private DispatcherTimer timer = null;
 
-        private double dpiFactor = 1;
+        private double dpiFactor { get => sceneItem.DpiFactor; set => sceneItem.DpiFactor = value; }
 
         private BitmapSource bitmapsource;
         public SceneItem sceneItem { get; private set; }
@@ -91,8 +91,8 @@ namespace Binjyo
         private bool dragMovesConnectedGroup = false;
         private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
         private ResizeHandle activeResizeHandle = ResizeHandle.None;
-        private double anchorLeft { get => sceneItem.AnchorLeft; set => sceneItem.AnchorLeft = value; }
-        private double anchorTop { get => sceneItem.AnchorTop; set => sceneItem.AnchorTop = value; }
+        private double anchorLeft { get => sceneItem.Left; set => sceneItem.Left = value; }
+        private double anchorTop { get => sceneItem.Top; set => sceneItem.Top = value; }
         private bool hasAnchorPosition { get => sceneItem.HasAnchorPosition; set => sceneItem.HasAnchorPosition = value; }
 
 
@@ -107,8 +107,8 @@ namespace Binjyo
             int w = item.OriginalBitmapWidth;  // Physical pixel
             int h = item.OriginalBitmapHeight;  // Physical pixel
 
-            var centerx = (int)item.AnchorLeft + w / 2;
-            var centery = (int)item.AnchorTop + h / 2;
+            var centerx = (int)item.Left + w / 2;
+            var centery = (int)item.Top + h / 2;
 
             //var scr = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
             var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(centerx, centery));
@@ -116,7 +116,7 @@ namespace Binjyo
             dpiFactor = dpi.X / 96.0;
             Console.WriteLine(dpiFactor);
 
-            Left = item.AnchorLeft / dpiFactor; Top = item.AnchorTop / dpiFactor;
+            Left = item.Left / dpiFactor; Top = item.Top / dpiFactor;
 
             this.showFeaturePoints = isFeaturePointModeEnabled;
             this.ShowBitmap(item.Bitmap);
@@ -132,7 +132,6 @@ namespace Binjyo
 
             // Register
             item.RegisterView(this);
-            Scene.RegisterView(this);
         }
 
         private static bool CanInteract => Scene.DisplayMode == EDisplayMode.Expanded;
@@ -201,6 +200,23 @@ namespace Binjyo
             flashOnNextActivation = false;
             Focus();
             FlashFocusCue();
+        }
+
+        public void NotifiedMove()
+        {
+            if (isClosing)
+                return;
+
+            // if (Scene.DisplayMode != EDisplayMode.Expanded)
+            //     return;
+
+            //  if (!hasAnchorPosition)
+            //     return;
+
+            if (isSuspendingDisplayPosition)
+                return;
+
+            ApplyDisplayPosition(sceneItem.Left, sceneItem.Top);
         }
         #endregion
 
@@ -550,27 +566,6 @@ namespace Binjyo
             return this.bitmapTransformed.Height / dpiFactor;
         }
 
-        private void SetResizeMode(bool enabled)
-        {
-            if (isEditMode)
-                return;
-
-            isResizeMode = enabled && CanInteract;
-            if (!isResizeMode)
-                StopResize();
-            UpdateResizeModeVisuals();
-        }
-
-        private void UpdateResizeModeVisuals()
-        {
-            if (resizeOverlay == null)
-                return;
-
-            resizeOverlay.Visibility = isResizeMode && CanInteract && !isEditMode
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-
 
         private void DisplayExpanded()
         {
@@ -601,7 +596,7 @@ namespace Binjyo
             StopResize();
             if (isResizeMode)
                 isResizeMode = false;
-            _HideHSVWheel();
+            HideHSVWheel();
             if (IsVisible) Hide();
         }
 
@@ -622,7 +617,7 @@ namespace Binjyo
             anchorLeft = left;
             anchorTop = top;
             hasAnchorPosition = true;
-            NotifiedDisplayMode();
+            ApplyDisplayPosition(left, top);
         }
 
         private void SetCenterInfoText(string title, string detail)

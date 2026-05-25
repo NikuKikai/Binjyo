@@ -50,17 +50,6 @@ namespace Binjyo
                 .ToList();
         }
 
-        private static bool AreRectsConnected(System.Windows.Rect a, System.Windows.Rect b)
-        {
-            return a.Right >= b.Left && b.Right >= a.Left &&
-                   a.Bottom >= b.Top && b.Bottom >= a.Top;
-        }
-
-        private System.Windows.Rect GetMemoBounds(Memo memo)
-        {
-            return new System.Windows.Rect(memo.anchorLeft, memo.anchorTop, memo.Width, memo.Height);
-        }
-
         private List<Memo> GetConnectedMemoGroup()
         {
             var allMemos = GetVisibleMemos();
@@ -74,14 +63,14 @@ namespace Binjyo
             {
                 Memo current = queue.Dequeue();
                 result.Add(current);
-                System.Windows.Rect currentBounds = GetMemoBounds(current);
+                System.Windows.Rect currentBounds = current.sceneItem.GetBounds();
 
                 foreach (Memo candidate in allMemos)
                 {
                     if (visited.Contains(candidate))
                         continue;
 
-                    if (AreRectsConnected(currentBounds, GetMemoBounds(candidate)))
+                    if (Geo.DoRectsOverlap(currentBounds, candidate.sceneItem.GetBounds()))
                     {
                         visited.Add(candidate);
                         queue.Enqueue(candidate);
@@ -201,7 +190,7 @@ namespace Binjyo
                 double otherRight = item.anchorLeft + item.Width;
                 double otherBottom = item.anchorTop + item.Height;
 
-                if (!IntervalsOverlapOrTouch(currentTop, currentBottom, otherTop, otherBottom))
+                if (!Geo.DoSegmentsOverlap(currentTop, currentBottom, otherTop, otherBottom))
                     continue;
 
                 TrySnapValue(nextLeft, otherLeft, ref snappedLeft, ref bestDistanceX);
@@ -224,7 +213,7 @@ namespace Binjyo
                 double otherRight = item.anchorLeft + item.Width;
                 double otherBottom = item.anchorTop + item.Height;
 
-                if (!IntervalsOverlapOrTouch(currentLeft, currentRight, otherLeft, otherRight))
+                if (!Geo.DoSegmentsOverlap(currentLeft, currentRight, otherLeft, otherRight))
                     continue;
 
                 TrySnapValue(nextTop, otherTop, ref snappedTop, ref bestDistanceY);
@@ -331,11 +320,6 @@ namespace Binjyo
                 snappedValue = targetValue;
                 bestDistance = distance;
             }
-        }
-
-        private static bool IntervalsOverlapOrTouch(double startA, double endA, double startB, double endB)
-        {
-            return endA >= startB && endB >= startA;
         }
 
 
@@ -497,13 +481,13 @@ namespace Binjyo
                 case Key.Right:
                 case Key.Up:
                 case Key.Down:
-                    _HideHSVWheel();
+                    HideHSVWheel();
                     MoveByKeyboard(actualKey, e.IsRepeat);
                     e.Handled = true;
                     break;
                 case Key.Tab:
                     if (!e.IsRepeat)
-                        FocusMemoFromMousePosition();
+                        Scene.FocusNext();
                     e.Handled = true;
                     break;
                 case Key.B:
@@ -571,53 +555,6 @@ namespace Binjyo
             return e.Key == Key.System ? e.SystemKey : e.Key;
         }
 
-        private void FocusMemoFromMousePosition()
-        {
-            List<Memo> allMemos = GetVisibleMemos();
-            List<Memo> candidates = GetMemosUnderMouse(allMemos);
-            if (candidates.Count == 0)
-                candidates = allMemos;
-
-            if (candidates.Count == 0)
-                return;
-
-            Memo target = GetNextFocusTarget(allMemos, candidates);
-            if (target == null)
-                return;
-
-            Scene.Focus(target.Id);
-        }
-
-        private Memo GetNextFocusTarget(List<Memo> allMemos, List<Memo> candidates)
-        {
-            if (allMemos == null || candidates == null || candidates.Count == 0)
-                return null;
-
-            HashSet<Memo> candidateSet = new HashSet<Memo>(candidates);
-            List<Memo> orderedCandidates = allMemos
-                .Where(memo => candidateSet.Contains(memo))
-                .ToList();
-            Memo activeMemo = orderedCandidates.FirstOrDefault(memo => memo.IsActive);
-            if (activeMemo == null)
-                return orderedCandidates[0];
-
-            if (orderedCandidates.Count == 1)
-                return activeMemo;
-
-            int currentIndex = orderedCandidates.IndexOf(activeMemo);
-            return orderedCandidates[(currentIndex + 1) % orderedCandidates.Count];
-        }
-
-        private List<Memo> GetMemosUnderMouse(List<Memo> allMemos)
-        {
-            double mouseX = System.Windows.Forms.Control.MousePosition.X;
-            double mouseY = System.Windows.Forms.Control.MousePosition.Y;
-
-            return allMemos
-                .Where(memo => memo.ContainsScreenPoint(mouseX, mouseY))
-                .ToList();
-        }
-
         private bool ContainsScreenPoint(double screenX, double screenY)
         {
             double localX = screenX / dpiFactor - Left;
@@ -645,7 +582,7 @@ namespace Binjyo
 
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
-                MoveToNextSnap(key, movingMemos);
+                Scene.MoveToNextSnap(movingMemos.Select(memo => memo.sceneItem.Id).ToList(), key);
                 return;
             }
 
@@ -701,101 +638,6 @@ namespace Binjyo
             return repeatCount;
         }
 
-        private void MoveToNextSnap(Key key, List<Memo> movingMemos)
-        {
-            System.Windows.Rect boundingBox = GetBoundingBox(movingMemos);
-            double? target = null;
-            switch (key)
-            {
-                case Key.Left:
-                    target = GetNextSnapPositionX(movingMemos, boundingBox, false);
-                    if (target.HasValue)
-                        ApplyMoveDelta(movingMemos, target.Value - boundingBox.Left, 0, false);
-                    break;
-                case Key.Right:
-                    target = GetNextSnapPositionX(movingMemos, boundingBox, true);
-                    if (target.HasValue)
-                        ApplyMoveDelta(movingMemos, target.Value - boundingBox.Left, 0, false);
-                    break;
-                case Key.Up:
-                    target = GetNextSnapPositionY(movingMemos, boundingBox, false);
-                    if (target.HasValue)
-                        ApplyMoveDelta(movingMemos, 0, target.Value - boundingBox.Top, false);
-                    break;
-                case Key.Down:
-                    target = GetNextSnapPositionY(movingMemos, boundingBox, true);
-                    if (target.HasValue)
-                        ApplyMoveDelta(movingMemos, 0, target.Value - boundingBox.Top, false);
-                    break;
-            }
-        }
-
-        private double? GetNextSnapPositionX(List<Memo> movingMemos, System.Windows.Rect boundingBox, bool forward)
-        {
-            List<double> candidates = new List<double>();
-            double width = boundingBox.Width;
-            double top = boundingBox.Top;
-            double bottom = boundingBox.Bottom;
-            var movingSet = new HashSet<Memo>(movingMemos);
-
-            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
-            {
-                double screenLeft = screen.Bounds.Left / dpiFactor;
-                double screenRight = screen.Bounds.Right / dpiFactor;
-                candidates.Add(screenLeft);
-                candidates.Add(screenRight - width);
-            }
-
-            foreach (Memo item in GetVisibleMemos())
-            {
-                if (movingSet.Contains(item))
-                    continue;
-
-                if (!IntervalsOverlapOrTouch(top, bottom, item.anchorTop, item.anchorTop + item.Height))
-                    continue;
-
-                candidates.Add(item.anchorLeft);
-                candidates.Add(item.anchorLeft + item.Width);
-                candidates.Add(item.anchorLeft - width);
-                candidates.Add(item.anchorLeft + item.Width - width);
-            }
-
-            return FindNextCandidate(boundingBox.Left, candidates, forward);
-        }
-
-        private double? GetNextSnapPositionY(List<Memo> movingMemos, System.Windows.Rect boundingBox, bool forward)
-        {
-            List<double> candidates = new List<double>();
-            double height = boundingBox.Height;
-            double left = boundingBox.Left;
-            double right = boundingBox.Right;
-            var movingSet = new HashSet<Memo>(movingMemos);
-
-            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
-            {
-                double screenTop = screen.Bounds.Top / dpiFactor;
-                double screenBottom = screen.Bounds.Bottom / dpiFactor;
-                candidates.Add(screenTop);
-                candidates.Add(screenBottom - height);
-            }
-
-            foreach (Memo item in GetVisibleMemos())
-            {
-                if (movingSet.Contains(item))
-                    continue;
-
-                if (!IntervalsOverlapOrTouch(left, right, item.anchorLeft, item.anchorLeft + item.Width))
-                    continue;
-
-                candidates.Add(item.anchorTop);
-                candidates.Add(item.anchorTop + item.Height);
-                candidates.Add(item.anchorTop - height);
-                candidates.Add(item.anchorTop + item.Height - height);
-            }
-
-            return FindNextCandidate(boundingBox.Top, candidates, forward);
-        }
-
         private void ApplyMoveDelta(List<Memo> movingMemos, double deltaX, double deltaY, bool allowSnap)
         {
             if (movingMemos == null || movingMemos.Count == 0)
@@ -818,7 +660,6 @@ namespace Binjyo
                         var position = targetPositions[memo];
                         targetPositions[memo] = new System.Windows.Point(position.X + snapOffsetX, position.Y + snapOffsetY);
                     }
-                    boundingBox = GetBoundingBox(targetPositions);
                 }
             }
 
@@ -947,7 +788,7 @@ namespace Binjyo
                 else if (isDrawingStroke)
                     EndDrawingStroke();
 
-                _HideHSVWheel();
+                HideHSVWheel();
                 return;
             }
 
@@ -1113,7 +954,7 @@ namespace Binjyo
 
         private void Window_MouseLeave(object sender, MouseEventArgs e)
         {
-            _HideHSVWheel();
+            HideHSVWheel();
         }
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)

@@ -18,7 +18,7 @@ namespace Binjyo
 
     public partial class Memo
     {
-        private void _UpdateHSVWheel()
+        private void UpdateHSVWheel()
         {
             double x = System.Windows.Forms.Control.MousePosition.X - Left;
             double y = System.Windows.Forms.Control.MousePosition.Y - Top;
@@ -62,7 +62,7 @@ namespace Binjyo
             CoordText.Text = String.Format("X{0: 0000}    Y{1: 0000}", originalPoint.X, originalPoint.Y);
         }
 
-        private void _HideHSVWheel()
+        private void HideHSVWheel()
         {
             popup.IsOpen = false;
         }
@@ -75,9 +75,9 @@ namespace Binjyo
         private void RefreshHSVWheelVisibility()
         {
             if (ShouldShowHSVWheel())
-                _UpdateHSVWheel();
+                UpdateHSVWheel();
             else
-                _HideHSVWheel();
+                HideHSVWheel();
         }
 
         private static void RefreshAllMemoHSVWheelVisibility()
@@ -213,7 +213,7 @@ namespace Binjyo
             EnsureEditModePanel();
             SetEditTool(EditTool.Brush);
             UpdateResizeModeVisuals();
-            _HideHSVWheel();
+            HideHSVWheel();
         }
 
         private void ExitEditMode()

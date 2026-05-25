@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Windows;
+using System.Windows.Media;
+
 
 namespace Binjyo
 {
@@ -9,6 +12,7 @@ namespace Binjyo
         Guid Id { get; }
         void NotifiedClose();
         void NotifiedFocus();
+        void NotifiedMove();
 
         void NotifiedDisplayMode();
 
@@ -24,6 +28,7 @@ namespace Binjyo
         public Bitmap BitmapTransformed { get; internal set; }
         public int OriginalBitmapWidth { get; internal set; }
         public int OriginalBitmapHeight { get; internal set; }
+        public double DpiFactor { get; internal set; }
 
         public double Scale { get; internal set; } = 1;
         public bool IsEffectGray { get; internal set; }
@@ -39,8 +44,8 @@ namespace Binjyo
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
         public Stack<DrawingDocumentData> DrawingUndoStack { get; } = new Stack<DrawingDocumentData>();
 
-        public double AnchorLeft { get; internal set; }
-        public double AnchorTop { get; internal set; }
+        public double Left { get; internal set; }
+        public double Top { get; internal set; }
         public bool HasAnchorPosition { get; internal set; }
         public long focusOrder { get; internal set; } = 0;
 
@@ -51,8 +56,8 @@ namespace Binjyo
             BitmapTransformed = (Bitmap)Bitmap.Clone();
             OriginalBitmapWidth = bmp.Width;
             OriginalBitmapHeight = bmp.Height;
-            AnchorLeft = left;
-            AnchorTop = top;
+            Left = left;
+            Top = top;
             HasAnchorPosition = true;
         }
 
@@ -65,6 +70,24 @@ namespace Binjyo
             Bitmap = null;
             BitmapTransformed.Dispose();
             BitmapTransformed = null;
+        }
+
+        public void MoveTo(double left, double top)
+        {
+            Left = left;
+            Top = top;
+            views.ForEach(view => view.NotifiedMove());
+        }
+
+
+        public double GetBaseWidth() => BitmapTransformed.Width / DpiFactor;
+        public double GetBaseHeight() => BitmapTransformed.Height / DpiFactor;
+        public double GetWidth() => GetBaseWidth() * Scale;
+        public double GetHeight() => GetBaseHeight() * Scale;
+
+        public Rect GetBounds()
+        {
+            return new Rect(Left, Top, GetWidth(), GetHeight());
         }
 
         public void RegisterView(ISceneItemView view)
