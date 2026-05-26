@@ -30,8 +30,10 @@ namespace Binjyo
         private double lastContextMenuScreenY = 0;
         private void InitializeContextMenu()
         {
-            memoContextMenu = new ContextMenu();
-            memoContextMenu.FlowDirection = FlowDirection.LeftToRight;
+            memoContextMenu = new ContextMenu
+            {
+                FlowDirection = FlowDirection.LeftToRight
+            };
             memoContextMenu.Opened += MemoContextMenu_Opened;
             memoContextMenu.Closed += MemoContextMenu_Closed;
 
@@ -91,14 +93,14 @@ namespace Binjyo
         {
             MenuItem menu = new MenuItem { Header = "Binarization", InputGestureText = "B + Wheel", FlowDirection = FlowDirection.LeftToRight };
             binarizeMenuItems = new Dictionary<int, MenuItem>();
-            binarizeOffMenuItem = CreateCheckableMenuItem("Off", null, (s, e) => SetBinarizationEnabled(false));
+            binarizeOffMenuItem = CreateCheckableMenuItem("Off", null, (s, e) => SetEffectBinarize(false));
             menu.Items.Add(binarizeOffMenuItem);
             menu.Items.Add(new Separator());
 
             foreach (int percent in binarizePercentOptions)
             {
                 int localPercent = percent;
-                MenuItem item = CreateCheckableMenuItem($"{localPercent}%", null, (s, e) => SetBinarizationPercent(localPercent));
+                MenuItem item = CreateCheckableMenuItem($"{localPercent}%", null, (s, e) => SetEffectBinarize(true, localPercent));
                 binarizeMenuItems[localPercent] = item;
                 menu.Items.Add(item);
             }
@@ -110,14 +112,14 @@ namespace Binjyo
         {
             MenuItem menu = new MenuItem { Header = "Quantization", InputGestureText = "Q + Wheel", FlowDirection = FlowDirection.LeftToRight };
             quantizeMenuItems = new Dictionary<int, MenuItem>();
-            quantizeOffMenuItem = CreateCheckableMenuItem("Off", null, (s, e) => SetQuantizationEnabled(false));
+            quantizeOffMenuItem = CreateCheckableMenuItem("Off", null, (s, e) => SetEffectQuantize(false));
             menu.Items.Add(quantizeOffMenuItem);
             menu.Items.Add(new Separator());
 
             foreach (int level in quantizeLevelOptions)
             {
                 int localLevel = level;
-                MenuItem item = CreateCheckableMenuItem($"{localLevel} levels", null, (s, e) => SetQuantizationLevel(localLevel));
+                MenuItem item = CreateCheckableMenuItem($"{localLevel} levels", null, (s, e) => SetEffectQuantize(true, localLevel));
                 quantizeMenuItems[localLevel] = item;
                 menu.Items.Add(item);
             }
@@ -127,16 +129,16 @@ namespace Binjyo
 
         private MenuItem CreateTransparencyMenu()
         {
-            MenuItem menu = new MenuItem { Header = "Transparency", InputGestureText = "O + Wheel", FlowDirection = FlowDirection.LeftToRight };
+            MenuItem menu = new MenuItem { Header = "Opacity", InputGestureText = "O + Wheel", FlowDirection = FlowDirection.LeftToRight };
             transparencyMenuItems = new Dictionary<int, MenuItem>();
-            transparencyOffMenuItem = CreateCheckableMenuItem("Off", null, (s, e) => SetTransparencyEnabled(false));
+            transparencyOffMenuItem = CreateCheckableMenuItem("Off", null, (s, e) => SetEffectTransparent(false));
             menu.Items.Add(transparencyOffMenuItem);
             menu.Items.Add(new Separator());
 
             foreach (int percent in transparencyPercentOptions)
             {
                 int localPercent = percent;
-                MenuItem item = CreateCheckableMenuItem($"{localPercent}%", null, (s, e) => SetTransparencyPercent(localPercent));
+                MenuItem item = CreateCheckableMenuItem($"{localPercent}%", null, (s, e) => SetEffectTransparent(true, localPercent));
                 transparencyMenuItems[localPercent] = item;
                 menu.Items.Add(item);
             }

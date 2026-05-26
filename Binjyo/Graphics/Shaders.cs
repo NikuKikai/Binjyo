@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -114,12 +114,87 @@ namespace Binjyo
             set => SetValue(IsGrayProperty, value);
         }
 
+        // C1
+        public static readonly DependencyProperty IsBinarizeProperty =
+            DependencyProperty.Register(
+                nameof(IsBinarize),
+                typeof(double),
+                typeof(ImageEffect),
+                new UIPropertyMetadata(0.0, PixelShaderConstantCallback(1))
+            );
+        public double IsBinarize
+        {
+            get => (double)GetValue(IsBinarizeProperty);
+            set => SetValue(IsBinarizeProperty, value);
+        }
+
+        // C2
+        public static readonly DependencyProperty BinarizeThresholdProperty =
+            DependencyProperty.Register(
+                nameof(BinarizeThreshold),
+                typeof(double),
+                typeof(ImageEffect),
+                new UIPropertyMetadata(0.0, PixelShaderConstantCallback(2))
+            );
+        public double BinarizeThreshold
+        {
+            get => (double)GetValue(BinarizeThresholdProperty);
+            set => SetValue(BinarizeThresholdProperty, value);
+        }
+
+        // C3
+        public static readonly DependencyProperty IsQuantizeProperty =
+            DependencyProperty.Register(
+                nameof(IsQuantize),
+                typeof(double),
+                typeof(ImageEffect),
+                new UIPropertyMetadata(0.0, PixelShaderConstantCallback(3))
+            );
+        public double IsQuantize
+        {
+            get => (double)GetValue(IsQuantizeProperty);
+            set => SetValue(IsQuantizeProperty, value);
+        }
+
+        // C4
+        public static readonly DependencyProperty QuantizeLevelsProperty =
+            DependencyProperty.Register(
+                nameof(QuantizeLevels),
+                typeof(double),
+                typeof(ImageEffect),
+                new UIPropertyMetadata(0.0, PixelShaderConstantCallback(4))
+            );
+        public double QuantizeLevels
+        {
+            get => (double)GetValue(QuantizeLevelsProperty);
+            set => SetValue(QuantizeLevelsProperty, value);
+        }
+
+        // C5
+        public static readonly DependencyProperty IsHuemapProperty =
+            DependencyProperty.Register(
+                nameof(IsHuemap),
+                typeof(double),
+                typeof(ImageEffect),
+                new UIPropertyMetadata(0.0, PixelShaderConstantCallback(5))
+            );
+        public double IsHuemap
+        {
+            get => (double)GetValue(IsHuemapProperty);
+            set => SetValue(IsHuemapProperty, value);
+        }
+
         public ImageEffect()
         {
             this.PixelShader = _pixelShader;
 
             UpdateShaderValue(InputProperty);
             UpdateShaderValue(IsGrayProperty);
+            UpdateShaderValue(IsBinarizeProperty);
+            UpdateShaderValue(BinarizeThresholdProperty);
+            UpdateShaderValue(IsQuantizeProperty);
+            UpdateShaderValue(QuantizeLevelsProperty);
+            UpdateShaderValue(IsHuemapProperty);
         }
 
     }

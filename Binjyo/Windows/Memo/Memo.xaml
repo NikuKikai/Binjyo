@@ -28,7 +28,7 @@
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill">
             <Image.Effect>
-                <local:ImageEffect x:Name="Effect"/>
+                <local:ImageEffect x:Name="effect"/>
             </Image.Effect>
         </Image>
         <Canvas Name="featureOverlay"

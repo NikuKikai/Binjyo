@@ -11,6 +11,19 @@ namespace Binjyo
     public partial class Memo
     {
 
+        private void FlashFocusCue()
+        {
+            if (focusFlashOverlay == null)
+                return;
+
+            var animation = new DoubleAnimationUsingKeyFrames();
+            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0.5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70))));
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180))));
+            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
+        }
+
+
         #region ======== Center Info ========
 
         private void ShowCenterInfoPersistent(string title, string detail)
@@ -74,6 +87,12 @@ namespace Binjyo
             resizeInfoOverlay.Visibility = Visibility.Collapsed;
             resizeInfoOverlay.Opacity = 1;
             centerInfoFadeCompletedHandler = null;
+        }
+
+        private static string ThrToPercentInfo(bool enabled, int threshold)
+        {
+            var perc = (int)Math.Round(threshold * 100.0 / 255.0 / 10.0) * 10;
+            return enabled ? $"{perc}%" : "Off";
         }
 
         #endregion

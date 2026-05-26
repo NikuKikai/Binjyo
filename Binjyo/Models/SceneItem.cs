@@ -18,7 +18,6 @@ namespace Binjyo
         void NotifiedMove();
         void NotifiedTransform();  // scale, flip, rotate
         void NotifiedEffect();
-        void NotifiedRendered();
 
         // Scene-level notifications
         void NotifiedCanvasActive();
@@ -39,17 +38,17 @@ namespace Binjyo
         public double Left { get; internal set; }
         public double Top { get; internal set; } // Logical pixels (WPF units)
         public double Scale { get; internal set; } = 1;
-        public bool IsFlippedHorizontal { get; internal set; } = false;
-        public bool IsFlippedVertical { get; internal set; } = false;
-        public double Rotation { get; internal set; } = 0; // degrees
+        public bool IsFlippedHorizontal { get; private set; } = false;
+        public bool IsFlippedVertical { get; private set; } = false;
+        public double Rotation { get; private set; } = 0; // degrees
         public bool IsEffectGray { get; private set; }
-        public bool IsEffectBinarize { get; internal set; }
-        public int PEffectBinarize { get; internal set; } = 128;
-        public bool IsEffectQuantize { get; internal set; }  // exclusive to IsEffectBinarize
-        public int PEffectQuantize { get; internal set; } = 3;
-        public bool IsEffectTransparent { get; internal set; }
-        public int PEffectTransparent { get; internal set; } = 128;
-        public bool IsEffectHuemap { get; internal set; }
+        public bool IsEffectBinarize { get; private set; }
+        public int PEffectBinarize { get; private set; } = 128;
+        public bool IsEffectQuantize { get; private set; }  // exclusive to IsEffectBinarize
+        public int PEffectQuantize { get; private set; } = 3;
+        public bool IsEffectTransparent { get; private set; }
+        public int PEffectTransparent { get; private set; } = 128;
+        public bool IsEffectHuemap { get; private set; }
 
         public List<char> GeometryTransformHistory { get; } = new List<char>();
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
@@ -101,11 +100,6 @@ namespace Binjyo
                 views.Remove(view);
         }
 
-        public void PublishRenderedBitmap(WriteableBitmap wbmp)
-        {
-            RenderedWBitmap = wbmp;
-            views.ForEach(view => view.NotifiedRendered());
-        }
         #endregion
 
 
@@ -193,6 +187,28 @@ namespace Binjyo
         {
             if (IsEffectHuemap == enabled) return;
             IsEffectHuemap = enabled;
+            views.ForEach(view => view.NotifiedEffect());
+        }
+
+        public void SetEffectTransparent(bool enabled, int? p = null)
+        {
+            if (IsEffectTransparent == enabled && PEffectTransparent == p) return;
+            IsEffectTransparent = enabled;
+            if (p.HasValue) PEffectTransparent = Math.Max(Math.Min(p.Value, 245), 10);
+            views.ForEach(view => view.NotifiedEffect());
+        }
+        public void SetEffectBinarize(bool enabled, int? p = null)
+        {
+            if (IsEffectBinarize == enabled && PEffectBinarize == p) return;
+            IsEffectBinarize = enabled;
+            if (p.HasValue) PEffectBinarize = Math.Max(Math.Min(p.Value, 245), 10);
+            views.ForEach(view => view.NotifiedEffect());
+        }
+        public void SetEffectQuantize(bool enabled, int? p = null)
+        {
+            if (IsEffectQuantize == enabled && PEffectQuantize == p) return;
+            IsEffectQuantize = enabled;
+            if (p.HasValue) PEffectQuantize = Math.Max(Math.Min(p.Value, 16), 3);
             views.ForEach(view => view.NotifiedEffect());
         }
         #endregion

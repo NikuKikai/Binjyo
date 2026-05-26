@@ -34,12 +34,6 @@ namespace Binjyo
 
         // effect
         private double scale { get => Item.Scale; }
-        private bool isEffectBinarize { get => Item.IsEffectBinarize; set => Item.IsEffectBinarize = value; }
-        private int pEffectBinarize { get => Item.PEffectBinarize; set => Item.PEffectBinarize = value; }
-        private bool isEffectQuantize { get => Item.IsEffectQuantize; set => Item.IsEffectQuantize = value; }  // exclusive to isEffectBinarize
-        private int pEffectQuantize { get => Item.PEffectQuantize; set => Item.PEffectQuantize = value; }
-        private bool isEffectTransparent { get => Item.IsEffectTransparent; set => Item.IsEffectTransparent = value; }
-        private int pEffectTransparent { get => Item.PEffectTransparent; set => Item.PEffectTransparent = value; }
         private List<char> geometryTransformHistory => Item.GeometryTransformHistory;
         private DrawingDocumentData drawingDocument { get => Item.DrawingDocument; set => Item.DrawingDocument = value; }
         private DrawingStrokeData activeDrawingStroke = null;
@@ -102,8 +96,6 @@ namespace Binjyo
             item.RegisterView(this);
 
             NotifiedDisplayMode();
-            if (item.RenderedWBitmap != null)
-                NotifiedRendered();
         }
 
         private static bool CanInteract => Scene.DisplayMode == EDisplayMode.Expanded;
@@ -122,7 +114,8 @@ namespace Binjyo
         {
             if (Scene.IsCanvasActive)
                 DisplayMinimized();
-            else {
+            else
+            {
                 NotifiedEffect();
                 NotifiedDisplayMode();
             }
@@ -194,18 +187,18 @@ namespace Binjyo
             Height = Item.GetHeight();
         }
 
-        public void NotifiedEffect() { } // No need
-
-        public void NotifiedRendered()
+        public void NotifiedEffect()
         {
-            if (Item.RenderedWBitmap == null)
-                return;
-
-            image.Source = Item.RenderedWBitmap;
-
-            // drawingOverlay.Visibility = Visibility.Collapsed;
-            // HandleDisplayedBitmapUpdated(bitmapTransformed);
+            var e = effect as ImageEffect;
+            e.IsGray = Item.IsEffectGray ? 1 : 0;
+            e.IsHuemap = Item.IsEffectHuemap ? 1 : 0;
+            e.IsBinarize = Item.IsEffectBinarize ? 1 : 0;
+            e.BinarizeThreshold = Item.PEffectBinarize;
+            e.IsQuantize = Item.IsEffectQuantize ? 1 : 0;
+            e.QuantizeLevels = Item.PEffectQuantize;
+            Opacity = Item.IsEffectTransparent ? Item.PEffectTransparent / 255.0 : 1;
         }
+
         #endregion
 
 
@@ -331,86 +324,32 @@ namespace Binjyo
             ShowCenterInfoFading("Hue Map", Item.IsEffectHuemap ? "On" : "Off");
         }
 
-        private void ToggleBinarization()
+
+        #region ======== Effect Ops ========
+
+        private void SetEffectBinarize(bool enabled, int? percent = null)
         {
-            Item.IsEffectBinarize = !Item.IsEffectBinarize;
-            if (Item.IsEffectBinarize)
-                Item.IsEffectQuantize = false;
-            UpdateBitmap();
-            ShowCenterInfoFading("Binarization", Item.IsEffectBinarize ? $"{ThresholdToPercent(Item.PEffectBinarize)}%" : "Off");
+            var p = percent.HasValue ? (int?)Math.Round(255 * percent.Value / 100.0) : null;
+            Item.SetEffectBinarize(enabled, p);
+            if (enabled) Item.SetEffectQuantize(false);
+            ShowCenterInfoFading("Binarization", ThrToPercentInfo(enabled, Item.PEffectBinarize));
         }
 
-        private void ToggleQuantization()
+        private void SetEffectQuantize(bool enabled, int? level = null)
         {
-            Item.IsEffectQuantize = !Item.IsEffectQuantize;
-            if (Item.IsEffectQuantize)
-                Item.IsEffectBinarize = false;
-            UpdateBitmap();
-            ShowCenterInfoFading("Quantization", Item.IsEffectQuantize ? $"{Item.PEffectQuantize} levels" : "Off");
-        }
-
-        private void ToggleTransparency()
-        {
-            Item.IsEffectTransparent = !Item.IsEffectTransparent;
-            UpdateBitmap();
-            ShowCenterInfoFading("Transparency", Item.IsEffectTransparent ? $"{ThresholdToPercent(Item.PEffectTransparent)}%" : "Off");
-        }
-
-        private void SetBinarizationEnabled(bool enabled)
-        {
-            Item.IsEffectBinarize = enabled;
-            if (enabled)
-                Item.IsEffectQuantize = false;
-            UpdateBitmap();
-            ShowCenterInfoFading("Binarization", enabled ? $"{ThresholdToPercent(Item.PEffectBinarize)}%" : "Off");
-        }
-
-        private void SetBinarizationPercent(int percent)
-        {
-            Item.PEffectBinarize = PercentToThreshold(percent);
-            Item.IsEffectBinarize = true;
-            Item.IsEffectQuantize = false;
-            UpdateBitmap();
-            ShowCenterInfoFading("Binarization", $"{percent}%");
-        }
-
-        private void SetQuantizationEnabled(bool enabled)
-        {
-            Item.IsEffectQuantize = enabled;
-            if (enabled)
-                Item.IsEffectBinarize = false;
-            UpdateBitmap();
-            ShowCenterInfoFading("Quantization", enabled ? $"{Item.PEffectQuantize} levels" : "Off");
-        }
-
-        private void SetQuantizationLevel(int level)
-        {
-            Item.PEffectQuantize = level;
-            Item.IsEffectQuantize = true;
-            Item.IsEffectBinarize = false;
-            UpdateBitmap();
+            Item.SetEffectQuantize(enabled, level);
+            if (enabled) Item.SetEffectBinarize(false);
             ShowCenterInfoFading("Quantization", $"{level} levels");
         }
 
-        private void SetTransparencyEnabled(bool enabled)
+        private void SetEffectTransparent(bool enabled, int? percent = null)
         {
-            Item.IsEffectTransparent = enabled;
-            UpdateBitmap();
-            ShowCenterInfoFading("Transparency", enabled ? $"{ThresholdToPercent(Item.PEffectTransparent)}%" : "Off");
+            var p = percent.HasValue ? (int?)Math.Round(255 * percent.Value / 100.0) : null;
+            Item.SetEffectTransparent(enabled, p);
+            ShowCenterInfoFading("Opacity", ThrToPercentInfo(enabled, Item.PEffectTransparent));
         }
+        #endregion
 
-        private void SetTransparencyPercent(int percent)
-        {
-            Item.PEffectTransparent = PercentToThreshold(percent);
-            Item.IsEffectTransparent = true;
-            UpdateBitmap();
-            ShowCenterInfoFading("Transparency", $"{percent}%");
-        }
-
-        private double GetBaseWidth()
-        {
-            return Item.GetBaseWidth();
-        }
 
         #region ======== Display ========
 

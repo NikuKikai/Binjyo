@@ -56,6 +56,7 @@ namespace Binjyo
             return (int)Math.Round(threshold * 100.0 / 255.0 / 10.0) * 10;
         }
 
+
         private static int GetClosestOption(int value, IEnumerable<int> options)
         {
             return options
@@ -199,10 +200,8 @@ namespace Binjyo
                     }
                     break;
                 case Key.R:
-                    RotateDrawing90();
-                    this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
-                    geometryTransformHistory.Add('R');
-                    UpdateBitmap();
+                    // RotateDrawing90();
+                    // this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     break;
                 case Key.Left:
                 case Key.Right:
@@ -250,15 +249,26 @@ namespace Binjyo
                     break;
                 case Key.B:
                     if (!isEditedDuringKeyB)
-                        ToggleBinarization();
+                    {
+                        Item.SetEffectBinarize(!Item.IsEffectBinarize);
+                        if (Item.IsEffectBinarize) Item.SetEffectQuantize(false);
+                        ShowCenterInfoFading("Binarization", ThrToPercentInfo(Item.IsEffectBinarize, Item.PEffectBinarize));
+                    }
                     break;
                 case Key.Q:
                     if (!isEditedDuringKeyQ)
-                        ToggleQuantization();
+                    {
+                        Item.SetEffectQuantize(!Item.IsEffectQuantize);
+                        if (Item.IsEffectQuantize) Item.SetEffectBinarize(false);
+                        ShowCenterInfoFading("Quantization", Item.IsEffectQuantize ? $"{Item.PEffectQuantize} levels" : "Off");
+                    }
                     break;
                 case Key.O:
                     if (!isEditedDuringKeyO)
-                        ToggleTransparency();
+                    {
+                        Item.SetEffectTransparent(!Item.IsEffectTransparent);
+                        ShowCenterInfoFading("Transparency", ThrToPercentInfo(Item.IsEffectTransparent, Item.PEffectTransparent));
+                    }
                     break;
                 default:
                     break;
@@ -275,19 +285,6 @@ namespace Binjyo
             double localX = screenX / dpiFactor - Left;
             double localY = screenY / dpiFactor - Top;
             return localX >= 0 && localX < Width && localY >= 0 && localY < Height;
-        }
-
-
-        private void FlashFocusCue()
-        {
-            if (focusFlashOverlay == null)
-                return;
-
-            var animation = new DoubleAnimationUsingKeyFrames();
-            animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0.5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70))));
-            animation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180))));
-            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
         }
 
 
@@ -446,26 +443,22 @@ namespace Binjyo
             else if (Keyboard.IsKeyDown(Key.B))
             {
                 isEditedDuringKeyB = true;
-                isEffectBinarize = true; isEffectQuantize = false;
-                pEffectBinarize = Math.Max(Math.Min(pEffectBinarize + 15 * Math.Sign(e.Delta), 250), 5);
-                UpdateBitmap();
-                ShowCenterInfoFading("Binarization", $"{ThresholdToPercent(pEffectBinarize)}%");
+                Item.SetEffectQuantize(false);
+                Item.SetEffectBinarize(true, Item.PEffectBinarize + 14 * Math.Sign(e.Delta));
+                ShowCenterInfoFading("Binarization", $"{ThresholdToPercent(Item.PEffectBinarize)}%");
             }
             else if (Keyboard.IsKeyDown(Key.Q))
             {
                 isEditedDuringKeyQ = true;
-                isEffectQuantize = true; isEffectBinarize = false;
-                pEffectQuantize = Math.Max(Math.Min(pEffectQuantize + 1 * Math.Sign(e.Delta), 16), 3);
-                UpdateBitmap();
-                ShowCenterInfoFading("Quantization", $"{pEffectQuantize} levels");
+                Item.SetEffectBinarize(false);
+                Item.SetEffectQuantize(true, Item.PEffectQuantize + 1 * Math.Sign(e.Delta));
+                ShowCenterInfoFading("Quantization", $"{Item.PEffectQuantize} levels");
             }
             else if (Keyboard.IsKeyDown(Key.O))
             {
                 isEditedDuringKeyO = true;
-                isEffectTransparent = true;
-                pEffectTransparent = Math.Max(Math.Min(pEffectTransparent + 15 * Math.Sign(e.Delta), 245), 10);
-                UpdateBitmap();
-                ShowCenterInfoFading("Transparency", $"{ThresholdToPercent(pEffectTransparent)}%");
+                Item.SetEffectTransparent(true, Item.PEffectTransparent + 15 * Math.Sign(e.Delta));
+                ShowCenterInfoFading("Opacity", $"{ThresholdToPercent(Item.PEffectTransparent)}%");
             }
         }
 

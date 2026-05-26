@@ -99,9 +99,12 @@ namespace Binjyo
         public void NotifiedEffect()
         {
             Effect.IsGray = Item.IsEffectGray ? 1 : 0;
-
-            var wbmp = Effects.RenderImage(Image);
-            Item.PublishRenderedBitmap(wbmp);
+            Effect.IsHuemap = Item.IsEffectHuemap ? 1 : 0;
+            Effect.IsBinarize = Item.IsEffectBinarize ? 1 : 0;
+            Effect.BinarizeThreshold = Item.PEffectBinarize;
+            Effect.IsQuantize = Item.IsEffectQuantize ? 1 : 0;
+            Effect.QuantizeLevels = Item.PEffectQuantize;
+            Image.Opacity = Item.IsEffectTransparent ? Item.PEffectTransparent / 255.0 : 1;
         }
 
 
