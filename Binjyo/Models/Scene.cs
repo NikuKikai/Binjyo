@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Windows.Input;
 using System.Linq;
 using System.Windows;
 
@@ -11,6 +10,7 @@ namespace Binjyo
 
     public partial class Scene
     {
+        public static bool IsCanvasActive { get; internal set; } = false;
         public static bool IsStitchMode { get; internal set; } = false;
 
 
@@ -31,6 +31,9 @@ namespace Binjyo
 
         public static void CloseItem(Guid id)
         {
+            if (FocusedId == id)
+                FocusedId = Guid.Empty;
+
             if (Items.ContainsKey(id))
             {
                 Items[id].Close();
@@ -74,6 +77,16 @@ namespace Binjyo
                     break;
             }
         }
+
+        public static void SetCanvasActive(bool active)
+        {
+            IsCanvasActive = active;
+            foreach (var item in Items.Values)
+            {
+                item.views.ForEach(view => view.NotifiedCanvasActive());
+            }
+        }
+
 
         #endregion
 

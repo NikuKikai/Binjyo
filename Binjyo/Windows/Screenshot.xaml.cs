@@ -37,7 +37,7 @@ namespace Binjyo
         public Screenshot()
         {
             InitializeComponent();
-            _CreateObjects();
+            CreateObjects();
         }
 
         public void Shot()
@@ -61,8 +61,7 @@ namespace Binjyo
             t = rect.Top;
 
             // Get DPI
-            var scr = Screen.FromPoint(new System.Drawing.Point(l + 1, t + 1));
-            dpiFactor = scr.GetDpiFactor();
+            dpiFactor = Geo.GetDpiFactorAt(l + 1, t + 1);
 
             // Get DPI another method
             // var curr_dpiFactor = VisualTreeHelper.GetDpi(this).DpiScaleX; // Only works under per-monitor DPI mode > https://github.com/microsoft/WPF-Samples/tree/master/
@@ -105,7 +104,7 @@ namespace Binjyo
         }
 
 
-        private void _CreateObjects()
+        private void CreateObjects()
         {
             // Set up canvas mask with four rectangles to avoid large opacity-mask surfaces.
             this.canvasMask.Background = System.Windows.Media.Brushes.Transparent;
@@ -297,21 +296,29 @@ namespace Binjyo
 
         private void CreateMemo()
         {
-            if (this.selectedWidth > 20 && this.selectedHeight > 20)
+            if (selectedWidth > 20 && selectedHeight > 20)
             {
                 // Crop bitmap with rect
-                var croppedImage = new Bitmap(this.selectedWidth, this.selectedHeight);
+                var croppedImage = new Bitmap(selectedWidth, selectedHeight);
                 using (var graphics = Graphics.FromImage(croppedImage))
                 {
                     var srcrect = new System.Drawing.Rectangle(
-                        this.selectedLeft + 1, this.selectedTop + 1,
+                        selectedLeft + 1, selectedTop + 1,
                         croppedImage.Width, croppedImage.Height);
-                    graphics.DrawImage(this.bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
+                    graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
                 }
 
+                double left = selectedLeft + 1 + l;
+                double top = selectedTop + 1 + t;
+                double dpiFactor = Geo.GetDpiFactorAt(
+                    left + croppedImage.Width / 2,
+                    top + croppedImage.Height / 2
+                );
+
                 // Create Memo from cropped bitmap
-                var item = Scene.CreateItem(croppedImage, selectedLeft + 1 + l, selectedTop + 1 + t);
+                var item = Scene.CreateItem(croppedImage, (int)(left / dpiFactor), (int)(top / dpiFactor));
                 Memo memo = new Memo(item);
+                CanvasWindow.CreateItem(item);
                 Scene.Focus(item.Id);
             }
         }

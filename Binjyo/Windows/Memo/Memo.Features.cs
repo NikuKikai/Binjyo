@@ -86,12 +86,6 @@ namespace Binjyo
             ShowCenterInfoFading("Feature Points", isFeaturePointModeEnabled ? "On" : "Off");
         }
 
-        private void MarkFeaturePointsDirty()
-        {
-            areFeaturePointsDirty = true;
-            InvalidateFeatureGeometryCache();
-        }
-
         private void HandleDisplayedBitmapUpdated(Bitmap displayedBitmap)
         {
             if (displayedBitmap == null || bitmap == null)
@@ -713,7 +707,7 @@ namespace Binjyo
         public static Memo GetFocusedMemo()
         {
             return GetAllMemos()
-                .OrderByDescending(memo => memo.sceneItem.focusOrder)
+                .OrderByDescending(memo => memo.sceneItem.FocusOrder)
                 .FirstOrDefault();
         }
 

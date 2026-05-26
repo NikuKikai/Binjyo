@@ -50,10 +50,15 @@ namespace Binjyo
             mainWindow = new MainWindow();
             mainWindow.Closing += MainWindow_Closing;
 
-            _notifyIcon = new System.Windows.Forms.NotifyIcon();
-            //_notifyIcon.DoubleClick += (s, args) => ShowMainWindow();
-            _notifyIcon.Icon = Binjyo.Properties.Resources.icon;
-            _notifyIcon.Visible = true;
+            _notifyIcon = new System.Windows.Forms.NotifyIcon
+            {
+                //_notifyIcon.DoubleClick += (s, args) => ShowMainWindow();
+                Icon = Binjyo.Properties.Resources.icon,
+                Visible = true
+            };
+
+            canvasWindow = new CanvasWindow();
+            canvasWindow.Hide();
 
             CreateContextMenu();
         }
@@ -276,15 +281,8 @@ namespace Binjyo
 
         public void OpenCanvasWindow()
         {
-            if (canvasWindow == null)
-            {
-                canvasWindow = new CanvasWindow();
-                canvasWindow.Closed += (s, e) => canvasWindow = null;
-            }
-
             if (!canvasWindow.IsVisible)
                 canvasWindow.Show();
-
             canvasWindow.Activate();
             canvasWindow.Focus();
         }

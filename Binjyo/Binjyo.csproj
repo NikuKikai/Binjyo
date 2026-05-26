@@ -93,8 +93,12 @@
     <Compile Include="Models\Scene.Focus.cs" />
     <Compile Include="Models\Scene.Geometry.cs" />
     <Compile Include="Models\Scene.Move.cs" />
+    <Compile Include="Services\Effects.cs" />
     <Compile Include="Utils\BitmapExt.cs" />
     <Compile Include="Utils\Geometry.cs" />
+    <Compile Include="Windows\CanvasWindow\CanvasItem.cs" />
+    <Compile Include="Windows\CanvasWindow\CanvasWindow.Interaction.cs" />
+    <Compile Include="Windows\CanvasWindow\CanvasWindow.Render.cs" />
     <Compile Include="Windows\Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>
@@ -130,7 +134,6 @@
     <Compile Include="Windows\Memo\Memo.Features.cs" />
     <Compile Include="Windows\Memo\Memo.Interaction.cs" />
     <Compile Include="Windows\Memo\Memo.Imaging.cs" />
-    <Compile Include="Windows\Memo\Memo.CanvasAccess.cs" />
     <Page Include="Windows\CanvasWindow\CanvasWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

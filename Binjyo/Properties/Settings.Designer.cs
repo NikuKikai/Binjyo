@@ -8,137 +8,171 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Binjyo.Properties {
-    
-    
+namespace Binjyo.Properties
+{
+
+
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "18.6.0.0")]
-    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
-        
+    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase
+    {
+
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
-        
-        public static Settings Default {
-            get {
+
+        public static Settings Default
+        {
+            get
+            {
                 return defaultInstance;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int KeyScreenshot {
-            get {
+        public int KeyScreenshot
+        {
+            get
+            {
                 return ((int)(this["KeyScreenshot"]));
             }
-            set {
+            set
+            {
                 this["KeyScreenshot"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int ModifierScreenshot {
-            get {
+        public int ModifierScreenshot
+        {
+            get
+            {
                 return ((int)(this["ModifierScreenshot"]));
             }
-            set {
+            set
+            {
                 this["ModifierScreenshot"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int ModifierDisplayMode {
-            get {
+        public int ModifierDisplayMode
+        {
+            get
+            {
                 return ((int)(this["ModifierDisplayMode"]));
             }
-            set {
+            set
+            {
                 this["ModifierDisplayMode"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool SnapMemo {
-            get {
+        public bool SnapMemo
+        {
+            get
+            {
                 return ((bool)(this["SnapMemo"]));
             }
-            set {
+            set
+            {
                 this["SnapMemo"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public int AutoHideBehavior {
-            get {
+        public int AutoHideBehavior
+        {
+            get
+            {
                 return ((int)(this["AutoHideBehavior"]));
             }
-            set {
+            set
+            {
                 this["AutoHideBehavior"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("100")]
-        public int HistoryEntryLimit {
-            get {
+        public int HistoryEntryLimit
+        {
+            get
+            {
                 return ((int)(this["HistoryEntryLimit"]));
             }
-            set {
+            set
+            {
                 this["HistoryEntryLimit"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ExportApplyTransform {
-            get {
+        public bool ExportApplyTransform
+        {
+            get
+            {
                 return ((bool)(this["ExportApplyTransform"]));
             }
-            set {
+            set
+            {
                 this["ExportApplyTransform"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ExportApplyEffects {
-            get {
+        public bool ExportApplyEffects
+        {
+            get
+            {
                 return ((bool)(this["ExportApplyEffects"]));
             }
-            set {
+            set
+            {
                 this["ExportApplyEffects"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public int BitmapScalingMode {
-            get {
+        public int BitmapScalingMode
+        {
+            get
+            {
                 return ((int)(this["BitmapScalingMode"]));
             }
-            set {
+            set
+            {
                 this["BitmapScalingMode"] = value;
             }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ShowFeatureMatchLines {
-            get {
+        public bool ShowFeatureMatchLines
+        {
+            get
+            {
                 return ((bool)(this["ShowFeatureMatchLines"]));
             }
-            set {
+            set
+            {
                 this["ShowFeatureMatchLines"] = value;
             }
         }

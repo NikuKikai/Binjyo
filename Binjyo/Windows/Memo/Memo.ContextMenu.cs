@@ -223,39 +223,39 @@ namespace Binjyo
             }
             if (grayscaleMenuItem != null)
             {
-                grayscaleMenuItem.IsChecked = isEffectGray;
+                grayscaleMenuItem.IsChecked = sceneItem.IsEffectGray;
                 grayscaleMenuItem.IsEnabled = isInteractive;
             }
             if (hueMapMenuItem != null)
             {
-                hueMapMenuItem.IsChecked = isEffectHuemap;
+                hueMapMenuItem.IsChecked = sceneItem.IsEffectHuemap;
                 hueMapMenuItem.IsEnabled = isInteractive;
             }
 
             if (binarizeOffMenuItem != null)
-                binarizeOffMenuItem.IsChecked = !isEffectBinarize;
+                binarizeOffMenuItem.IsChecked = !sceneItem.IsEffectBinarize;
             if (binarizeMenuItems != null)
             {
-                int currentPercent = GetClosestOption(ThresholdToPercent(pEffectBinarize), binarizePercentOptions);
+                int currentPercent = GetClosestOption(ThresholdToPercent(sceneItem.PEffectBinarize), binarizePercentOptions);
                 foreach (var pair in binarizeMenuItems)
-                    pair.Value.IsChecked = isEffectBinarize && pair.Key == currentPercent;
+                    pair.Value.IsChecked = sceneItem.IsEffectBinarize && pair.Key == currentPercent;
             }
 
             if (quantizeOffMenuItem != null)
-                quantizeOffMenuItem.IsChecked = !isEffectQuantize;
+                quantizeOffMenuItem.IsChecked = !sceneItem.IsEffectQuantize;
             if (quantizeMenuItems != null)
             {
                 foreach (var pair in quantizeMenuItems)
-                    pair.Value.IsChecked = isEffectQuantize && pair.Key == pEffectQuantize;
+                    pair.Value.IsChecked = sceneItem.IsEffectQuantize && pair.Key == sceneItem.PEffectQuantize;
             }
 
             if (transparencyOffMenuItem != null)
-                transparencyOffMenuItem.IsChecked = !isEffectTransparent;
+                transparencyOffMenuItem.IsChecked = !sceneItem.IsEffectTransparent;
             if (transparencyMenuItems != null)
             {
-                int currentPercent = GetClosestOption(ThresholdToPercent(pEffectTransparent), transparencyPercentOptions);
+                int currentPercent = GetClosestOption(ThresholdToPercent(sceneItem.PEffectTransparent), transparencyPercentOptions);
                 foreach (var pair in transparencyMenuItems)
-                    pair.Value.IsChecked = isEffectTransparent && pair.Key == currentPercent;
+                    pair.Value.IsChecked = sceneItem.IsEffectTransparent && pair.Key == currentPercent;
             }
         }
 
@@ -315,7 +315,7 @@ namespace Binjyo
         {
             return GetVisibleMemos()
                 .Where(memo => memo.ContainsScreenPoint(screenX, screenY))
-                .OrderBy(memo => memo.sceneItem.focusOrder)
+                .OrderBy(memo => memo.sceneItem.FocusOrder)
                 .ToList();
         }
 

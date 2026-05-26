@@ -8,17 +8,24 @@ namespace Binjyo
     public partial class Scene
     {
         private static long focusOrderAll = 0;
+        public static Guid FocusedId { get; private set; } = Guid.Empty;
 
         public static void Focus(Guid id)
         {
+            var formerId = FocusedId;
+
             if (!Items.ContainsKey(id)) return;
-            Items[id].focusOrder = ++focusOrderAll;
+            Items[id].FocusOrder = ++focusOrderAll;
+            FocusedId = id;
             Items[id].views.ForEach(view => view.NotifiedFocus());
+
+            if (!Items.ContainsKey(formerId)) return;
+            Items[formerId].views.ForEach(view => view.NotifiedFocus());
         }
 
         private static Guid GetTopFocusId(List<Guid> ids)
         {
-            return ids.OrderByDescending(id => Items[id].focusOrder).FirstOrDefault();
+            return ids.OrderByDescending(id => Items[id].FocusOrder).FirstOrDefault();
         }
 
         public static void FocusNext()

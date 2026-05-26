@@ -39,14 +39,12 @@ namespace Binjyo
 
         // effect
         private double scale { get => sceneItem.Scale; set => sceneItem.Scale = value; }
-        private bool isEffectGray { get => sceneItem.IsEffectGray; set => sceneItem.IsEffectGray = value; }
         private bool isEffectBinarize { get => sceneItem.IsEffectBinarize; set => sceneItem.IsEffectBinarize = value; }
         private int pEffectBinarize { get => sceneItem.PEffectBinarize; set => sceneItem.PEffectBinarize = value; }
         private bool isEffectQuantize { get => sceneItem.IsEffectQuantize; set => sceneItem.IsEffectQuantize = value; }  // exclusive to isEffectBinarize
         private int pEffectQuantize { get => sceneItem.PEffectQuantize; set => sceneItem.PEffectQuantize = value; }
         private bool isEffectTransparent { get => sceneItem.IsEffectTransparent; set => sceneItem.IsEffectTransparent = value; }
         private int pEffectTransparent { get => sceneItem.PEffectTransparent; set => sceneItem.PEffectTransparent = value; }
-        private bool isEffectHuemap { get => sceneItem.IsEffectHuemap; set => sceneItem.IsEffectHuemap = value; }
         private static bool isHSVWheelPinnedGlobally = false;
         private List<char> geometryTransformHistory => sceneItem.GeometryTransformHistory;
         private DrawingDocumentData drawingDocument { get => sceneItem.DrawingDocument; set => sceneItem.DrawingDocument = value; }
@@ -95,18 +93,8 @@ namespace Binjyo
             ApplyConfiguredBitmapScalingMode();
             InitializeTimer();
 
-            int w = item.OriginalBitmapWidth;  // Physical pixel
-            int h = item.OriginalBitmapHeight;  // Physical pixel
-
-            var centerx = (int)item.Left + w / 2;
-            var centery = (int)item.Top + h / 2;
-
-            //var scr = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
-            var scr = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(centerx, centery));
-            dpiFactor = scr.GetDpiFactor();
-            Console.WriteLine(dpiFactor);
-
-            Left = item.Left / dpiFactor; Top = item.Top / dpiFactor;
+            Left = item.Left;
+            Top = item.Top;
 
             this.showFeaturePoints = isFeaturePointModeEnabled;
             this.ShowBitmap(item.Bitmap);
@@ -116,12 +104,15 @@ namespace Binjyo
             InitializeContextMenu();
             UpdateResizeModeVisuals();
 
-            NotifiedDisplayMode();
             if (showFeaturePoints)
                 RefreshAllMemoFeatureOverlays();
 
             // Register
             item.RegisterView(this);
+
+            NotifiedDisplayMode();
+            if (item.RenderedBitmapSource != null)
+                NotifiedRenderedBitmapUpdated();
         }
 
         private static bool CanInteract => Scene.DisplayMode == EDisplayMode.Expanded;
@@ -134,13 +125,21 @@ namespace Binjyo
 
         #region ======= ISceneItemView Implementation ========
         public Guid Id => sceneItem.Id;
+        public bool ProducesRenderedBitmap => false;
+
+        public void NotifiedCanvasActive()
+        {
+            if (Scene.IsCanvasActive)
+                DisplayMinimized();
+            else
+                NotifiedDisplayMode();
+        }
 
         public void NotifiedDisplayMode()
         {
             if (isClosing)
                 return;
-
-            if (!hasAnchorPosition)
+            if (Scene.IsCanvasActive)
                 return;
 
             switch (Scene.DisplayMode)
@@ -179,6 +178,9 @@ namespace Binjyo
 
         public void NotifiedFocus()
         {
+            if (Scene.FocusedId != Id)
+                return;
+
             if (!IsActive)
             {
                 flashOnNextActivation = true;
@@ -197,16 +199,27 @@ namespace Binjyo
             if (isClosing)
                 return;
 
-            // if (Scene.DisplayMode != EDisplayMode.Expanded)
-            //     return;
-
-            //  if (!hasAnchorPosition)
-            //     return;
-
             if (isSuspendingDisplayPosition)
                 return;
 
             ApplyDisplayPosition(sceneItem.Left, sceneItem.Top);
+        }
+
+        public void NotifiedEffect()
+        {
+        }
+
+        public void NotifiedRenderedBitmapUpdated()
+        {
+            if (sceneItem.RenderedBitmapSource == null)
+                return;
+
+            bitmapsource = sceneItem.RenderedBitmapSource;
+            Resize(scale);
+            drawingOverlay.Visibility = Visibility.Collapsed;
+            Console.WriteLine("Rendered bitmap updated for item " + Id);
+            image.Source = bitmapsource;
+            HandleDisplayedBitmapUpdated(bitmapTransformed);
         }
         #endregion
 
@@ -230,6 +243,7 @@ namespace Binjyo
                 Resize(scale);
 
                 this.image.Source = this.bitmapsource;
+                drawingOverlay.Visibility = Visibility.Visible;
                 RenderDrawingOverlay();
                 HandleDisplayedBitmapUpdated(bmp);
                 Show();
@@ -246,20 +260,20 @@ namespace Binjyo
             Bitmap bmp = this.bitmapTransformed;
             bmp = bmp.Clone(new Rect(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
-            if (isEffectGray)
-                EffectGray(bmp);
+            if (sceneItem.IsEffectGray)
+                Effects.Gray(bmp);
 
-            if (isEffectBinarize && pEffectBinarize > 0)
-                EffectBinarize(bmp, pEffectBinarize);
+            if (sceneItem.IsEffectBinarize && sceneItem.PEffectBinarize > 0)
+                Effects.Binarize(bmp, sceneItem.PEffectBinarize);
 
-            else if (isEffectQuantize && pEffectQuantize > 2)
-                EffectQuantize(bmp, pEffectQuantize);
+            else if (sceneItem.IsEffectQuantize && sceneItem.PEffectQuantize > 2)
+                Effects.Quantize(bmp, sceneItem.PEffectQuantize);
 
-            if (isEffectHuemap)
-                EffectHuemap(bmp);
+            if (sceneItem.IsEffectHuemap)
+                Effects.Huemap(bmp);
 
-            if (isEffectTransparent && pEffectTransparent > 0)
-                EffectTransparent(bmp, pEffectTransparent);
+            if (sceneItem.IsEffectTransparent && sceneItem.PEffectTransparent > 0)
+                Effects.Transparent(bmp, sceneItem.PEffectTransparent);
 
             return bmp;
         }
@@ -309,25 +323,30 @@ namespace Binjyo
 
         protected void UpdateBitmap()
         {
+            if (sceneItem.HasRenderProducer())
+            {
+                return;
+            }
+
             var res = GetBitmapAfterEffect();
             ShowBitmap(res, true);
         }
 
         private void ApplyConfiguredEffects(Bitmap bitmapToUpdate)
         {
-            if (isEffectGray)
-                EffectGray(bitmapToUpdate);
+            if (sceneItem.IsEffectGray)
+                Effects.Gray(bitmapToUpdate);
 
-            if (isEffectBinarize && pEffectBinarize > 0)
-                EffectBinarize(bitmapToUpdate, pEffectBinarize);
-            else if (isEffectQuantize && pEffectQuantize > 2)
-                EffectQuantize(bitmapToUpdate, pEffectQuantize);
+            if (sceneItem.IsEffectBinarize && sceneItem.PEffectBinarize > 0)
+                Effects.Binarize(bitmapToUpdate, sceneItem.PEffectBinarize);
+            else if (sceneItem.IsEffectQuantize && sceneItem.PEffectQuantize > 2)
+                Effects.Quantize(bitmapToUpdate, sceneItem.PEffectQuantize);
 
-            if (isEffectHuemap)
-                EffectHuemap(bitmapToUpdate);
+            if (sceneItem.IsEffectHuemap)
+                Effects.Huemap(bitmapToUpdate);
 
-            if (isEffectTransparent && pEffectTransparent > 0)
-                EffectTransparent(bitmapToUpdate, pEffectTransparent);
+            if (sceneItem.IsEffectTransparent && sceneItem.PEffectTransparent > 0)
+                Effects.Transparent(bitmapToUpdate, sceneItem.PEffectTransparent);
         }
 
         private Bitmap ResizeBitmapForExport(Bitmap sourceBitmap, int width, int height)
@@ -426,90 +445,88 @@ namespace Binjyo
 
         private void ToggleGrayscale()
         {
-            isEffectGray = !isEffectGray;
-            UpdateBitmap();
-            ShowCenterInfoFading("Grayscale", isEffectGray ? "On" : "Off");
+            sceneItem.SetEffectGray(!sceneItem.IsEffectGray);
+            ShowCenterInfoFading("Grayscale", sceneItem.IsEffectGray ? "On" : "Off");
         }
 
         private void ToggleHueMap()
         {
-            isEffectHuemap = !isEffectHuemap;
-            UpdateBitmap();
-            ShowCenterInfoFading("Hue Map", isEffectHuemap ? "On" : "Off");
+            sceneItem.SetEffectHuemap(!sceneItem.IsEffectHuemap);
+            ShowCenterInfoFading("Hue Map", sceneItem.IsEffectHuemap ? "On" : "Off");
         }
 
         private void ToggleBinarization()
         {
-            isEffectBinarize = !isEffectBinarize;
-            if (isEffectBinarize)
-                isEffectQuantize = false;
+            sceneItem.IsEffectBinarize = !sceneItem.IsEffectBinarize;
+            if (sceneItem.IsEffectBinarize)
+                sceneItem.IsEffectQuantize = false;
             UpdateBitmap();
-            ShowCenterInfoFading("Binarization", isEffectBinarize ? $"{ThresholdToPercent(pEffectBinarize)}%" : "Off");
+            ShowCenterInfoFading("Binarization", sceneItem.IsEffectBinarize ? $"{ThresholdToPercent(sceneItem.PEffectBinarize)}%" : "Off");
         }
 
         private void ToggleQuantization()
         {
-            isEffectQuantize = !isEffectQuantize;
-            if (isEffectQuantize)
-                isEffectBinarize = false;
+            sceneItem.IsEffectQuantize = !sceneItem.IsEffectQuantize;
+            if (sceneItem.IsEffectQuantize)
+                sceneItem.IsEffectBinarize = false;
             UpdateBitmap();
-            ShowCenterInfoFading("Quantization", isEffectQuantize ? $"{pEffectQuantize} levels" : "Off");
+            ShowCenterInfoFading("Quantization", sceneItem.IsEffectQuantize ? $"{sceneItem.PEffectQuantize} levels" : "Off");
         }
 
         private void ToggleTransparency()
         {
-            isEffectTransparent = !isEffectTransparent;
+            sceneItem.IsEffectTransparent = !sceneItem.IsEffectTransparent;
             UpdateBitmap();
-            ShowCenterInfoFading("Transparency", isEffectTransparent ? $"{ThresholdToPercent(pEffectTransparent)}%" : "Off");
+            ShowCenterInfoFading("Transparency", sceneItem.IsEffectTransparent ? $"{ThresholdToPercent(sceneItem.PEffectTransparent)}%" : "Off");
         }
 
         private void SetBinarizationEnabled(bool enabled)
         {
-            isEffectBinarize = enabled;
+            sceneItem.IsEffectBinarize = enabled;
             if (enabled)
-                isEffectQuantize = false;
+                sceneItem.IsEffectQuantize = false;
             UpdateBitmap();
-            ShowCenterInfoFading("Binarization", enabled ? $"{ThresholdToPercent(pEffectBinarize)}%" : "Off");
+            ShowCenterInfoFading("Binarization", enabled ? $"{ThresholdToPercent(sceneItem.PEffectBinarize)}%" : "Off");
         }
 
         private void SetBinarizationPercent(int percent)
         {
-            pEffectBinarize = PercentToThreshold(percent);
-            isEffectBinarize = true;
-            isEffectQuantize = false;
+            sceneItem.PEffectBinarize = PercentToThreshold(percent);
+            sceneItem.IsEffectBinarize = true;
+            sceneItem.IsEffectQuantize = false;
             UpdateBitmap();
             ShowCenterInfoFading("Binarization", $"{percent}%");
         }
 
         private void SetQuantizationEnabled(bool enabled)
         {
-            isEffectQuantize = enabled;
+            sceneItem.IsEffectQuantize = enabled;
             if (enabled)
-                isEffectBinarize = false;
+                sceneItem.IsEffectBinarize = false;
             UpdateBitmap();
-            ShowCenterInfoFading("Quantization", enabled ? $"{pEffectQuantize} levels" : "Off");
+            ShowCenterInfoFading("Quantization", enabled ? $"{sceneItem.PEffectQuantize} levels" : "Off");
         }
 
         private void SetQuantizationLevel(int level)
         {
-            pEffectQuantize = level;
-            isEffectQuantize = true;
-            isEffectBinarize = false;
+            sceneItem.PEffectQuantize = level;
+            sceneItem.IsEffectQuantize = true;
+            sceneItem.IsEffectBinarize = false;
             UpdateBitmap();
             ShowCenterInfoFading("Quantization", $"{level} levels");
         }
 
         private void SetTransparencyEnabled(bool enabled)
         {
-            isEffectTransparent = enabled;
+            sceneItem.IsEffectTransparent = enabled;
             UpdateBitmap();
-            ShowCenterInfoFading("Transparency", enabled ? $"{ThresholdToPercent(pEffectTransparent)}%" : "Off");
+            ShowCenterInfoFading("Transparency", enabled ? $"{ThresholdToPercent(sceneItem.PEffectTransparent)}%" : "Off");
         }
 
         private void SetTransparencyPercent(int percent)
         {
-            pEffectTransparent = PercentToThreshold(percent);
-            isEffectTransparent = true;
+            sceneItem.PEffectTransparent = PercentToThreshold(percent);
+            sceneItem.IsEffectTransparent = true;
             UpdateBitmap();
             ShowCenterInfoFading("Transparency", $"{percent}%");
         }
@@ -603,13 +620,6 @@ namespace Binjyo
             isSuspendingDisplayPosition = false;
         }
 
-        private void SetAnchorPosition(double left, double top)
-        {
-            anchorLeft = left;
-            anchorTop = top;
-            hasAnchorPosition = true;
-            ApplyDisplayPosition(left, top);
-        }
 
         private void SetCenterInfoText(string title, string detail)
         {

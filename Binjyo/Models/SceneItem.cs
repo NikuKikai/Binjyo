@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 
 namespace Binjyo
@@ -10,13 +11,16 @@ namespace Binjyo
     public interface ISceneItemView
     {
         Guid Id { get; }
+        bool ProducesRenderedBitmap { get; }
         void NotifiedClose();
         void NotifiedFocus();
         void NotifiedMove();
+        void NotifiedEffect();
+        void NotifiedRenderedBitmapUpdated();
 
+        // Scene-level notifications
+        void NotifiedCanvasActive();
         void NotifiedDisplayMode();
-
-        // void NotifyEffectGray();
     }
 
     public class SceneItem
@@ -28,10 +32,10 @@ namespace Binjyo
         public Bitmap BitmapTransformed { get; internal set; }
         public int OriginalBitmapWidth { get; internal set; }
         public int OriginalBitmapHeight { get; internal set; }
-        public double DpiFactor { get; internal set; }
+        public double DpiFactor { get; internal set; } = 1;
 
         public double Scale { get; internal set; } = 1;
-        public bool IsEffectGray { get; internal set; }
+        public bool IsEffectGray { get; private set; }
         public bool IsEffectBinarize { get; internal set; }
         public int PEffectBinarize { get; internal set; } = 128;
         public bool IsEffectQuantize { get; internal set; }  // exclusive to IsEffectBinarize
@@ -47,7 +51,9 @@ namespace Binjyo
         public double Left { get; internal set; }
         public double Top { get; internal set; } // Logical pixels (WPF units)
         public bool HasAnchorPosition { get; internal set; }
-        public long focusOrder { get; internal set; } = 0;
+        public long FocusOrder { get; internal set; } = 0;
+        public bool IsRenderDirty { get; private set; } = true;
+        public BitmapSource RenderedBitmapSource { get; private set; }
 
 
         public SceneItem(Bitmap bmp, int left, int top)
@@ -65,6 +71,8 @@ namespace Binjyo
         {
             foreach (ISceneItemView view in views) view.NotifiedClose();
             views.Clear();
+
+            RenderedBitmapSource = null;
 
             Bitmap.Dispose();
             Bitmap = null;
@@ -100,5 +108,70 @@ namespace Binjyo
             if (views.Contains(view))
                 views.Remove(view);
         }
+
+        public bool HasRenderProducer()
+        {
+            return views.Exists(view => view.ProducesRenderedBitmap);
+        }
+
+        public void PublishRenderedBitmap(BitmapSource bitmapSource)
+        {
+            RenderedBitmapSource = bitmapSource;
+            IsRenderDirty = false;
+            views.ForEach(view => view.NotifiedRenderedBitmapUpdated());
+        }
+
+        #region ======== Imaging ========
+
+        private void ApplyEffects(Bitmap bitmapToUpdate)
+        {
+            if (IsEffectGray)
+                Effects.Gray(bitmapToUpdate);
+
+            if (IsEffectBinarize && PEffectBinarize > 0)
+                Effects.Binarize(bitmapToUpdate, PEffectBinarize);
+            else if (IsEffectQuantize && PEffectQuantize > 2)
+                Effects.Quantize(bitmapToUpdate, PEffectQuantize);
+
+            if (IsEffectHuemap)
+                Effects.Huemap(bitmapToUpdate);
+
+            if (IsEffectTransparent && PEffectTransparent > 0)
+                Effects.Transparent(bitmapToUpdate, PEffectTransparent);
+        }
+
+        public BitmapSource RenderBitmapSource()
+        {
+            Bitmap bitmap = Bitmap.Clone(
+                new Rectangle(0, 0, Bitmap.Width, Bitmap.Height),
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            ApplyEffects(bitmap);
+
+            // todo: should not map, instead drawing data should be stored in original coordinate space
+            // DrawingDocumentData documentToRender = MapDrawingDocumentToOriginal(item);
+            // ApplyDrawingToBitmap(bitmap, documentToRender);
+
+            BitmapSource bitmapSource = bitmap.ToBitmapSource(System.Windows.Media.PixelFormats.Bgra32);
+            bitmapSource.Freeze();
+            return bitmapSource;
+        }
+
+        public void SetEffectGray(bool enabled)
+        {
+            if (IsEffectGray == enabled)
+                return;
+            IsEffectGray = enabled;
+            views.ForEach(view => view.NotifiedEffect());
+        }
+
+        public void SetEffectHuemap(bool enabled)
+        {
+            if (IsEffectHuemap == enabled)
+                return;
+            IsEffectHuemap = enabled;
+            views.ForEach(view => view.NotifiedEffect());
+        }
+        #endregion
     }
 }

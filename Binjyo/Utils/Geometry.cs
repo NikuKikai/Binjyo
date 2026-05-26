@@ -33,12 +33,18 @@ namespace Binjyo
 
 
         #region  ======== DPI Handling ========
+
+        public static double GetDpiFactorAt(double x, double y, DpiType dpiType = DpiType.Effective)
+        {
+            var pnt = new System.Drawing.Point((int)x, (int)y);
+            var mon = MonitorFromPoint(pnt, 2/*MONITOR_DEFAULTTONEAREST*/);
+            GetDpiForMonitor(mon, dpiType, out uint dpiX, out uint dpiY);
+            return dpiX / 96.0;
+        }
+
         public static double GetDpiFactor(this Screen screen, DpiType dpiType = DpiType.Effective)
         {
-            var pnt = new System.Drawing.Point(screen.Bounds.Left + 1, screen.Bounds.Top + 1);
-            var mon = MonitorFromPoint(pnt, 2/*MONITOR_DEFAULTTONEAREST*/);
-            GetDpiForMonitor(mon, dpiType, out uint x, out uint y);
-            return x / 96.0;
+            return GetDpiFactorAt(screen.Bounds.Left + 1, screen.Bounds.Top + 1, dpiType);
         }
 
         //https://msdn.microsoft.com/en-us/library/windows/desktop/dd145062(v=vs.85).aspx

@@ -143,33 +143,9 @@ namespace Binjyo
             if (image == null)
                 return;
 
-            RenderOptions.SetBitmapScalingMode(image, GetConfiguredBitmapScalingMode());
+            RenderOptions.SetBitmapScalingMode(image, Effects.GetConfiguredBitmapScalingMode());
         }
 
-        private static BitmapScalingMode GetConfiguredBitmapScalingMode()
-        {
-            switch ((EBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
-            {
-                case EBitmapScalingMode.NearestNeighbor:
-                    return BitmapScalingMode.NearestNeighbor;
-                case EBitmapScalingMode.Linear:
-                    return BitmapScalingMode.Linear;
-                default:
-                    return BitmapScalingMode.Fant;
-            }
-        }
-
-        private void ApplySnap(ref double nextLeft, ref double nextTop)
-        {
-            var movingMemos = new List<Memo> { this };
-            var targetPositions = new Dictionary<Memo, System.Windows.Point>
-            {
-                [this] = new System.Windows.Point(nextLeft, nextTop)
-            };
-            GetMoveSnapAdjustment(movingMemos, targetPositions, nextLeft, nextTop, Width, Height, out double offsetX, out double offsetY);
-            nextLeft += offsetX;
-            nextTop += offsetY;
-        }
 
         private void MemoLocationChanged(object sender, EventArgs e)
         {
@@ -536,6 +512,9 @@ namespace Binjyo
 
                 drawingOverlay.Children.Add(polyline);
             }
+
+            // TODO
+            // sceneItem.
         }
 
         private void ApplyDrawingToBitmap(Bitmap targetBitmap)
