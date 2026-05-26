@@ -26,7 +26,11 @@
         Deactivated="Window_Deactivated"
         >
     <Grid Margin="0,0,0,0">
-        <Image Name="image" Margin="0,0,0,0" Stretch="Fill"></Image>
+        <Image Name="image" Margin="0,0,0,0" Stretch="Fill">
+            <Image.Effect>
+                <local:ImageEffect x:Name="Effect"/>
+            </Image.Effect>
+        </Image>
         <Canvas Name="featureOverlay"
                 IsHitTestVisible="False"/>
         <Canvas Name="drawingOverlay"
@@ -138,7 +142,7 @@
                             <local:HueWheelEffect x:Name="HSV_H"/>
                         </Ellipse.Effect>
                     </Ellipse>
-                    <Rectangle x:Name="HSVRect" Fill="Black" 
+                    <Rectangle x:Name="HSVRect" Fill="Black"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Width="100" Height="100">
                         <Rectangle.Effect>
@@ -151,16 +155,16 @@
                     <Ellipse x:Name="SVMark" Fill="Transparent" Stroke="Black" StrokeThickness="1"
                             Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top">
                     </Ellipse>
-                
+
                 </Grid>
                 <Grid Margin="0,190,0,0" Height="20">
-                    <TextBlock Name="HSVText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
+                    <TextBlock x:Name="HSVText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
                 </Grid>
                 <Grid Margin="0,230,0,0" Height="20">
-                    <TextBlock Name="RGBText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
+                    <TextBlock x:Name="RGBText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
                 </Grid>
                 <Grid Margin="0,270,0,0" Height="20">
-                    <TextBlock Name="CoordText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
+                    <TextBlock x:Name="CoordText" Background="#aa000000" Foreground="White" TextAlignment="Center"></TextBlock>
                 </Grid>
             </Grid>
         </Popup>

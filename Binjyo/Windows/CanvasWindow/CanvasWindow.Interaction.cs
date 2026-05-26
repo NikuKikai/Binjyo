@@ -53,6 +53,7 @@ namespace Binjyo
             {
                 Scene.SetCanvasActive(false);
                 Hide();
+                Opacity = 0;
                 e.Handled = true;
                 return;
             }

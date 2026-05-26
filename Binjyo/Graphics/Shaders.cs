@@ -20,8 +20,10 @@ namespace Binjyo
 
         public HueWheelEffect()
         {
-            PixelShader pixelShader = new PixelShader();
-            pixelShader.UriSource = new Uri(@"/Resources/HueWheelShader.ps", UriKind.Relative);
+            PixelShader pixelShader = new PixelShader
+            {
+                UriSource = new Uri(@"/Resources/HueWheelShader.ps", UriKind.Relative)
+            };
             this.PixelShader = pixelShader;
 
             this.UpdateShaderValue(InputProperty);
@@ -29,29 +31,16 @@ namespace Binjyo
         }
         public Brush Input
         {
-            get
-            {
-                return ((Brush)(this.GetValue(InputProperty)));
-            }
-            set
-            {
-                this.SetValue(InputProperty, value);
-            }
+            get => (Brush)(this.GetValue(InputProperty));
+            set => this.SetValue(InputProperty, value);
         }
 
         public float Angle
         {
-            get
-            {
-                return ((float)(this.GetValue(AngleProperty)));
-            }
-            set
-            {
-                this.SetValue(AngleProperty, value);
-            }
+            get => (float)(this.GetValue(AngleProperty));
+            set => this.SetValue(AngleProperty, value);
         }
     }
-
 
     public class SaturationValueEffect : ShaderEffect
     {
@@ -98,5 +87,40 @@ namespace Binjyo
                 this.SetValue(HueProperty, value);
             }
         }
+    }
+
+    public class ImageEffect : ShaderEffect
+    {
+        private static readonly PixelShader _pixelShader = new PixelShader
+        {
+            UriSource = new Uri(@"/Resources/Effect.ps", UriKind.Relative)
+        };
+
+        // S0: First sampler is defaultly source image (Implicit Input)
+        public static readonly DependencyProperty InputProperty =
+            RegisterPixelShaderSamplerProperty("Input", typeof(ImageEffect), 0);
+
+        // C0
+        public static readonly DependencyProperty IsGrayProperty =
+            DependencyProperty.Register(
+                nameof(IsGray),
+                typeof(double), // シェーダーへ送るため float 互換の double 型にする
+                typeof(ImageEffect),
+                new UIPropertyMetadata(0.0, PixelShaderConstantCallback(0))
+            );
+        public double IsGray
+        {
+            get => (double)GetValue(IsGrayProperty);
+            set => SetValue(IsGrayProperty, value);
+        }
+
+        public ImageEffect()
+        {
+            this.PixelShader = _pixelShader;
+
+            UpdateShaderValue(InputProperty);
+            UpdateShaderValue(IsGrayProperty);
+        }
+
     }
 }

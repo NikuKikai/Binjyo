@@ -110,7 +110,6 @@ namespace Binjyo
             double y = Control.MousePosition.Y;
             double deltaX = (x - dragStartMouseX) / dpiFactor;
             double deltaY = (y - dragStartMouseY) / dpiFactor;
-            Console.WriteLine($"DragMoveUpdate: mouse=({x},{y}), delta=({deltaX},{deltaY})");
 
             var movingIds = dragMoveStartPts.Keys.ToList();
             var targetPts = new Dictionary<Guid, Point>();
@@ -166,7 +165,6 @@ namespace Binjyo
                 Geo.SnapValue(bounds.Top, screenTop, SnapDistance, ref snappedTop, ref bestDistanceY);
                 Geo.SnapValue(bounds.Top, screenBottom - bounds.Height, SnapDistance, ref snappedTop, ref bestDistanceY);
             }
-            Console.WriteLine($"snappedTop={snappedTop}, bounds.Top={bounds.Top}, bestDistanceY={bestDistanceY}");
 
             // Snap to other items
             if (!IsStitchMode)

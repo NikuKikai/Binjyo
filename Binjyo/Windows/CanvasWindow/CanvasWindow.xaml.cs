@@ -66,12 +66,8 @@ namespace Binjyo
 
         private void CanvasWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            Scene.SetCanvasActive(true);
             RenderScreens();
-            // SyncSceneItems();
             FitSceneToViewport();
-            Focus();
-            Keyboard.Focus(this);
         }
 
         private void CanvasWindow_Closed(object sender, EventArgs e)

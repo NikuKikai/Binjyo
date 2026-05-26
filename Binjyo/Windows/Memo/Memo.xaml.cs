@@ -40,7 +40,6 @@ namespace Binjyo
         private int pEffectQuantize { get => Item.PEffectQuantize; set => Item.PEffectQuantize = value; }
         private bool isEffectTransparent { get => Item.IsEffectTransparent; set => Item.IsEffectTransparent = value; }
         private int pEffectTransparent { get => Item.PEffectTransparent; set => Item.PEffectTransparent = value; }
-        private static bool isHSVWheelPinnedGlobally = false;
         private List<char> geometryTransformHistory => Item.GeometryTransformHistory;
         private DrawingDocumentData drawingDocument { get => Item.DrawingDocument; set => Item.DrawingDocument = value; }
         private DrawingStrokeData activeDrawingStroke = null;
@@ -123,12 +122,15 @@ namespace Binjyo
         {
             if (Scene.IsCanvasActive)
                 DisplayMinimized();
-            else
+            else {
+                NotifiedEffect();
                 NotifiedDisplayMode();
+            }
         }
 
         public void NotifiedDisplayMode()
         {
+            Console.WriteLine(Scene.IsCanvasActive);
             if (Scene.IsCanvasActive)
                 return;
 
@@ -201,8 +203,8 @@ namespace Binjyo
 
             image.Source = Item.RenderedWBitmap;
 
-            drawingOverlay.Visibility = Visibility.Collapsed;
-            HandleDisplayedBitmapUpdated(bitmapTransformed);
+            // drawingOverlay.Visibility = Visibility.Collapsed;
+            // HandleDisplayedBitmapUpdated(bitmapTransformed);
         }
         #endregion
 
@@ -416,7 +418,7 @@ namespace Binjyo
         {
             if (!IsVisible) Show();
             image.Opacity = GetCurrentImageOpacity();
-            ApplyDisplayPosition(anchorLeft, anchorTop);
+            ApplyDisplayPosition(Item.Left, Item.Top);
         }
 
         private void DisplayAutoHide()
@@ -430,7 +432,7 @@ namespace Binjyo
                 return;
             }
 
-            ApplyDisplayPosition(anchorLeft, anchorTop);
+            ApplyDisplayPosition(Item.Left, Item.Top);
             image.Opacity = IsMouseInsideMemoBounds() ? 0 : GetCurrentImageOpacity();
         }
 

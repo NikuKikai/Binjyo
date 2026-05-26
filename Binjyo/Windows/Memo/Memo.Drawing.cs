@@ -18,75 +18,6 @@ namespace Binjyo
 
     public partial class Memo
     {
-        private void UpdateHSVWheel()
-        {
-            double x = System.Windows.Forms.Control.MousePosition.X - Left;
-            double y = System.Windows.Forms.Control.MousePosition.Y - Top;
-
-            if (x < 0 || x >= Width || y < 0 || y >= Height)
-                return;
-            int displayX = ClampToPixelIndex((int)(x / scale), bitmapTransformed.Width);
-            int displayY = ClampToPixelIndex((int)(y / scale), bitmapTransformed.Height);
-            var px = bitmapTransformed.GetPixel(displayX, displayY);
-            var originalPoint = MapDisplayedPixelToOriginalPixel(displayX, displayY);
-
-            popup.IsOpen = true;
-            popup.HorizontalOffset = x / dpiFactor + 20;
-            popup.VerticalOffset = y / dpiFactor + 10;
-
-            //  Update Hue marker
-            float hue = px.GetHue();
-            HSV_SV.Hue = hue;
-            var radius = HSVWheel.Width / 2 - HSVWheel.StrokeThickness / 2;
-            var angle = (hue + 210) / 180 * Math.PI;
-            var xc = HSVWheel.Width / 2 + Math.Cos(angle) * radius;
-            var yc = HSVWheel.Height / 2 + Math.Sin(angle) * radius;
-            HueMark.Margin = new Thickness(xc - HueMark.Width / 2, yc - HueMark.Height / 2, 0, 0);
-
-            //  Update SV marker
-            var v = (double)Math.Max(Math.Max(px.R, px.G), px.B) / 255;
-            var s = (double)Math.Min(Math.Min(px.R, px.G), px.B) / 255;
-            if (v == 0) s = 1;
-            else s = (v - s) / v; // S of HSV is different from px.GetSaturation(), which is S of HSL(?)
-
-            if (v < 0.5) SVMark.Stroke = new SolidColorBrush(Colors.White);
-            else SVMark.Stroke = new SolidColorBrush(Colors.Black);
-
-            SVMark.Margin = new Thickness(
-                HSVWheel.Width / 2 - HSVRect.Width / 2 + s * HSVRect.Width - SVMark.Width / 2,
-                HSVWheel.Height / 2 + HSVRect.Height / 2 - v * HSVRect.Height - SVMark.Height / 2, 0, 0);
-
-            // Show text
-            HSVText.Text = String.Format("H{0: 000}°   S{1: 000}    L{2: 000}", (int)px.GetHue(), (int)(px.GetSaturation() * 100), (int)(px.GetBrightness() * 100));
-            RGBText.Text = String.Format("R{0: 000}    G{1: 000}    B{2: 000}", px.R, px.G, px.B);
-            CoordText.Text = String.Format("X{0: 0000}    Y{1: 0000}", originalPoint.X, originalPoint.Y);
-        }
-
-        private void HideHSVWheel()
-        {
-            popup.IsOpen = false;
-        }
-
-        private bool ShouldShowHSVWheel()
-        {
-            return isHSVWheelPinnedGlobally && !isEditMode && !isdrag && !isResizing && Scene.DisplayMode != EDisplayMode.Minimized;
-        }
-
-        private void RefreshHSVWheelVisibility()
-        {
-            if (ShouldShowHSVWheel())
-                UpdateHSVWheel();
-            else
-                HideHSVWheel();
-        }
-
-        private static void RefreshAllMemoHSVWheelVisibility()
-        {
-            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>())
-            {
-                memo.RefreshHSVWheelVisibility();
-            }
-        }
 
         public static void RefreshAllMemoScalingModes()
         {
@@ -101,41 +32,6 @@ namespace Binjyo
             if (length <= 0)
                 return 0;
             return Math.Max(0, Math.Min(length - 1, value));
-        }
-
-        private System.Drawing.Point MapDisplayedPixelToOriginalPixel(int displayX, int displayY)
-        {
-            int currentWidth = bitmapTransformed.Width;
-            int currentHeight = bitmapTransformed.Height;
-            int x = displayX;
-            int y = displayY;
-
-            for (int i = geometryTransformHistory.Count - 1; i >= 0; i--)
-            {
-                switch (geometryTransformHistory[i])
-                {
-                    case 'H':
-                        x = currentWidth - 1 - x;
-                        break;
-                    case 'V':
-                        y = currentHeight - 1 - y;
-                        break;
-                    case 'R':
-                        int previousWidth = currentHeight;
-                        int previousHeight = currentWidth;
-                        int rotatedX = y;
-                        int rotatedY = currentWidth - 1 - x;
-                        x = rotatedX;
-                        y = rotatedY;
-                        currentWidth = previousWidth;
-                        currentHeight = previousHeight;
-                        break;
-                }
-            }
-
-            return new System.Drawing.Point(
-                ClampToPixelIndex(x, bitmap.Width),
-                ClampToPixelIndex(y, bitmap.Height));
         }
 
         private void ApplyConfiguredBitmapScalingMode()

@@ -8,6 +8,10 @@ using System.Drawing.Drawing2D;
 using BitmapScalingMode = System.Windows.Media.BitmapScalingMode;
 using Rect = System.Drawing.Rectangle;
 
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
 
 namespace Binjyo
 {
@@ -42,8 +46,7 @@ namespace Binjyo
 
         public static void Binarize(Bitmap src, int threshold)
         {
-            if (src.PixelFormat != PixelFormat.Format32bppArgb)
-                // src = src.Clone(new Rect(0, 0, src.Width, src.Height), PixelFormat.Format32bppArgb);
+            if (src.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb)
                 return;
 
             // Lock the bitmap's bits.
@@ -77,7 +80,7 @@ namespace Binjyo
 
         public static void Quantize(Bitmap src, int q)
         {
-            if (src.PixelFormat != PixelFormat.Format32bppArgb)
+            if (src.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb)
                 // src = src.Clone(new Rect(0, 0, src.Width, src.Height), PixelFormat.Format32bppArgb);
                 return;
 
@@ -124,7 +127,7 @@ namespace Binjyo
             // Processing bytes using LockBits is faster than SetPixel/GetPixel
             // https://docs.microsoft.com/ja-jp/dotnet/api/system.drawing.bitmap.lockbits?view=dotnet-plat-ext-6.0
 
-            if (src.PixelFormat != PixelFormat.Format32bppArgb)
+            if (src.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb)
                 // src = src.Clone(new Rect(0, 0, src.Width, src.Height), PixelFormat.Format32bppArgb);
                 return;
 
@@ -157,7 +160,7 @@ namespace Binjyo
 
         public static void Huemap(Bitmap src)
         {
-            if (src.PixelFormat != PixelFormat.Format32bppArgb)
+            if (src.PixelFormat != System.Drawing.Imaging.PixelFormat.Format32bppArgb)
                 // src = src.Clone(new Rect(0, 0, src.Width, src.Height), PixelFormat.Format32bppArgb);
                 return;
 
@@ -245,6 +248,61 @@ namespace Binjyo
             }
         }
 
+
+        #region ======== Utils =========
+
+        public static WriteableBitmap RenderImage(System.Windows.Controls.Image img)
+        {
+            if (img.ActualWidth == 0 || img.ActualHeight == 0)
+                return null;
+
+            // Physical size
+            double dpiFactor = 1.0;  // physical / logical
+            var source = PresentationSource.FromVisual(img);
+            if (source?.CompositionTarget != null)
+                dpiFactor = source.CompositionTarget.TransformToDevice.M11;
+            int w = (int)Math.Round(img.ActualWidth * dpiFactor);
+            int h = (int)Math.Round(img.ActualHeight * dpiFactor);
+
+            // Render
+            var renderTarget = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+            renderTarget.Render(img);
+
+            return new WriteableBitmap(renderTarget);
+        }
+
+        public static System.Windows.Media.Color GetPixel(this WriteableBitmap wbitmap, int x, int y)
+        {
+            if (x < 0 || x >= wbitmap.PixelWidth || y < 0 || y >= wbitmap.PixelHeight)
+            {
+                return Colors.Transparent;
+            }
+
+            byte[] pixel = new byte[4];
+
+            wbitmap.CopyPixels(new Int32Rect(x, y, 1, 1), pixel, 4, 0);
+
+            // 配列の中身は B, G, R, A の順
+            byte b = pixel[0];
+            byte g = pixel[1];
+            byte r = pixel[2];
+            byte a = pixel[3];
+
+            return System.Windows.Media.Color.FromArgb(a, r, g, b);
+        }
+        public static float GetH(this System.Windows.Media.Color color)
+        {
+            return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B).GetHue();
+        }
+        public static float GetS(this System.Windows.Media.Color color)
+        {
+            return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B).GetSaturation();
+        }
+        public static float GetV(this System.Windows.Media.Color color)
+        {
+            return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B).GetBrightness();
+        }
+
         public static InterpolationMode GetConfiguredInterpolationMode()
         {
             switch ((EBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
@@ -257,7 +315,6 @@ namespace Binjyo
                     return InterpolationMode.HighQualityBicubic;
             }
         }
-
         public static BitmapScalingMode GetConfiguredBitmapScalingMode()
         {
             switch ((EBitmapScalingMode)Properties.Settings.Default.BitmapScalingMode)
@@ -270,5 +327,7 @@ namespace Binjyo
                     return BitmapScalingMode.Fant;
             }
         }
+
+        #endregion
     }
 }

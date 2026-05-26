@@ -81,6 +81,7 @@ namespace Binjyo
 
         public static void SetCanvasActive(bool active)
         {
+            if (IsCanvasActive == active) return;
             IsCanvasActive = active;
             foreach (var item in Items.Values)
             {

@@ -207,14 +207,14 @@ namespace Binjyo
                 if (other == this || other.Title != "Memo" || !other.IsVisible)
                     continue;
 
-                if (IsResizeX() &&
+                if (IsResizeX &&
                     Geo.DoSegmentsOverlap(rawTop, rawBottom, other.Top, other.Top + other.Height))
                 {
                     TryResizeSnapCandidate(rawScale, other.Left, true, ref bestScale, ref bestDistance);
                     TryResizeSnapCandidate(rawScale, other.Left + other.Width, true, ref bestScale, ref bestDistance);
                 }
 
-                if (IsResizeY() &&
+                if (IsResizeY &&
                     Geo.DoSegmentsOverlap(rawLeft, rawRight, other.Left, other.Left + other.Width))
                 {
                     TryResizeSnapCandidate(rawScale, other.Top, false, ref bestScale, ref bestDistance);

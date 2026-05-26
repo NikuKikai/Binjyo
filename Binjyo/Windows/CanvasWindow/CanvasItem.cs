@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace Binjyo
 {
@@ -13,6 +14,15 @@ namespace Binjyo
     internal sealed class CanvasItem : ISceneItemView
     {
         private readonly CanvasWindow owner;
+        public Guid Id => Item.Id;
+        public bool IsRenderer => true;
+        public SceneItem Item { get; private set; }
+        internal Grid Container { get; }
+        private Border Border { get; }
+        private Grid ContentRoot { get; }
+        private Image Image { get; }
+        public ImageEffect Effect { get; private set; }
+
 
         public CanvasItem(CanvasWindow owner, SceneItem item)
         {
@@ -50,21 +60,16 @@ namespace Binjyo
 
             Container.MouseLeftButtonDown += Container_MouseLeftButtonDown;
 
+            Effect = new ImageEffect();
+
             Image.Source = item.Bitmap;
+            Image.Effect = Effect;
+
             NotifiedMove();
             NotifiedTransform();
 
             item.RegisterView(this);
         }
-
-        public Guid Id => Item.Id;
-        public bool IsRenderer => true;
-        public SceneItem Item { get; private set; }
-        public Grid Container { get; }
-        public Border Border { get; }
-        public Grid ContentRoot { get; }
-        public Image Image { get; }
-        public Rect Bounds { get; set; }
 
 
         public void NotifiedClose()
@@ -93,10 +98,12 @@ namespace Binjyo
 
         public void NotifiedEffect()
         {
-            // var bs = Item.RenderBitmapSource();
-            // Image.Source = bs;
-            // Item.PublishRenderedBitmap(bs);
+            Effect.IsGray = Item.IsEffectGray ? 1 : 0;
+
+            var wbmp = Effects.RenderImage(Image);
+            Item.PublishRenderedBitmap(wbmp);
         }
+
 
         public void NotifiedCanvasActive() { } // No need
         public void NotifiedDisplayMode() { } // No need

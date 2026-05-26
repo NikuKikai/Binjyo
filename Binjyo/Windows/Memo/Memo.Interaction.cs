@@ -109,13 +109,9 @@ namespace Binjyo
             {
                 case Key.Escape:
                     if (isResizeMode)
-                    {
                         SetResizeMode(false);
-                    }
                     else
-                    {
                         Scene.CloseItem(Item.Id);
-                    }
                     e.Handled = true;
                     break;
                 case Key.S:
@@ -198,7 +194,7 @@ namespace Binjyo
                 case Key.CapsLock:
                     if (!e.IsRepeat)
                     {
-                        isHSVWheelPinnedGlobally = !isHSVWheelPinnedGlobally;
+                        isHSVWheel = !isHSVWheel;
                         RefreshAllMemoHSVWheelVisibility();
                     }
                     break;
@@ -490,7 +486,7 @@ namespace Binjyo
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
-            RefreshHSVWheelVisibility();
+            HideHSVWheel();
         }
 
         private void Window_Activated(object sender, EventArgs e)
