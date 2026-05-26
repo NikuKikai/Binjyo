@@ -9,11 +9,12 @@
         WindowStartupLocation="Manual"
         WindowStyle="None" Top="0" Left="0"
         WindowState="Normal" Opacity="0"
-        AllowsTransparency="True"
-        Topmost="True" Focusable="True"
+        AllowsTransparency="False"
+        Topmost="False" 
+        Focusable="True"
         Deactivated="Window_Deactivated"
         StateChanged="Window_StateChanged"
-        Background="Transparent"
+        Background="Black"
         ShowInTaskbar="False"
         KeyDown="Window_KeyDown"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
@@ -24,9 +25,14 @@
         ResizeMode="NoResize"
         >
     <Grid Margin="0,0,0,0">
-        <Canvas Name="canvas" Margin="0,0,0,0" Background="Black"></Canvas>
-        <Canvas Name="canvasMask" Margin="0,0,0,0" Background="Transparent"></Canvas>
-        <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=canvas}">
+        <Image Name="image" Margin="0,0,0,0" Stretch="Fill" SnapsToDevicePixels="True"></Image>
+        <Rectangle Name="maskTop" Opacity="0.6" Fill="Black" HorizontalAlignment="Stretch" VerticalAlignment="Top"></Rectangle>
+        <Rectangle Name="maskBottom" Opacity="0.6" Fill="Black" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"></Rectangle>
+        <Rectangle Name="maskLeft" Opacity="0.6" Fill="Black" HorizontalAlignment="Left" VerticalAlignment="Stretch"></Rectangle>
+        <Rectangle Name="maskRight" Opacity="0.6" Fill="Black" HorizontalAlignment="Right" VerticalAlignment="Stretch"></Rectangle>
+        <Line Name="lineX" Opacity="0" Stroke="White" StrokeThickness="1"></Line>
+        <Line Name="lineY" Opacity="0" Stroke="White" StrokeThickness="1"></Line>
+        <Popup Name="popup" IsOpen="False" AllowsTransparency="True" Placement="Relative" PlacementTarget="{Binding ElementName=image}">
             <Grid>
                 <TextBlock Name="poptext" Background="Black" Foreground="White"></TextBlock>
 

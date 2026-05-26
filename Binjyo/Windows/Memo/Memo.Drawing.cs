@@ -140,9 +140,6 @@ namespace Binjyo
 
         private void ApplyConfiguredBitmapScalingMode()
         {
-            if (image == null)
-                return;
-
             RenderOptions.SetBitmapScalingMode(image, Effects.GetConfiguredBitmapScalingMode());
         }
 
@@ -153,7 +150,6 @@ namespace Binjyo
             {
                 anchorLeft = Left;
                 anchorTop = Top;
-                hasAnchorPosition = true;
             }
 
             UpdateEditPanelPlacement();
@@ -166,7 +162,6 @@ namespace Binjyo
             {
                 anchorLeft = Left;
                 anchorTop = Top;
-                hasAnchorPosition = true;
             }
 
             UpdateEditPanelPlacement();
@@ -188,7 +183,7 @@ namespace Binjyo
             activeDrawingStroke = null;
             EnsureEditModePanel();
             SetEditTool(EditTool.Brush);
-            UpdateResizeModeVisuals();
+            UpdateResizeVisuals();
             HideHSVWheel();
         }
 
@@ -212,7 +207,7 @@ namespace Binjyo
 
             isEditMode = false;
             CloseEditModePanel();
-            UpdateResizeModeVisuals();
+            UpdateResizeVisuals();
             Cursor = Cursors.Arrow;
         }
 

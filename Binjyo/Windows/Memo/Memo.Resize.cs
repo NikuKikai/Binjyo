@@ -29,33 +29,72 @@ namespace Binjyo
 
     public partial class Memo
     {
+        private bool isResizing = false;
+        private bool isResizeMode = false;
         private double resizeStartScale = 1;
         private double resizeStartLeft = 0;
         private double resizeStartTop = 0;
         private double resizeStartRight = 0;
         private double resizeStartBottom = 0;
 
+
         private void SetResizeMode(bool enabled)
         {
-            if (isEditMode)
-                return;
+            if (isEditMode) return;
 
             isResizeMode = enabled && CanInteract;
             if (!isResizeMode)
                 StopResize();
-            UpdateResizeModeVisuals();
+            UpdateResizeVisuals();
         }
 
-        private bool IsResizeHandle(ResizeHandle handle)
+        private void BeginResize(ResizeHandle handle)
         {
-            return handle != ResizeHandle.None;
+            if (handle == ResizeHandle.None) return;
+            activeResizeHandle = handle;
+            isResizing = true;
+            resizeStartScale = scale;
+            resizeStartLeft = Left;
+            resizeStartTop = Top;
+            resizeStartRight = Left + Width;
+            resizeStartBottom = Top + Height;
+            dragStartMouseX = System.Windows.Forms.Control.MousePosition.X;
+            dragStartMouseY = System.Windows.Forms.Control.MousePosition.Y;
+            Mouse.Capture(this);
+            UpdateResizeInfoOverlay(scale, Width, Height);
+        }
+        private void UpdateResize()
+        {
+            double mouseX = System.Windows.Forms.Control.MousePosition.X;
+            double mouseY = System.Windows.Forms.Control.MousePosition.Y;
+            double deltaX = (mouseX - dragStartMouseX) / dpiFactor;
+            double deltaY = (mouseY - dragStartMouseY) / dpiFactor;
+
+            double rawScale = CalcResizeScaleFromMouseDelta(deltaX, deltaY);
+            rawScale = ClampScale(rawScale);
+
+            double snappedScale = ApplyResizeSnap(rawScale);
+            CalcBoundsByScale(
+                snappedScale,
+                out double nextLeft, out double nextTop,
+                out double nextWidth, out double nextHeight
+            );
+
+            Item.SetScale(snappedScale);
+            Item.SetPos(nextLeft, nextTop);
+            UpdateResizeInfoOverlay(snappedScale, nextWidth, nextHeight);
+        }
+        private void StopResize()
+        {
+            isResizing = false;
+            activeResizeHandle = ResizeHandle.None;
+            if (Mouse.Captured == this)
+                Mouse.Capture(null);
+            HideCenterInfo();
         }
 
-        private void UpdateResizeModeVisuals()
+        private void UpdateResizeVisuals()
         {
-            if (resizeOverlay == null)
-                return;
-
             resizeOverlay.Visibility = isResizeMode && CanInteract && !isEditMode
                 ? Visibility.Visible
                 : Visibility.Collapsed;
@@ -100,46 +139,9 @@ namespace Binjyo
             }
         }
 
-        private void BeginResize(ResizeHandle handle)
+        private double ClampScale(double s)
         {
-            activeResizeHandle = handle;
-            isResizing = true;
-            resizeStartScale = scale;
-            resizeStartLeft = Left;
-            resizeStartTop = Top;
-            resizeStartRight = Left + Width;
-            resizeStartBottom = Top + Height;
-            dragStartMouseX = System.Windows.Forms.Control.MousePosition.X;
-            dragStartMouseY = System.Windows.Forms.Control.MousePosition.Y;
-            Mouse.Capture(this);
-            UpdateResizeInfoOverlay(scale, Width, Height);
-        }
-
-        private void StopResize()
-        {
-            isResizing = false;
-            activeResizeHandle = ResizeHandle.None;
-            if (Mouse.Captured == this)
-                Mouse.Capture(null);
-            HideCenterInfo();
-        }
-
-        private void UpdateResizeFromMouse()
-        {
-            double mouseX = System.Windows.Forms.Control.MousePosition.X;
-            double mouseY = System.Windows.Forms.Control.MousePosition.Y;
-            double deltaX = (mouseX - dragStartMouseX) / dpiFactor;
-            double deltaY = (mouseY - dragStartMouseY) / dpiFactor;
-            double rawScale = GetResizeScaleFromMouseDelta(deltaX, deltaY);
-            rawScale = ClampScale(rawScale);
-            double snappedScale = ApplyResizeSnap(rawScale);
-            ApplyScaleToBounds(snappedScale, out double nextLeft, out double nextTop, out double nextWidth, out double nextHeight);
-            scale = snappedScale;
-            Left = nextLeft;
-            Top = nextTop;
-            Width = nextWidth;
-            Height = nextHeight;
-            UpdateResizeInfoOverlay(snappedScale, nextWidth, nextHeight);
+            return Math.Max(Item.GetMinScale(), Math.Min(Item.GetMaxScale(), s));
         }
 
         private void UpdateResizeInfoOverlay(double currentScale, double currentWidth, double currentHeight)
@@ -149,28 +151,24 @@ namespace Binjyo
             ShowCenterInfoPersistent(scaleText, sizeText);
         }
 
-        private double GetResizeScaleFromMouseDelta(double deltaX, double deltaY)
+        private double CalcResizeScaleFromMouseDelta(double deltaX, double deltaY)
         {
-            double handleVectorX = 0;
-            double handleVectorY = 0;
+            var handleVectorX = Item.GetBaseWidth();
+            var handleVectorY = Item.GetBaseHeight();
 
             switch (activeResizeHandle)
             {
                 case ResizeHandle.TopLeft:
-                    handleVectorX = -GetBaseWidth();
-                    handleVectorY = -GetBaseHeight();
+                    handleVectorX = -handleVectorX;
+                    handleVectorY = -handleVectorY;
                     break;
                 case ResizeHandle.TopRight:
-                    handleVectorX = GetBaseWidth();
-                    handleVectorY = -GetBaseHeight();
+                    handleVectorY = -handleVectorY;
                     break;
                 case ResizeHandle.BottomLeft:
-                    handleVectorX = -GetBaseWidth();
-                    handleVectorY = GetBaseHeight();
+                    handleVectorX = -handleVectorX;
                     break;
                 case ResizeHandle.BottomRight:
-                    handleVectorX = GetBaseWidth();
-                    handleVectorY = GetBaseHeight();
                     break;
             }
 
@@ -182,10 +180,56 @@ namespace Binjyo
             return resizeStartScale + projectedScaleDelta;
         }
 
-        private void ApplyScaleToBounds(double targetScale, out double nextLeft, out double nextTop, out double nextWidth, out double nextHeight)
+        private double ApplyResizeSnap(double rawScale)
         {
-            nextWidth = GetBaseWidth() * targetScale;
-            nextHeight = GetBaseHeight() * targetScale;
+            if (Keyboard.IsKeyDown(Key.Space) == Properties.Settings.Default.SnapMemo ||
+                activeResizeHandle == ResizeHandle.None)
+                return rawScale;
+
+            CalcBoundsByScale(
+                rawScale, out double rawLeft, out double rawTop, out double rawWidth, out double rawHeight
+            );
+            double rawRight = rawLeft + rawWidth;
+            double rawBottom = rawTop + rawHeight;
+            double bestScale = rawScale;
+            double bestDistance = SnapDistance + 1;
+
+            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+            {
+                TryResizeSnapCandidate(rawScale, screen.Bounds.Left / dpiFactor, true, ref bestScale, ref bestDistance);
+                TryResizeSnapCandidate(rawScale, screen.Bounds.Right / dpiFactor, true, ref bestScale, ref bestDistance);
+                TryResizeSnapCandidate(rawScale, screen.Bounds.Top / dpiFactor, false, ref bestScale, ref bestDistance);
+                TryResizeSnapCandidate(rawScale, screen.Bounds.Bottom / dpiFactor, false, ref bestScale, ref bestDistance);
+            }
+
+            foreach (Window other in Application.Current.Windows)
+            {
+                if (other == this || other.Title != "Memo" || !other.IsVisible)
+                    continue;
+
+                if (IsResizeX() &&
+                    Geo.DoSegmentsOverlap(rawTop, rawBottom, other.Top, other.Top + other.Height))
+                {
+                    TryResizeSnapCandidate(rawScale, other.Left, true, ref bestScale, ref bestDistance);
+                    TryResizeSnapCandidate(rawScale, other.Left + other.Width, true, ref bestScale, ref bestDistance);
+                }
+
+                if (IsResizeY() &&
+                    Geo.DoSegmentsOverlap(rawLeft, rawRight, other.Left, other.Left + other.Width))
+                {
+                    TryResizeSnapCandidate(rawScale, other.Top, false, ref bestScale, ref bestDistance);
+                    TryResizeSnapCandidate(rawScale, other.Top + other.Height, false, ref bestScale, ref bestDistance);
+                }
+            }
+
+            return bestScale;
+        }
+
+        private void CalcBoundsByScale(
+            double targetScale, out double nextLeft, out double nextTop, out double nextWidth, out double nextHeight)
+        {
+            nextWidth = Item.GetBaseWidth() * targetScale;
+            nextHeight = Item.GetBaseHeight() * targetScale;
 
             switch (activeResizeHandle)
             {
@@ -209,60 +253,19 @@ namespace Binjyo
             }
         }
 
-        private double ApplyResizeSnap(double rawScale)
-        {
-            if (!IsResizeSnapEnabled() || !IsResizeHandle(activeResizeHandle))
-                return rawScale;
-
-            ApplyScaleToBounds(rawScale, out double rawLeft, out double rawTop, out double rawWidth, out double rawHeight);
-            double rawRight = rawLeft + rawWidth;
-            double rawBottom = rawTop + rawHeight;
-            double bestScale = rawScale;
-            double bestDistance = SnapDistance + 1;
-
-            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
-            {
-                TryResizeSnapCandidate(rawScale, screen.Bounds.Left / dpiFactor, true, ref bestScale, ref bestDistance);
-                TryResizeSnapCandidate(rawScale, screen.Bounds.Right / dpiFactor, true, ref bestScale, ref bestDistance);
-                TryResizeSnapCandidate(rawScale, screen.Bounds.Top / dpiFactor, false, ref bestScale, ref bestDistance);
-                TryResizeSnapCandidate(rawScale, screen.Bounds.Bottom / dpiFactor, false, ref bestScale, ref bestDistance);
-            }
-
-            foreach (Window item in Application.Current.Windows)
-            {
-                if (item == this || item.Title != "Memo" || !item.IsVisible)
-                    continue;
-
-                if (MovesLeftOrRightEdge() &&
-                    Geo.DoSegmentsOverlap(rawTop, rawBottom, item.Top, item.Top + item.Height))
-                {
-                    TryResizeSnapCandidate(rawScale, item.Left, true, ref bestScale, ref bestDistance);
-                    TryResizeSnapCandidate(rawScale, item.Left + item.Width, true, ref bestScale, ref bestDistance);
-                }
-
-                if (MovesTopOrBottomEdge() &&
-                    Geo.DoSegmentsOverlap(rawLeft, rawRight, item.Left, item.Left + item.Width))
-                {
-                    TryResizeSnapCandidate(rawScale, item.Top, false, ref bestScale, ref bestDistance);
-                    TryResizeSnapCandidate(rawScale, item.Top + item.Height, false, ref bestScale, ref bestDistance);
-                }
-            }
-
-            return bestScale;
-        }
-
-        private void TryResizeSnapCandidate(double rawScale, double targetEdge, bool horizontalEdge, ref double bestScale, ref double bestDistance)
+        private void TryResizeSnapCandidate(
+            double scale, double targetEdge, bool horizontalEdge, ref double bestScale, ref double bestDistance)
         {
             if (!TryGetResizeScaleForTarget(targetEdge, horizontalEdge, out double candidateScale))
                 return;
 
             candidateScale = ClampScale(candidateScale);
-            ApplyScaleToBounds(candidateScale, out double candidateLeft, out double candidateTop, out double candidateWidth, out double candidateHeight);
+            CalcBoundsByScale(candidateScale, out double candidateLeft, out double candidateTop, out double candidateWidth, out double candidateHeight);
 
-            double rawMovingEdge = GetMovingEdge(rawScale, horizontalEdge);
+            double rawMovingEdge = GetMovingEdge(scale, horizontalEdge);
             double candidateMovingEdge = horizontalEdge
-                ? (MovesLeftEdge() ? candidateLeft : candidateLeft + candidateWidth)
-                : (MovesTopEdge() ? candidateTop : candidateTop + candidateHeight);
+                ? (IsResizeLeft ? candidateLeft : candidateLeft + candidateWidth)
+                : (IsResizeTop ? candidateTop : candidateTop + candidateHeight);
 
             double distance = Math.Abs(rawMovingEdge - targetEdge);
             if (distance <= SnapDistance && distance < bestDistance && Math.Abs(candidateMovingEdge - targetEdge) < 0.001)
@@ -274,72 +277,49 @@ namespace Binjyo
 
         private double GetMovingEdge(double candidateScale, bool horizontalEdge)
         {
-            ApplyScaleToBounds(candidateScale, out double candidateLeft, out double candidateTop, out double candidateWidth, out double candidateHeight);
+            CalcBoundsByScale(candidateScale, out double candidateLeft, out double candidateTop, out double candidateWidth, out double candidateHeight);
             if (horizontalEdge)
-                return MovesLeftEdge() ? candidateLeft : candidateLeft + candidateWidth;
-            return MovesTopEdge() ? candidateTop : candidateTop + candidateHeight;
+                return IsResizeLeft ? candidateLeft : candidateLeft + candidateWidth;
+            return IsResizeTop ? candidateTop : candidateTop + candidateHeight;
         }
 
-        private bool TryGetResizeScaleForTarget(double targetEdge, bool horizontalEdge, out double candidateScale)
+        private bool TryGetResizeScaleForTarget(double targetEdge, bool horizontalEdge, out double scale)
         {
-            candidateScale = scale;
+            scale = Item.Scale;
             if (horizontalEdge)
             {
-                if (MovesLeftEdge())
+                if (IsResizeLeft)
                 {
-                    candidateScale = (resizeStartRight - targetEdge) / GetBaseWidth();
+                    scale = (resizeStartRight - targetEdge) / Item.GetBaseWidth();
                     return true;
                 }
-                if (MovesRightEdge())
+                if (IsResizeRight)
                 {
-                    candidateScale = (targetEdge - resizeStartLeft) / GetBaseWidth();
+                    scale = (targetEdge - resizeStartLeft) / Item.GetBaseWidth();
                     return true;
                 }
                 return false;
             }
 
-            if (MovesTopEdge())
+            if (IsResizeTop)
             {
-                candidateScale = (resizeStartBottom - targetEdge) / GetBaseHeight();
+                scale = (resizeStartBottom - targetEdge) / Item.GetBaseHeight();
                 return true;
             }
-            if (MovesBottomEdge())
+            if (IsResizeBottom)
             {
-                candidateScale = (targetEdge - resizeStartTop) / GetBaseHeight();
+                scale = (targetEdge - resizeStartTop) / Item.GetBaseHeight();
                 return true;
             }
             return false;
         }
 
-        private bool MovesLeftEdge()
-        {
-            return activeResizeHandle == ResizeHandle.TopLeft || activeResizeHandle == ResizeHandle.BottomLeft;
-        }
-
-        private bool MovesRightEdge()
-        {
-            return activeResizeHandle == ResizeHandle.TopRight || activeResizeHandle == ResizeHandle.BottomRight;
-        }
-
-        private bool MovesTopEdge()
-        {
-            return activeResizeHandle == ResizeHandle.TopLeft || activeResizeHandle == ResizeHandle.TopRight;
-        }
-
-        private bool MovesBottomEdge()
-        {
-            return activeResizeHandle == ResizeHandle.BottomLeft || activeResizeHandle == ResizeHandle.BottomRight;
-        }
-
-        private bool MovesLeftOrRightEdge()
-        {
-            return MovesLeftEdge() || MovesRightEdge();
-        }
-
-        private bool MovesTopOrBottomEdge()
-        {
-            return MovesTopEdge() || MovesBottomEdge();
-        }
+        private bool IsResizeLeft => activeResizeHandle == ResizeHandle.TopLeft || activeResizeHandle == ResizeHandle.BottomLeft;
+        private bool IsResizeRight => activeResizeHandle == ResizeHandle.TopRight || activeResizeHandle == ResizeHandle.BottomRight;
+        private bool IsResizeTop => activeResizeHandle == ResizeHandle.TopLeft || activeResizeHandle == ResizeHandle.TopRight;
+        private bool IsResizeBottom => activeResizeHandle == ResizeHandle.BottomLeft || activeResizeHandle == ResizeHandle.BottomRight;
+        private bool IsResizeX => IsResizeLeft || IsResizeRight;
+        private bool IsResizeY => IsResizeTop || IsResizeBottom;
 
     }
 }

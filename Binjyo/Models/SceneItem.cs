@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -11,12 +12,13 @@ namespace Binjyo
     public interface ISceneItemView
     {
         Guid Id { get; }
-        bool ProducesRenderedBitmap { get; }
+        bool IsRenderer { get; }
         void NotifiedClose();
         void NotifiedFocus();
         void NotifiedMove();
+        void NotifiedTransform();  // scale, flip, rotate
         void NotifiedEffect();
-        void NotifiedRenderedBitmapUpdated();
+        void NotifiedRendered();
 
         // Scene-level notifications
         void NotifiedCanvasActive();
@@ -28,13 +30,18 @@ namespace Binjyo
         public List<ISceneItemView> views = new List<ISceneItemView>();
 
         public Guid Id { get; } = Guid.NewGuid();
-        public Bitmap Bitmap { get; internal set; }
+        public WriteableBitmap Bitmap { get; internal set; }
+
+        // TODO remove
         public Bitmap BitmapTransformed { get; internal set; }
-        public int OriginalBitmapWidth { get; internal set; }
-        public int OriginalBitmapHeight { get; internal set; }
         public double DpiFactor { get; internal set; } = 1;
 
+        public double Left { get; internal set; }
+        public double Top { get; internal set; } // Logical pixels (WPF units)
         public double Scale { get; internal set; } = 1;
+        public bool IsFlippedHorizontal { get; internal set; } = false;
+        public bool IsFlippedVertical { get; internal set; } = false;
+        public double Rotation { get; internal set; } = 0; // degrees
         public bool IsEffectGray { get; private set; }
         public bool IsEffectBinarize { get; internal set; }
         public int PEffectBinarize { get; internal set; } = 128;
@@ -48,54 +55,38 @@ namespace Binjyo
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
         public Stack<DrawingDocumentData> DrawingUndoStack { get; } = new Stack<DrawingDocumentData>();
 
-        public double Left { get; internal set; }
-        public double Top { get; internal set; } // Logical pixels (WPF units)
-        public bool HasAnchorPosition { get; internal set; }
         public long FocusOrder { get; internal set; } = 0;
-        public bool IsRenderDirty { get; private set; } = true;
-        public BitmapSource RenderedBitmapSource { get; private set; }
+        public WriteableBitmap RenderedWBitmap { get; private set; }
 
 
-        public SceneItem(Bitmap bmp, int left, int top)
+        public SceneItem(WriteableBitmap bmp, int left, int top)
         {
             Bitmap = bmp;
-            BitmapTransformed = (Bitmap)Bitmap.Clone();
-            OriginalBitmapWidth = bmp.Width;
-            OriginalBitmapHeight = bmp.Height;
             Left = left;
             Top = top;
-            HasAnchorPosition = true;
         }
 
-        public void Close()
-        {
-            foreach (ISceneItemView view in views) view.NotifiedClose();
-            views.Clear();
-
-            RenderedBitmapSource = null;
-
-            Bitmap.Dispose();
-            Bitmap = null;
-            BitmapTransformed.Dispose();
-            BitmapTransformed = null;
-        }
-
-        public void MoveTo(double left, double top)
-        {
-            Left = left;
-            Top = top;
-            views.ForEach(view => view.NotifiedMove());
-        }
-
-
-        public double GetBaseWidth() => BitmapTransformed.Width / DpiFactor;
-        public double GetBaseHeight() => BitmapTransformed.Height / DpiFactor;
+        #region ======== Informations =======
+        public double GetBaseWidth() => Bitmap.Width / DpiFactor;
+        public double GetBaseHeight() => Bitmap.Height / DpiFactor;
         public double GetWidth() => GetBaseWidth() * Scale;
         public double GetHeight() => GetBaseHeight() * Scale;
+        public Rect GetBounds() => new Rect(Left, Top, GetWidth(), GetHeight());
+        public double GetMinScale() => Math.Max(25.0 / GetBaseWidth(), 25.0 / GetBaseHeight());
+        public double GetMaxScale() => 10;
+        #endregion
 
-        public Rect GetBounds()
+
+        #region ======== Base Operations =======
+        public void Close()
         {
-            return new Rect(Left, Top, GetWidth(), GetHeight());
+            var viewsToNotify = views.ToList();
+            views.Clear(); // Clear before notifying to avoid potential conflicts
+
+            foreach (ISceneItemView view in viewsToNotify) view.NotifiedClose();
+
+            Bitmap = null;
+            RenderedWBitmap = null;
         }
 
         public void RegisterView(ISceneItemView view)
@@ -103,23 +94,56 @@ namespace Binjyo
             if (!views.Contains(view))
                 views.Add(view);
         }
+
         public void UnregisterView(ISceneItemView view)
         {
             if (views.Contains(view))
                 views.Remove(view);
         }
 
-        public bool HasRenderProducer()
+        public void PublishRenderedBitmap(WriteableBitmap wbmp)
         {
-            return views.Exists(view => view.ProducesRenderedBitmap);
+            RenderedWBitmap = wbmp;
+            views.ForEach(view => view.NotifiedRendered());
+        }
+        #endregion
+
+
+        #region ======== Transform =======
+
+        public void SetPos(double left, double top)
+        {
+            Left = left;
+            Top = top;
+            views.ForEach(view => view.NotifiedMove());
         }
 
-        public void PublishRenderedBitmap(BitmapSource bitmapSource)
+        public void SetScale(double scale)
         {
-            RenderedBitmapSource = bitmapSource;
-            IsRenderDirty = false;
-            views.ForEach(view => view.NotifiedRenderedBitmapUpdated());
+            scale = Math.Max(GetMinScale(), Math.Min(GetMaxScale(), scale));
+
+            if (Scale == scale) return;
+            Scale = scale;
+            views.ForEach(view => view.NotifiedTransform());
         }
+        public void SetFlip(bool isFlippedHorizontal, bool isFlippedVertical)
+        {
+            if (IsFlippedHorizontal == isFlippedHorizontal && IsFlippedVertical == isFlippedVertical)
+                return;
+            IsFlippedHorizontal = isFlippedHorizontal;
+            IsFlippedVertical = isFlippedVertical;
+            views.ForEach(view => view.NotifiedTransform());
+        }
+        public void SetRotation(double rotation)
+        {
+            rotation = rotation % 360;
+            if (Rotation == rotation) return;
+            Rotation = rotation;
+            views.ForEach(view => view.NotifiedTransform());
+        }
+        #endregion
+
+
 
         #region ======== Imaging ========
 
@@ -142,33 +166,32 @@ namespace Binjyo
 
         public BitmapSource RenderBitmapSource()
         {
-            Bitmap bitmap = Bitmap.Clone(
-                new Rectangle(0, 0, Bitmap.Width, Bitmap.Height),
-                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            return null;
+            // Bitmap bitmap = Bitmap.Clone(
+            //     new Rectangle(0, 0, Bitmap.Width, Bitmap.Height),
+            //     System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
-            ApplyEffects(bitmap);
+            // ApplyEffects(bitmap);
 
-            // todo: should not map, instead drawing data should be stored in original coordinate space
-            // DrawingDocumentData documentToRender = MapDrawingDocumentToOriginal(item);
-            // ApplyDrawingToBitmap(bitmap, documentToRender);
+            // // todo: should not map, instead drawing data should be stored in original coordinate space
+            // // DrawingDocumentData documentToRender = MapDrawingDocumentToOriginal(item);
+            // // ApplyDrawingToBitmap(bitmap, documentToRender);
 
-            BitmapSource bitmapSource = bitmap.ToBitmapSource(System.Windows.Media.PixelFormats.Bgra32);
-            bitmapSource.Freeze();
-            return bitmapSource;
+            // BitmapSource bitmapSource = bitmap.ToBitmapSource(System.Windows.Media.PixelFormats.Bgra32);
+            // bitmapSource.Freeze();
+            // return bitmapSource;
         }
 
         public void SetEffectGray(bool enabled)
         {
-            if (IsEffectGray == enabled)
-                return;
+            if (IsEffectGray == enabled) return;
             IsEffectGray = enabled;
             views.ForEach(view => view.NotifiedEffect());
         }
 
         public void SetEffectHuemap(bool enabled)
         {
-            if (IsEffectHuemap == enabled)
-                return;
+            if (IsEffectHuemap == enabled) return;
             IsEffectHuemap = enabled;
             views.ForEach(view => view.NotifiedEffect());
         }

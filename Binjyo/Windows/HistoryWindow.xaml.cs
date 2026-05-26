@@ -94,11 +94,11 @@ namespace Binjyo
 
         private void RestoreEntry(HistoryEntryViewModel viewModel)
         {
-            Bitmap bitmap = HistoryStore.LoadBitmap(viewModel.Entry);
-            var item = Scene.CreateItem(bitmap, 0, 0);
+            var wbitmap = HistoryStore.LoadWriteableBitmap(viewModel.Entry);
+            var item = Scene.CreateItem(wbitmap, 0, 0);
             var memo = new Memo(item);
+            CanvasWindow.CreateItem(item);
 
-            memo.RestoreDrawingData(HistoryStore.LoadDrawingData(viewModel.Entry));
             GetAdjustedBounds(
                 viewModel.Entry.Left,
                 viewModel.Entry.Top,
@@ -106,7 +106,11 @@ namespace Binjyo
                 viewModel.Entry.Height,
                 out double restoredLeft,
                 out double restoredTop);
-            memo.RestoreBounds(restoredLeft, restoredTop, viewModel.Entry.Width, viewModel.Entry.Height);
+
+            item.SetPos(restoredLeft, restoredTop);
+            item.SetScale(viewModel.Entry.Width / item.GetBaseWidth());
+            // TODO
+            memo.RestoreDrawingData(HistoryStore.LoadDrawingData(viewModel.Entry));
 
             HistoryStore.DeleteEntry(viewModel.Entry);
             ReloadEntries();

@@ -95,10 +95,12 @@
     <Compile Include="Models\Scene.Move.cs" />
     <Compile Include="Services\Effects.cs" />
     <Compile Include="Utils\BitmapExt.cs" />
+    <Compile Include="Utils\CaptureScreen.cs" />
     <Compile Include="Utils\Geometry.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasItem.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.Interaction.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.Render.cs" />
+    <Compile Include="Windows\Memo\Memo.Overlay.cs" />
     <Compile Include="Windows\Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
     </Compile>

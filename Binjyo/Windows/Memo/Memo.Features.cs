@@ -184,7 +184,7 @@ namespace Binjyo
 
         private void UpdateFeatureOverlayTransform()
         {
-            if (featureOverlay == null || isClosing)
+            if (featureOverlay == null)
                 return;
 
             double safeScale = Math.Max(scale, 0.0001);
@@ -287,9 +287,6 @@ namespace Binjyo
             EnsureFeatureAlignmentCachesForVisibleMemos();
             foreach (Memo memo in GetAllMemos())
             {
-                if (memo.isClosing)
-                    continue;
-
                 memo.RenderFeatureOverlay();
             }
 
@@ -707,7 +704,7 @@ namespace Binjyo
         public static Memo GetFocusedMemo()
         {
             return GetAllMemos()
-                .OrderByDescending(memo => memo.sceneItem.FocusOrder)
+                .OrderByDescending(memo => memo.Item.FocusOrder)
                 .FirstOrDefault();
         }
 
@@ -843,8 +840,8 @@ namespace Binjyo
         {
             double x = originalX;
             double y = originalY;
-            int currentWidth = originalBitmapWidth;
-            int currentHeight = originalBitmapHeight;
+            int currentWidth = (int)Item.Bitmap.Width;
+            int currentHeight = (int)Item.Bitmap.Height;
 
             foreach (char transform in geometryTransformHistory)
             {

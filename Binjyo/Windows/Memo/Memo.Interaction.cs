@@ -12,9 +12,11 @@ namespace Binjyo
 {
     public partial class Memo
     {
+        private bool isEditedDuringKeyB = false;
+        private bool isEditedDuringKeyQ = false;
+        private bool isEditedDuringKeyO = false;
         private bool isdrag { get => Scene.IsDragMoving; }
         private double dragStartMouseX, dragStartMouseY;
-        private bool dragMovesConnectedGroup = false;
         private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
 
         private bool IsResizeSnapEnabled()
@@ -23,11 +25,6 @@ namespace Binjyo
             return IsSnapToggleModifierDown() ? !isDefaultEnabled : isDefaultEnabled;
         }
 
-        private bool IsMoveSnapEnabled()
-        {
-            bool isDefaultEnabled = Properties.Settings.Default.SnapMemo;
-            return IsSnapToggleModifierDown() ? !isDefaultEnabled : isDefaultEnabled;
-        }
 
         private bool IsSnapToggleModifierDown()
         {
@@ -39,107 +36,6 @@ namespace Binjyo
             return GetAllMemos()
                 .Where(item => item.IsVisible)
                 .ToList();
-        }
-
-
-        private void GetMoveSnapAdjustment(
-            ICollection<Memo> movingMemos,
-            IDictionary<Memo, System.Windows.Point> targetPositions,
-            double nextLeft,
-            double nextTop,
-            double width,
-            double height,
-            out double offsetX,
-            out double offsetY)
-        {
-            offsetX = 0;
-            offsetY = 0;
-
-            if (!IsMoveSnapEnabled())
-                return;
-
-            double snappedLeft = nextLeft;
-            double snappedTop = nextTop;
-            double bestDistanceX = SnapDistance + 1;
-            double bestDistanceY = SnapDistance + 1;
-            var movingSet = new HashSet<Memo>(movingMemos);
-            bool disableMemoEdgeSnap = isFeaturePointModeEnabled && isdrag;
-
-            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
-            {
-                double screenLeft = screen.Bounds.Left / dpiFactor;
-                double screenTop = screen.Bounds.Top / dpiFactor;
-                double screenRight = screen.Bounds.Right / dpiFactor;
-                double screenBottom = screen.Bounds.Bottom / dpiFactor;
-
-                TrySnapValue(nextLeft, screenLeft, ref snappedLeft, ref bestDistanceX);
-                TrySnapValue(nextLeft, screenRight - width, ref snappedLeft, ref bestDistanceX);
-                TrySnapValue(nextTop, screenTop, ref snappedTop, ref bestDistanceY);
-                TrySnapValue(nextTop, screenBottom - height, ref snappedTop, ref bestDistanceY);
-            }
-
-            if (!disableMemoEdgeSnap)
-            {
-                TrySnapAgainstMemosForX(nextLeft, nextTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
-                TrySnapAgainstMemosForY(snappedLeft, nextTop, width, height, movingSet, ref snappedTop, ref bestDistanceY);
-                TrySnapAgainstMemosForX(nextLeft, snappedTop, width, height, movingSet, ref snappedLeft, ref bestDistanceX);
-            }
-
-            offsetX = snappedLeft - nextLeft;
-            offsetY = snappedTop - nextTop;
-
-            if (targetPositions != null &&
-                TryGetFeatureAlignmentSnapOffset(targetPositions, movingSet, out double alignmentOffsetX, out double alignmentOffsetY))
-            {
-                offsetX = alignmentOffsetX;
-                offsetY = alignmentOffsetY;
-            }
-        }
-
-        private void TrySnapAgainstMemosForX(double nextLeft, double currentTop, double width, double height, HashSet<Memo> movingSet, ref double snappedLeft, ref double bestDistanceX)
-        {
-            double currentBottom = currentTop + height;
-            foreach (Memo item in GetVisibleMemos())
-            {
-                if (movingSet.Contains(item))
-                    continue;
-
-                double otherLeft = item.anchorLeft;
-                double otherTop = item.anchorTop;
-                double otherRight = item.anchorLeft + item.Width;
-                double otherBottom = item.anchorTop + item.Height;
-
-                if (!Geo.DoSegmentsOverlap(currentTop, currentBottom, otherTop, otherBottom))
-                    continue;
-
-                TrySnapValue(nextLeft, otherLeft, ref snappedLeft, ref bestDistanceX);
-                TrySnapValue(nextLeft, otherRight, ref snappedLeft, ref bestDistanceX);
-                TrySnapValue(nextLeft, otherLeft - width, ref snappedLeft, ref bestDistanceX);
-                TrySnapValue(nextLeft, otherRight - width, ref snappedLeft, ref bestDistanceX);
-            }
-        }
-
-        private void TrySnapAgainstMemosForY(double currentLeft, double nextTop, double width, double height, HashSet<Memo> movingSet, ref double snappedTop, ref double bestDistanceY)
-        {
-            double currentRight = currentLeft + width;
-            foreach (Memo item in GetVisibleMemos())
-            {
-                if (movingSet.Contains(item))
-                    continue;
-
-                double otherLeft = item.anchorLeft;
-                double otherTop = item.anchorTop;
-                double otherRight = item.anchorLeft + item.Width;
-                double otherBottom = item.anchorTop + item.Height;
-
-                if (!Geo.DoSegmentsOverlap(currentLeft, currentRight, otherLeft, otherRight))
-                    continue;
-
-                TrySnapValue(nextTop, otherTop, ref snappedTop, ref bestDistanceY);
-                TrySnapValue(nextTop, otherBottom, ref snappedTop, ref bestDistanceY);
-                TrySnapValue(nextTop, otherTop - height, ref snappedTop, ref bestDistanceY);
-                TrySnapValue(nextTop, otherBottom - height, ref snappedTop, ref bestDistanceY);
-            }
         }
 
 
@@ -167,29 +63,7 @@ namespace Binjyo
                 .First();
         }
 
-        private static void TrySnapValue(double nextValue, double targetValue, ref double snappedValue, ref double bestDistance)
-        {
-            double distance = Math.Abs(nextValue - targetValue);
-            if (distance <= SnapDistance && distance < bestDistance)
-            {
-                snappedValue = targetValue;
-                bestDistance = distance;
-            }
-        }
 
-
-        protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
-        {
-            dpiFactor = newDpi.DpiScaleX;
-            Console.WriteLine("DPI Changed");
-            Console.WriteLine(newDpi.DpiScaleX);
-            Console.WriteLine(Left);
-        }
-
-
-        private bool isEditedDuringKeyB = false;
-        private bool isEditedDuringKeyQ = false;
-        private bool isEditedDuringKeyO = false;
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             Key actualKey = GetActualKey(e);
@@ -240,7 +114,7 @@ namespace Binjyo
                     }
                     else
                     {
-                        Scene.CloseItem(sceneItem.Id);
+                        Scene.CloseItem(Item.Id);
                     }
                     e.Handled = true;
                     break;
@@ -267,12 +141,14 @@ namespace Binjyo
                     {
                         bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
                         CopyMemoToClipboard(includeDrawing);
-                        Scene.CloseItem(sceneItem.Id);
+                        Scene.CloseItem(Item.Id);
                         e.Handled = true;
                     }
                     break;
                 case Key.OemTilde:
-                    ResetSize();
+                    Item.SetScale(1);
+                    Item.SetRotation(0);
+                    Item.SetFlip(false, false);
                     break;
                 case Key.T:
                     if (!e.IsRepeat)
@@ -443,11 +319,8 @@ namespace Binjyo
             if (isResizeMode)
             {
                 ResizeHandle handle = GetResizeHandleAtMousePosition();
-                if (IsResizeHandle(handle))
-                {
-                    BeginResize(handle);
-                    return;
-                }
+                BeginResize(handle);
+                return;
             }
 
             Scene.DragMoveStart(Id);
@@ -496,7 +369,7 @@ namespace Binjyo
             if (isResizing)
             {
                 if (Mouse.LeftButton == MouseButtonState.Pressed)
-                    UpdateResizeFromMouse();
+                    UpdateResize();
                 else
                     StopResize();
             }
@@ -552,7 +425,7 @@ namespace Binjyo
 
             bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
             CopyMemoToClipboard(includeDrawing);
-            Scene.CloseItem(sceneItem.Id);
+            Scene.CloseItem(Item.Id);
         }
 
         private void Window_MouseEnter(object sender, MouseEventArgs e)
@@ -572,8 +445,7 @@ namespace Binjyo
 
             if (Keyboard.IsKeyDown(Key.LeftCtrl))
             {
-                if (e.Delta > 0) ResizeDelta(0.1);
-                else ResizeDelta(-0.1);
+                Item.SetScale(Item.Scale * (e.Delta > 0 ? 1.1 : 0.9));
             }
             else if (Keyboard.IsKeyDown(Key.B))
             {

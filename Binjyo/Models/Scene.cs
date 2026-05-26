@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 
 namespace Binjyo
@@ -22,7 +23,7 @@ namespace Binjyo
 
         #region ======== Create / CLose ========
         public static Dictionary<Guid, SceneItem> Items { get; } = new Dictionary<Guid, SceneItem>();
-        public static SceneItem CreateItem(Bitmap bmp, int left, int top)
+        public static SceneItem CreateItem(WriteableBitmap bmp, int left, int top)
         {
             var item = new SceneItem(bmp, left, top);
             Items.Add(item.Id, item);

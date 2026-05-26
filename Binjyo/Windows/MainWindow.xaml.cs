@@ -1,20 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Drawing;
-using System.Threading;
+
 
 namespace Binjyo
 {
@@ -35,22 +21,15 @@ namespace Binjyo
 
         public void Shot()
         {
-            /*foreach(var scr in System.Windows.Forms.Screen.AllScreens)
-            {
-                Screenshot ss = new Screenshot();
-                ss.Shot(scr);
-            }*/
-
             if (ss == null)
             {
-                ss = new Screenshot();
-                ss.Owner = this;
+                ss = new Screenshot { Owner = this };
                 ss.Closed += (sender, e) => ss = null;
             }
 
-            ss.Shot();
+            ss.Shot2();
         }
-        
+
 
         /*private void OnSourceInitialized(object sender, EventArgs e)
         {
@@ -76,6 +55,6 @@ namespace Binjyo
 
         [System.Runtime.InteropServices.DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
-        
+
     }
 }

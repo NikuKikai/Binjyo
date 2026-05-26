@@ -32,6 +32,35 @@ namespace Binjyo
         }
 
 
+        #region  ======== Screen Bounds ========
+        public static Int32Rect GetAllScreenBoundsPhysical()
+        {
+            // Get physical resolutions (https://stackoverflow.com/a/1317252)
+            var rect = new System.Drawing.Rectangle(int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
+            foreach (Screen screen in Screen.AllScreens)
+                rect = System.Drawing.Rectangle.Union(rect, screen.Bounds);
+            return new Int32Rect(rect.Left, rect.Top, rect.Width, rect.Height);
+        }
+
+        public static Int32Rect GetAllScreenBoundsPhysical2()
+        {
+            int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+            int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+            int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+            int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+            return new Int32Rect(left, top, width, height);
+        }
+        internal const int SM_XVIRTUALSCREEN = 76;
+        internal const int SM_YVIRTUALSCREEN = 77;
+        internal const int SM_CXVIRTUALSCREEN = 78;
+        internal const int SM_CYVIRTUALSCREEN = 79;
+
+        [DllImport("user32.dll")]
+        internal static extern int GetSystemMetrics(int nIndex);
+
+        #endregion
+
+
         #region  ======== DPI Handling ========
 
         public static double GetDpiFactorAt(double x, double y, DpiType dpiType = DpiType.Effective)
@@ -55,6 +84,7 @@ namespace Binjyo
         [DllImport("Shcore.dll")]
         private static extern IntPtr GetDpiForMonitor([In] IntPtr hmonitor, [In] DpiType dpiType, [Out] out uint dpiX, [Out] out uint dpiY);
         #endregion
+
     }
 
     public enum DpiType

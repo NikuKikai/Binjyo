@@ -32,10 +32,6 @@ namespace Binjyo
             return Path.Combine(Path.GetTempPath(), HistoryFolderName);
         }
 
-        public static void Save(BitmapSource source, double left, double top, double width, double height)
-        {
-            Save(source, left, top, width, height, null);
-        }
 
         public static void Save(BitmapSource source, double left, double top, double width, double height, DrawingDocumentData drawingData)
         {
@@ -113,6 +109,36 @@ namespace Binjyo
                 return new Bitmap(bitmap);
             }
         }
+        public static WriteableBitmap LoadWriteableBitmap(HistoryEntry entry)
+        {
+            // 1. ファイルストリームを開く（読み込み完了後に即破棄されるように using を使用）
+            using (var stream = new FileStream(entry.ImagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                // 2. デコーダーを使い、ストリームから画像をデコード（メモリ上に直接展開）
+                // BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile で高速化
+                var decoder = BitmapDecoder.Create(
+                    stream,
+                    BitmapCreateOptions.PreservePixelFormat,
+                    BitmapCacheOption.OnLoad);
+
+                BitmapFrame frame = decoder.Frames[0];
+
+                // Formatting
+                FormatConvertedBitmap convertedBitmap = new FormatConvertedBitmap();
+                convertedBitmap.BeginInit();
+                convertedBitmap.Source = frame;
+                convertedBitmap.DestinationFormat = System.Windows.Media.PixelFormats.Bgra32;
+                convertedBitmap.EndInit();
+
+                // 4. Create WriteableBitmap
+                WriteableBitmap wbitmap = new WriteableBitmap(convertedBitmap);
+
+                // （オプション）もしこの関数を「表示専用（編集しない）」として使うなら、
+                // ここで wbitmap.Freeze(); を呼ぶとさらにパフォーマンスが向上します。
+
+                return wbitmap;
+            }
+        }
 
         public static void DeleteEntry(HistoryEntry entry)
         {
@@ -164,7 +190,7 @@ namespace Binjyo
                 double.TryParse(lines[2], NumberStyles.Float, CultureInfo.InvariantCulture, out width) &&
                 double.TryParse(lines[3], NumberStyles.Float, CultureInfo.InvariantCulture, out height);
         }
-        
+
         private static void SaveBitmapSourceToPng(BitmapSource source, string path)
         {
             var encoder = new PngBitmapEncoder();

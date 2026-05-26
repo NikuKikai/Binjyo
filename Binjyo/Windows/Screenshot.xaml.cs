@@ -2,12 +2,10 @@ using System;
 using System.Drawing;
 using System.Threading;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
-using Screen = System.Windows.Forms.Screen;
+using System.Diagnostics;
 
 
 namespace Binjyo
@@ -26,10 +24,6 @@ namespace Binjyo
         private int startx, starty;  // Physical Pixel
         private int selectedLeft, selectedTop, selectedWidth, selectedHeight;  // Physical Pixel
 
-        private Line linew, lineh;
-        private System.Windows.Shapes.Rectangle rectBitmap;
-        private System.Windows.Shapes.Rectangle maskTop, maskLeft, maskRight, maskBottom;
-
         private Bitmap bitmap;
         private BitmapSource screenshotSource;
         private ImageBrush screenshotBrush;
@@ -37,7 +31,6 @@ namespace Binjyo
         public Screenshot()
         {
             InitializeComponent();
-            CreateObjects();
         }
 
         public void Shot()
@@ -51,21 +44,15 @@ namespace Binjyo
             // var lv = (int)SystemParameters.VirtualScreenLeft;
             // var tv = (int)SystemParameters.VirtualScreenTop;
 
-            // Get physical resolutions (https://stackoverflow.com/a/1317252)
-            var rect = new System.Drawing.Rectangle(int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
-            foreach (Screen screen in Screen.AllScreens)
-                rect = System.Drawing.Rectangle.Union(rect, screen.Bounds);
+            // Get physical bounds
+            var rect = Geo.GetAllScreenBoundsPhysical();
             w = rect.Width;
             h = rect.Height;
-            l = rect.Left;
-            t = rect.Top;
+            l = rect.X;
+            t = rect.Y;
 
             // Get DPI
             dpiFactor = Geo.GetDpiFactorAt(l + 1, t + 1);
-
-            // Get DPI another method
-            // var curr_dpiFactor = VisualTreeHelper.GetDpi(this).DpiScaleX; // Only works under per-monitor DPI mode > https://github.com/microsoft/WPF-Samples/tree/master/
-            // Console.WriteLine("dpi scale = " + dpiFactor.ToString() + " curr " + curr_dpiFactor);
 
             // Resize window to cover all screen
             Width = w / dpiFactor;
@@ -85,84 +72,59 @@ namespace Binjyo
 
             screenshotSource = this.bitmap.ToBitmapSource(PixelFormats.Bgr24);
             screenshotSource.Freeze();
-            screenshotBrush = new ImageBrush(screenshotSource)
-            {
-                Stretch = Stretch.Fill,
-                AlignmentX = AlignmentX.Left,
-                AlignmentY = AlignmentY.Top
-            };
+            this.image.Source = screenshotSource;
 
-            //canvas.Background = new ImageBrush(bs);
-            this.rectBitmap.Fill = screenshotBrush;
-            this.rectBitmap.Width = Width;
-            this.rectBitmap.Height = Height;
-            Canvas.SetLeft(this.rectBitmap, 0);
-            Canvas.SetTop(this.rectBitmap, 0);
             HideSelectionRect();
 
-            _Show();
+            ShowThis();
         }
 
-
-        private void CreateObjects()
+        // Use WriteableBitmap for better performance
+        public void Shot2()
         {
-            // Set up canvas mask with four rectangles to avoid large opacity-mask surfaces.
-            this.canvasMask.Background = System.Windows.Media.Brushes.Transparent;
-            RenderOptions.SetEdgeMode(this.canvasMask, EdgeMode.Aliased);
+            WindowState = WindowState.Normal;
 
+            // Scaled screen size
+            // BUG: If the app start with dpi ratio X, and then changed to Y < X, following vars does not change.
+            // var wv = (int)SystemParameters.VirtualScreenWidth;
+            // var hv = (int)SystemParameters.VirtualScreenHeight;
+            // var lv = (int)SystemParameters.VirtualScreenLeft;
+            // var tv = (int)SystemParameters.VirtualScreenTop;
 
-            // rect to render image
-            this.rectBitmap = new System.Windows.Shapes.Rectangle();
-            RenderOptions.SetEdgeMode(this.rectBitmap, EdgeMode.Aliased);
-            this.rectBitmap.SnapsToDevicePixels = true;
-            this.canvas.Children.Add(this.rectBitmap);
+            // Get physical bounds
+            var rect = Geo.GetAllScreenBoundsPhysical2();
+            w = rect.Width;
+            h = rect.Height;
+            l = rect.X;
+            t = rect.Y;
 
-            var overlayFill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 0, 0, 0));
-            maskTop = CreateMaskRectangle(overlayFill);
-            maskLeft = CreateMaskRectangle(overlayFill);
-            maskRight = CreateMaskRectangle(overlayFill);
-            maskBottom = CreateMaskRectangle(overlayFill);
+            // Get DPI
+            dpiFactor = Geo.GetDpiFactorAt(l + 1, t + 1);
 
-            this.canvasMask.Children.Add(maskTop);
-            this.canvasMask.Children.Add(maskLeft);
-            this.canvasMask.Children.Add(maskRight);
-            this.canvasMask.Children.Add(maskBottom);
+            // Resize window to cover all screens
+            Width = w / dpiFactor;
+            Height = h / dpiFactor;
+            Left = l / dpiFactor;
+            Top = t / dpiFactor;
 
+            ReleaseScreenshotResources();
 
-            // lines
-            linew = new Line
-            {
-                Stroke = System.Windows.Media.Brushes.White,
-                StrokeThickness = 1,
-                Y1 = 0
-            };
-            this.canvas.Children.Add(linew);
-            lineh = new Line
-            {
-                Stroke = System.Windows.Media.Brushes.White,
-                StrokeThickness = 1,
-                X1 = 0
-            };
-            this.canvas.Children.Add(lineh);
+            var wb = CaptureScreen.Run();
 
-        }
+            this.image.Source = wb;
 
-        private System.Windows.Shapes.Rectangle CreateMaskRectangle(System.Windows.Media.Brush fill)
-        {
-            return new System.Windows.Shapes.Rectangle
-            {
-                Fill = fill
-            };
+            HideSelectionRect();
+
+            ShowThis();
         }
 
 
-        private void _Show()
+        private void ShowThis()
         {
             if (!IsVisible)
                 Show();
             Opacity = 1;
             Thread.Sleep(10);
-            //canvas.Opacity = 1;
 
             UpdateCross();
             Activate();
@@ -177,10 +139,10 @@ namespace Binjyo
                 HideCross();
                 HideSelectionRect();
                 HideSelectionPopup();
+                HideSelectionRect();
                 Width = 10; Height = 10;
 
                 ReleaseScreenshotResources();
-                HideSelectionRect();
 
                 isshot = false;
                 isdrag = false;
@@ -195,7 +157,7 @@ namespace Binjyo
 
         private void ReleaseScreenshotResources()
         {
-            this.rectBitmap.Fill = null;
+            this.image.Source = null;
 
             if (screenshotBrush != null)
             {
@@ -214,12 +176,12 @@ namespace Binjyo
             double y = System.Windows.Forms.Control.MousePosition.Y - t;
             x /= dpiFactor; y /= dpiFactor;
 
-            linew.X1 = x; linew.X2 = x; linew.Y1 = 0; linew.Y2 = Height; linew.Opacity = 0.7;
-            lineh.Y1 = y; lineh.Y2 = y; lineh.X1 = 0; lineh.X2 = Width; lineh.Opacity = 0.7;
+            lineY.X1 = x; lineY.X2 = x; lineY.Y1 = 0; lineY.Y2 = Height; lineY.Opacity = 0.7;
+            lineX.Y1 = y; lineX.Y2 = y; lineX.X1 = 0; lineX.X2 = Width; lineX.Opacity = 0.7;
         }
         private void HideCross()
         {
-            linew.Opacity = 0; lineh.Opacity = 0;
+            lineY.Opacity = 0; lineX.Opacity = 0;
         }
 
 
@@ -240,40 +202,23 @@ namespace Binjyo
             double selectionWidth = selectedWidth / dpiFactor;
             double selectionHeight = selectedHeight / dpiFactor;
 
-            maskTop.Width = Width;
             maskTop.Height = Math.Max(0, selectionTop);
-            Canvas.SetLeft(maskTop, 0);
-            Canvas.SetTop(maskTop, 0);
+
+            maskBottom.Height = Math.Max(0, Height - (selectionTop + selectionHeight));
 
             maskLeft.Width = Math.Max(0, selectionLeft);
-            maskLeft.Height = Math.Max(0, selectionHeight);
-            Canvas.SetLeft(maskLeft, 0);
-            Canvas.SetTop(maskLeft, selectionTop);
+            // maskLeft.Height = Math.Max(0, selectionHeight);
 
             maskRight.Width = Math.Max(0, Width - (selectionLeft + selectionWidth));
-            maskRight.Height = Math.Max(0, selectionHeight);
-            Canvas.SetLeft(maskRight, selectionLeft + selectionWidth);
-            Canvas.SetTop(maskRight, selectionTop);
-
-            maskBottom.Width = Width;
-            maskBottom.Height = Math.Max(0, Height - (selectionTop + selectionHeight));
-            Canvas.SetLeft(maskBottom, 0);
-            Canvas.SetTop(maskBottom, selectionTop + selectionHeight);
+            // maskRight.Height = Math.Max(0, selectionHeight);
         }
 
         private void HideSelectionRect()
         {
-            maskTop.Width = Width;
             maskTop.Height = Height;
-            Canvas.SetLeft(maskTop, 0);
-            Canvas.SetTop(maskTop, 0);
-
-            maskLeft.Width = 0;
-            maskLeft.Height = 0;
-            maskRight.Width = 0;
-            maskRight.Height = 0;
-            maskBottom.Width = 0;
             maskBottom.Height = 0;
+            maskLeft.Width = 0;
+            maskRight.Width = 0;
         }
 
 
@@ -294,33 +239,89 @@ namespace Binjyo
         }
 
 
-        private void CreateMemo()
+        // private void CreateMemo()
+        // {
+        //     if (selectedWidth > 20 && selectedHeight > 20)
+        //     {
+        //         // Crop bitmap with rect
+        //         var croppedImage = new Bitmap(selectedWidth, selectedHeight);
+        //         using (var graphics = Graphics.FromImage(croppedImage))
+        //         {
+        //             var srcrect = new Rectangle(
+        //                 selectedLeft + 1, selectedTop + 1,
+        //                 croppedImage.Width, croppedImage.Height);
+        //             graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
+        //         }
+
+        //         double left = selectedLeft + 1 + l;
+        //         double top = selectedTop + 1 + t;
+        //         double dpiFactor = Geo.GetDpiFactorAt(
+        //             left + croppedImage.Width / 2,
+        //             top + croppedImage.Height / 2
+        //         );
+
+        //         // Create Memo from cropped bitmap
+        //         var item = Scene.CreateItem(croppedImage, (int)(left / dpiFactor), (int)(top / dpiFactor));
+        //         Memo memo = new Memo(item);
+        //         CanvasWindow.CreateItem(item);
+        //         Scene.Focus(item.Id);
+        //     }
+        // }
+
+        private void CreateMemo2()
         {
-            if (selectedWidth > 20 && selectedHeight > 20)
+            if (selectedWidth < 20 || selectedHeight < 20) return;
+
+            var source = (WriteableBitmap)this.image.Source;
+
+            // Crop bitmap with rect
+            var croppedImage = new WriteableBitmap(selectedWidth, selectedHeight, 96, 96, PixelFormats.Bgra32, null);
+            int srcStride = source.BackBufferStride;
+            int dstStride = croppedImage.BackBufferStride;
+
+            source.Lock();
+            croppedImage.Lock();
+            try
             {
-                // Crop bitmap with rect
-                var croppedImage = new Bitmap(selectedWidth, selectedHeight);
-                using (var graphics = Graphics.FromImage(croppedImage))
+                IntPtr srcPtr = source.BackBuffer;
+                IntPtr dstPtr = croppedImage.BackBuffer;
+
+                // クロップの開始位置までポインタを進める (1ピクセル = 4バイト)
+                IntPtr srcStartPtr = srcPtr + (selectedTop * srcStride) + (selectedLeft * 4);
+                int bytesToCopyPerRow = selectedWidth * 4;
+
+                // 2. 行（Row）ごとにメモリを一括コピーする
+                for (int row = 0; row < selectedHeight; row++)
                 {
-                    var srcrect = new System.Drawing.Rectangle(
-                        selectedLeft + 1, selectedTop + 1,
-                        croppedImage.Width, croppedImage.Height);
-                    graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
+                    IntPtr currentSrcRow = srcStartPtr + (row * srcStride);
+                    IntPtr currentDstRow = dstPtr + (row * dstStride);
+
+                    // Win32のCopyMemory（RtlMoveMemory）を使って1行分を丸ごと高速コピー
+                    CaptureScreen.CopyMemory(currentDstRow, currentSrcRow, (uint)bytesToCopyPerRow);
                 }
 
-                double left = selectedLeft + 1 + l;
-                double top = selectedTop + 1 + t;
-                double dpiFactor = Geo.GetDpiFactorAt(
-                    left + croppedImage.Width / 2,
-                    top + croppedImage.Height / 2
-                );
-
-                // Create Memo from cropped bitmap
-                var item = Scene.CreateItem(croppedImage, (int)(left / dpiFactor), (int)(top / dpiFactor));
-                Memo memo = new Memo(item);
-                CanvasWindow.CreateItem(item);
-                Scene.Focus(item.Id);
+                // 変更を通知
+                croppedImage.AddDirtyRect(new Int32Rect(0, 0, selectedWidth, selectedHeight));
             }
+            finally
+            {
+                croppedImage.Unlock();
+                source.Unlock();
+            }
+
+            // Get center DPI
+            double left = selectedLeft + 1 + l;
+            double top = selectedTop + 1 + t;
+            double dpiFactor = Geo.GetDpiFactorAt(
+                left + croppedImage.Width / 2,
+                top + croppedImage.Height / 2
+            );
+
+            // Create Memo from cropped bitmap
+            var item = Scene.CreateItem(croppedImage, (int)(left / dpiFactor), (int)(top / dpiFactor));
+            Memo memo = new Memo(item);
+            CanvasWindow.CreateItem(item);
+            Scene.Focus(item.Id);
         }
 
 
@@ -357,7 +358,7 @@ namespace Binjyo
             HideCross();
 
             Opacity = 0;
-            CreateMemo();
+            CreateMemo2();
 
             CloseThis();
         }

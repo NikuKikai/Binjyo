@@ -50,17 +50,15 @@ namespace Binjyo
 
             Container.MouseLeftButtonDown += Container_MouseLeftButtonDown;
 
-            var bs = item.RenderBitmapSource();
-            Image.Source = bs;
-            Border.Width = item.GetWidth();
-            Border.Height = item.GetHeight();
+            Image.Source = item.Bitmap;
             NotifiedMove();
+            NotifiedTransform();
 
             item.RegisterView(this);
         }
 
         public Guid Id => Item.Id;
-        public bool ProducesRenderedBitmap => true;
+        public bool IsRenderer => true;
         public SceneItem Item { get; private set; }
         public Grid Container { get; }
         public Border Border { get; }
@@ -87,16 +85,22 @@ namespace Binjyo
             Canvas.SetTop(Container, Item.Top);
         }
 
+        public void NotifiedTransform()
+        {
+            Border.Width = Item.GetWidth();
+            Border.Height = Item.GetHeight();
+        }
+
         public void NotifiedEffect()
         {
-            var bs = Item.RenderBitmapSource();
-            Image.Source = bs;
-            Item.PublishRenderedBitmap(bs);
+            // var bs = Item.RenderBitmapSource();
+            // Image.Source = bs;
+            // Item.PublishRenderedBitmap(bs);
         }
 
         public void NotifiedCanvasActive() { } // No need
         public void NotifiedDisplayMode() { } // No need
-        public void NotifiedRenderedBitmapUpdated() { } // No need
+        public void NotifiedRendered() { } // No need
 
         private void Container_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {

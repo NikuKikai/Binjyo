@@ -83,7 +83,7 @@ namespace Binjyo
             foreach (var item in movingItems)
             {
                 var position = targetPositions[item];
-                item.MoveTo(position.X, position.Y);
+                item.SetPos(position.X, position.Y);
             }
         }
 
@@ -130,7 +130,7 @@ namespace Binjyo
 
             // Move items to target positions
             foreach (var kv in targetPts)
-                Items[kv.Key].MoveTo(kv.Value.X, kv.Value.Y);
+                Items[kv.Key].SetPos(kv.Value.X, kv.Value.Y);
         }
 
         public static void DragMoveEnd()
