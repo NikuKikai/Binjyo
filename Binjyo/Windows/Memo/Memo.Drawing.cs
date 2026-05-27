@@ -10,83 +10,38 @@ using System.Drawing;
 
 namespace Binjyo
 {
-    public enum EditTool
-    {
-        Brush,
-        Eraser
-    }
-
     public partial class Memo
     {
+        private bool isDrawMode = false;
+        private DrawPanel drawPanel = null;
+        private DrawingDocumentData drawingDocument { get => Item.DrawingDocument; set => Item.DrawingDocument = value; }
+        private DrawingStrokeData activeDrawingStroke = null;
+        private bool isDrawingStroke = false;
+        private Stack<DrawingDocumentData> drawingUndoStack => Item.DrawingUndoStack;
+        private DrawingDocumentData pendingDrawingOperationSnapshot = null;
+        private bool pendingDrawingOperationChanged = false;
 
-        public static void RefreshAllMemoScalingModes()
+
+        private void EnterDrawMode()
         {
-            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>())
-            {
-                memo.ApplyConfiguredBitmapScalingMode();
-            }
-        }
-
-        private int ClampToPixelIndex(int value, int length)
-        {
-            if (length <= 0)
-                return 0;
-            return Math.Max(0, Math.Min(length - 1, value));
-        }
-
-        private void ApplyConfiguredBitmapScalingMode()
-        {
-            RenderOptions.SetBitmapScalingMode(image, Effects.GetConfiguredBitmapScalingMode());
-        }
-
-
-        private void MemoLocationChanged(object sender, EventArgs e)
-        {
-            if (!isSuspendingDisplayPosition)
-            {
-                anchorLeft = Left;
-                anchorTop = Top;
-            }
-
-            UpdateEditPanelPlacement();
-            RefreshAllMemoFeatureOverlays();
-        }
-
-        private void MemoSizeChanged(object sender, EventArgs e)
-        {
-            if (!isSuspendingDisplayPosition)
-            {
-                anchorLeft = Left;
-                anchorTop = Top;
-            }
-
-            UpdateEditPanelPlacement();
-            InvalidateFeatureAlignmentCachesFor(this);
-            UpdateFeatureOverlayTransform();
-            RenderDrawingOverlay();
-            RefreshAllMemoFeatureOverlays();
-        }
-
-        private void EnterEditMode()
-        {
-            if (isEditMode || !CanInteract)
+            if (isDrawMode || !CanInteract || isResizeMode || Scene.IsStitchMode)
                 return;
+            isDrawMode = true;
 
-            SetResizeMode(false);
-            StopResize();
-            isEditMode = true;
             isDrawingStroke = false;
             activeDrawingStroke = null;
-            EnsureEditModePanel();
-            SetEditTool(EditTool.Brush);
-            UpdateResizeVisuals();
+
+            drawPanel?.Close();
+            drawPanel = new DrawPanel();
+            drawPanel.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
+            drawPanel.Show();
+
             HideHSVWheel();
         }
 
-        private void ExitEditMode()
+        private void ExitDrawMode()
         {
-            if (!isEditMode)
-                return;
+            if (!isDrawMode) return;
 
             if (isDrawingStroke)
             {
@@ -101,63 +56,82 @@ namespace Binjyo
                 CancelPendingDrawingOperation();
             }
 
-            isEditMode = false;
-            CloseEditModePanel();
-            UpdateResizeVisuals();
+            isDrawMode = false;
+            drawPanel?.Close();
+            drawPanel = null;
+
             Cursor = Cursors.Arrow;
         }
 
-        private void EnsureEditModePanel()
+
+        private void BeginDrawingStroke(System.Windows.Point localPosition)
         {
-            if (editModePanel == null)
+            if (!TryGetDrawingPoint(localPosition, out DrawingPointData point))
+                return;
+
+            BeginDrawingOperation();
+
+            if (drawPanel.Tool == DrawTool.Eraser)
             {
-                editModePanel = new EditModePanel();
+                EraseStrokeAtPoint(point);
+            }
+            else
+            {
+                activeDrawingStroke = new DrawingStrokeData
+                {
+                    Size = drawPanel.BrushSize
+                };
+                activeDrawingStroke.Points.Add(point);
+                drawingDocument.Strokes.Add(activeDrawingStroke);
+                MarkDrawingOperationChanged();
             }
 
-            UpdateEditPanelState();
-            if (!editModePanel.IsVisible)
-                editModePanel.Show();
+            isDrawingStroke = true;
+            Mouse.Capture(this);
+            RenderDrawingOverlay();
         }
 
-        private void CloseEditModePanel()
+        private void ExtendDrawingStroke(System.Windows.Point localPosition)
         {
-            if (editModePanel == null)
+            if (!isDrawingStroke)
                 return;
 
-            editModePanel.Close();
-            editModePanel = null;
-        }
-
-        private void UpdateEditPanelState()
-        {
-            if (editModePanel == null)
+            if (!TryGetDrawingPoint(localPosition, out DrawingPointData point))
                 return;
 
-            editModePanel.UpdateToolName(currentEditTool == EditTool.Brush ? "Brush" : "Eraser");
-            editModePanel.UpdateBrushSize(drawingBrushSize);
-            UpdateEditPanelPlacement();
-        }
+            if (drawPanel.Tool == DrawTool.Eraser)
+            {
+                EraseStrokeAtPoint(point);
+                return;
+            }
 
-        private void UpdateEditPanelPlacement()
-        {
-            if (editModePanel == null || !isEditMode)
+            if (activeDrawingStroke == null)
                 return;
 
-            editModePanel.UpdatePlacement(Left, Top, Width, dpiFactor);
+            DrawingPointData lastPoint = activeDrawingStroke.Points.LastOrDefault();
+            if (lastPoint != null &&
+                Math.Abs(lastPoint.X - point.X) < 0.25 &&
+                Math.Abs(lastPoint.Y - point.Y) < 0.25)
+            {
+                return;
+            }
+
+            activeDrawingStroke.Points.Add(point);
+            RenderDrawingOverlay();
         }
 
-        private void AdjustDrawingBrushSize(double delta)
+        private void EndDrawingStroke()
         {
-            drawingBrushSize = Math.Max(MinimumDrawingBrushSize, Math.Min(MaximumDrawingBrushSize, drawingBrushSize + delta));
-            UpdateEditPanelState();
+            isDrawingStroke = false;
+            activeDrawingStroke = null;
+            if (Mouse.Captured == this)
+                Mouse.Capture(null);
+            CommitDrawingOperation();
+            RenderDrawingOverlay();
         }
 
-        private void SetEditTool(EditTool tool)
-        {
-            currentEditTool = tool;
-            Cursor = tool == EditTool.Brush ? Cursors.Pen : Cursors.Cross;
-            UpdateEditPanelState();
-        }
+
+        // ======== Drawing Operation Management ========
 
         private void BeginDrawingOperation()
         {
@@ -208,72 +182,6 @@ namespace Binjyo
             return true;
         }
 
-        private void BeginDrawingStroke(System.Windows.Point localPosition)
-        {
-            if (!TryGetDrawingPoint(localPosition, out DrawingPointData point))
-                return;
-
-            BeginDrawingOperation();
-
-            if (currentEditTool == EditTool.Eraser)
-            {
-                EraseStrokeAtPoint(point);
-            }
-            else
-            {
-                activeDrawingStroke = new DrawingStrokeData
-                {
-                    Size = drawingBrushSize
-                };
-                activeDrawingStroke.Points.Add(point);
-                drawingDocument.Strokes.Add(activeDrawingStroke);
-                MarkDrawingOperationChanged();
-            }
-
-            isDrawingStroke = true;
-            Mouse.Capture(this);
-            RenderDrawingOverlay();
-        }
-
-        private void ExtendDrawingStroke(System.Windows.Point localPosition)
-        {
-            if (!isDrawingStroke)
-                return;
-
-            if (!TryGetDrawingPoint(localPosition, out DrawingPointData point))
-                return;
-
-            if (currentEditTool == EditTool.Eraser)
-            {
-                EraseStrokeAtPoint(point);
-                return;
-            }
-
-            if (activeDrawingStroke == null)
-                return;
-
-            DrawingPointData lastPoint = activeDrawingStroke.Points.LastOrDefault();
-            if (lastPoint != null &&
-                Math.Abs(lastPoint.X - point.X) < 0.25 &&
-                Math.Abs(lastPoint.Y - point.Y) < 0.25)
-            {
-                return;
-            }
-
-            activeDrawingStroke.Points.Add(point);
-            RenderDrawingOverlay();
-        }
-
-        private void EndDrawingStroke()
-        {
-            isDrawingStroke = false;
-            activeDrawingStroke = null;
-            if (Mouse.Captured == this)
-                Mouse.Capture(null);
-            CommitDrawingOperation();
-            RenderDrawingOverlay();
-        }
-
         private void UndoLastDrawingStroke()
         {
             if (isDrawingStroke)
@@ -304,7 +212,7 @@ namespace Binjyo
             if (drawingDocument.Strokes.Count == 0)
                 return;
 
-            double eraserRadius = Math.Max(1, drawingBrushSize / 2.0);
+            double eraserRadius = Math.Max(1, drawPanel.BrushSize / 2.0);
             int removedCount = drawingDocument.Strokes.RemoveAll(stroke => DoesStrokeIntersectPoint(stroke, point, eraserRadius));
             if (removedCount > 0)
             {
@@ -408,10 +316,6 @@ namespace Binjyo
             // sceneItem.
         }
 
-        private void ApplyDrawingToBitmap(Bitmap targetBitmap)
-        {
-            ApplyDrawingToBitmap(targetBitmap, drawingDocument);
-        }
 
         private void ApplyDrawingToBitmap(Bitmap targetBitmap, DrawingDocumentData document)
         {

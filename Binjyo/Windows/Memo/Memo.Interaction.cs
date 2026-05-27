@@ -15,7 +15,7 @@ namespace Binjyo
         private bool isEditedDuringKeyB = false;
         private bool isEditedDuringKeyQ = false;
         private bool isEditedDuringKeyO = false;
-        private bool isdrag { get => Scene.IsDragMoving; }
+        private bool isDragging { get => Scene.IsDragMoving; }
         private double dragStartMouseX, dragStartMouseY;
         private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
 
@@ -57,22 +57,22 @@ namespace Binjyo
         {
             Key actualKey = GetActualKey(e);
 
-            if (isEditMode)
+            if (isDrawMode)
             {
                 switch (actualKey)
                 {
                     case Key.Escape:
                     case Key.Enter:
                         if (!e.IsRepeat)
-                            ExitEditMode();
+                            ExitDrawMode();
                         break;
                     case Key.E:
                         if (!e.IsRepeat)
-                            SetEditTool(EditTool.Eraser);
+                            drawPanel?.SetTool(DrawTool.Eraser);
                         break;
                     case Key.Q:
                         if (!e.IsRepeat)
-                            SetEditTool(EditTool.Brush);
+                            drawPanel?.SetTool(DrawTool.Brush);
                         break;
                     case Key.Z:
                         if (!e.IsRepeat)
@@ -80,11 +80,11 @@ namespace Binjyo
                         break;
                     case Key.Oem4:
                         if (!e.IsRepeat)
-                            AdjustDrawingBrushSize(-1);
+                            drawPanel?.SetBrushSize(drawPanel.BrushSize - 1);
                         break;
                     case Key.Oem6:
                         if (!e.IsRepeat)
-                            AdjustDrawingBrushSize(1);
+                            drawPanel?.SetBrushSize(drawPanel.BrushSize + 1);
                         break;
                     default:
                         break;
@@ -142,7 +142,7 @@ namespace Binjyo
                     break;
                 case Key.E:
                     if (!e.IsRepeat)
-                        EnterEditMode();
+                        EnterDrawMode();
                     e.Handled = true;
                     break;
                 case Key.LeftAlt:
@@ -223,7 +223,7 @@ namespace Binjyo
         private void Window_KeyUp(object sender, KeyEventArgs e)
         {
             Key actualKey = GetActualKey(e);
-            if (isEditMode)
+            if (isDrawMode)
             {
                 e.Handled = true;
                 return;
@@ -286,7 +286,7 @@ namespace Binjyo
             if (!IsActive)
                 flashOnNextActivation = true;
 
-            if (isEditMode)
+            if (isDrawMode)
             {
                 if (e.ChangedButton == MouseButton.Left)
                     BeginDrawingStroke(e.GetPosition(this));
@@ -320,7 +320,7 @@ namespace Binjyo
                 return;
             }
 
-            if (isEditMode)
+            if (isDrawMode)
             {
                 e.Handled = true;
                 return;
@@ -332,31 +332,19 @@ namespace Binjyo
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isEditMode)
+            if (isDrawMode)
             {
-                Cursor = currentEditTool == EditTool.Brush ? Cursors.Pen : Cursors.Cross;
-                if (isDrawingStroke && Mouse.LeftButton == MouseButtonState.Pressed)
-                    ExtendDrawingStroke(e.GetPosition(this));
-                else if (isDrawingStroke)
-                    EndDrawingStroke();
+                Cursor = drawPanel.Tool == DrawTool.Brush ? Cursors.Pen : Cursors.Cross;
+                if (isDrawingStroke)
+                {
+                    if (Mouse.LeftButton == MouseButtonState.Pressed)
+                        ExtendDrawingStroke(e.GetPosition(this));
+                    else
+                        EndDrawingStroke();
+                }
 
                 HideHSVWheel();
                 return;
-            }
-
-            if (isResizing)
-            {
-                if (Mouse.LeftButton == MouseButtonState.Pressed)
-                    UpdateResize();
-                else
-                    StopResize();
-            }
-            else if (isdrag)
-            {
-                if (Mouse.LeftButton == MouseButtonState.Pressed)
-                    Scene.DragMoveUpdate();
-                else
-                    Scene.DragMoveEnd();
             }
 
             if (isResizeMode)
@@ -364,15 +352,22 @@ namespace Binjyo
                 if (isResizing)
                 {
                     Cursor = GetCursorForResizeHandle(activeResizeHandle);
+                    if (Mouse.LeftButton == MouseButtonState.Pressed)
+                        UpdateResize();
+                    else
+                        StopResize();
                 }
                 else
-                {
                     Cursor = GetCursorForResizeHandle(GetResizeHandleAtMousePosition());
-                }
+                return;
             }
-            else
+
+            if (isDragging)
             {
-                Cursor = Cursors.Arrow;
+                if (Mouse.LeftButton == MouseButtonState.Pressed)
+                    Scene.DragMoveUpdate();
+                else
+                    Scene.DragMoveEnd();
             }
 
             RefreshHSVWheelVisibility();
@@ -380,9 +375,15 @@ namespace Binjyo
 
         private void Window_MouseUp(object sender, MouseButtonEventArgs e)
         {
-            if (isEditMode)
+            if (isDrawMode)
             {
                 EndDrawingStroke();
+                e.Handled = true;
+                return;
+            }
+            if (isResizeMode && isResizing)
+            {
+                StopResize();
                 e.Handled = true;
                 return;
             }
@@ -391,14 +392,14 @@ namespace Binjyo
 
             if (isFeaturePointModeEnabled)
                 image.Opacity = 1;
-            StopResize();
+
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
         }
 
         private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (isEditMode)
+            if (isDrawMode)
                 return;
 
             bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
@@ -418,7 +419,7 @@ namespace Binjyo
 
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (isEditMode)
+            if (isDrawMode)
                 return;
 
             if (Keyboard.IsKeyDown(Key.LeftCtrl))
@@ -451,8 +452,8 @@ namespace Binjyo
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
-            if (isEditMode)
-                ExitEditMode();
+            if (isDrawMode)
+                ExitDrawMode();
             if (isResizeMode)
                 SetResizeMode(false);
 
@@ -478,5 +479,10 @@ namespace Binjyo
             RefreshHSVWheelVisibility();
         }
 
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+
+        }
     }
 }

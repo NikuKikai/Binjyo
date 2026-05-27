@@ -24,6 +24,7 @@
         MouseWheel="Window_MouseWheel"
         Activated="Window_Activated"
         Deactivated="Window_Deactivated"
+        SizeChanged="Window_SizeChanged"
         >
     <Grid Margin="0,0,0,0">
         <Image Name="image" Margin="0,0,0,0" Stretch="Fill">
@@ -35,7 +36,7 @@
                 IsHitTestVisible="False"/>
         <Canvas Name="drawingOverlay"
                 IsHitTestVisible="False"/>
-        <Rectangle Name="focusFlashOverlay"
+        <Rectangle Name="highlightOverlay"
                    IsHitTestVisible="False"
                    Fill="#FF00C800"
                    Opacity="0"/>

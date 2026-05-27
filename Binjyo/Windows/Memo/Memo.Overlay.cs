@@ -10,6 +10,8 @@ namespace Binjyo
 {
     public partial class Memo
     {
+        private bool flashOnNextActivation = false;
+        private EventHandler centerInfoFadeCompletedHandler = null;
 
         private void FlashHighlight()
         {
@@ -17,12 +19,12 @@ namespace Binjyo
             animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(0.5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70))));
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180))));
-            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
+            highlightOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
         }
         private void SetHighlight(bool on)
         {
-            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, null);
-            focusFlashOverlay.Opacity = on ? 0.35 : 0;
+            highlightOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+            highlightOverlay.Opacity = on ? 0.35 : 0;
         }
 
 
@@ -158,7 +160,7 @@ namespace Binjyo
 
         private void RefreshHSVWheelVisibility()
         {
-            if (isHSVWheel && !isEditMode && !isdrag && !isResizing && Scene.DisplayMode == EDisplayMode.Expanded)
+            if (isHSVWheel && !isDrawMode && !isDragging && !isResizing && Scene.DisplayMode == EDisplayMode.Expanded)
                 UpdateHSVWheel();
             else
                 HideHSVWheel();

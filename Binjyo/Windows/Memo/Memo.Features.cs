@@ -833,7 +833,7 @@ namespace Binjyo
 
         private static bool IsAnyMemoDragging()
         {
-            return GetAllMemos().Any(memo => memo.isdrag);
+            return GetAllMemos().Any(memo => memo.isDragging);
         }
 
         private System.Windows.Point MapOriginalPointToDisplayed(double originalX, double originalY)

@@ -118,8 +118,8 @@
     </Compile>
     <Compile Include="Models\DrawingData.cs" />
     <Compile Include="Models\SceneItem.cs" />
-    <Compile Include="Windows\EditModePanel.xaml.cs">
-      <DependentUpon>EditModePanel.xaml</DependentUpon>
+    <Compile Include="Windows\DrawPanel.xaml.cs">
+      <DependentUpon>DrawPanel.xaml</DependentUpon>
     </Compile>
     <Compile Include="Windows\FeatureMatchOverlayWindow.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.xaml.cs">
@@ -156,7 +156,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Windows\EditModePanel.xaml">
+    <Page Include="Windows\DrawPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

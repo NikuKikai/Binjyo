@@ -29,23 +29,9 @@ namespace Binjyo
         // effect
         private double scale { get => Item.Scale; }
         private List<char> geometryTransformHistory => Item.GeometryTransformHistory;
-        private DrawingDocumentData drawingDocument { get => Item.DrawingDocument; set => Item.DrawingDocument = value; }
-        private DrawingStrokeData activeDrawingStroke = null;
-        private EditModePanel editModePanel = null;
-        private bool isEditMode = false;
-        private bool isDrawingStroke = false;
-        private EditTool currentEditTool = EditTool.Brush;
-        private double drawingBrushSize = 5;
-        private Stack<DrawingDocumentData> drawingUndoStack => Item.DrawingUndoStack;
-        private DrawingDocumentData pendingDrawingOperationSnapshot = null;
-        private bool pendingDrawingOperationChanged = false;
-        private const double MinimumDrawingBrushSize = 1;
-        private const double MaximumDrawingBrushSize = 64;
 
         private bool isSaving = false;
-        private bool flashOnNextActivation = false;
         private bool isSuspendingDisplayPosition = false;
-        private EventHandler centerInfoFadeCompletedHandler = null;
         private const double MouseEvadeRange = 200;
         private const double MouseEvadeBaseStrength = 300;
         private const double MouseEvadeSpringStrength = 0.4;
@@ -70,8 +56,6 @@ namespace Binjyo
 
             Console.WriteLine($"Memo created for item {Id} at ({Left}, {Top}) with size ({item.GetWidth()}x{item.GetHeight()})");
 
-            LocationChanged += MemoLocationChanged;
-            SizeChanged += MemoSizeChanged;
             InitializeContextMenu();
             UpdateResizeVisuals();
 
@@ -90,9 +74,79 @@ namespace Binjyo
         {
             return Application.Current.Windows.OfType<Window>().OfType<Memo>().ToList();
         }
+
         private List<Memo> GetVisibleMemos()
         {
             return GetAllMemos().Where(item => item.IsVisible).ToList();
+        }
+
+        private bool IsMouseInsideMemoBounds()
+        {
+            var mouse = System.Windows.Forms.Control.MousePosition;
+            double x = mouse.X / dpiFactor;
+            double y = mouse.Y / dpiFactor;
+            return Left <= x && x <= Left + Width && Top <= y && y <= Top + Height;
+        }
+
+        private double GetCurrentImageOpacity()
+        {
+            return isFeaturePointModeEnabled && isDragging ? 0.5 : 1.0;
+        }
+
+        private static double GetRectSignedDistance(System.Windows.Rect rect, double x, double y, out double normalX, out double normalY)
+        {
+            double leftDistance = x - rect.Left;
+            double rightDistance = rect.Right - x;
+            double topDistance = y - rect.Top;
+            double bottomDistance = rect.Bottom - y;
+            bool isInside = leftDistance >= 0 && rightDistance >= 0 && topDistance >= 0 && bottomDistance >= 0;
+
+            if (isInside)
+            {
+                double minDistance = leftDistance;
+                normalX = 1;
+                normalY = 0;
+
+                if (rightDistance < minDistance)
+                {
+                    minDistance = rightDistance;
+                    normalX = -1;
+                    normalY = 0;
+                }
+
+                if (topDistance < minDistance)
+                {
+                    minDistance = topDistance;
+                    normalX = 0;
+                    normalY = 1;
+                }
+
+                if (bottomDistance < minDistance)
+                {
+                    minDistance = bottomDistance;
+                    normalX = 0;
+                    normalY = -1;
+                }
+
+                return -minDistance;
+            }
+
+            double nearestX = Clamp(x, rect.Left, rect.Right);
+            double nearestY = Clamp(y, rect.Top, rect.Bottom);
+            double deltaX = nearestX - x;
+            double deltaY = nearestY - y;
+            double distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            if (distance < 0.0001)
+            {
+                normalX = 1;
+                normalY = 0;
+                return 0;
+            }
+
+            normalX = deltaX / distance;
+            normalY = deltaY / distance;
+            return distance;
         }
 
 
@@ -136,7 +190,7 @@ namespace Binjyo
         public void NotifiedClose()
         {
             SaveToHistory();
-            ExitEditMode();
+            ExitDrawMode();
 
             this.image.Source = null;
             if (Mouse.Captured == this) Mouse.Capture(null);
@@ -168,13 +222,21 @@ namespace Binjyo
             if (isSuspendingDisplayPosition)
                 return;
 
-            ApplyDisplayPosition(Item.Left, Item.Top);
+            MoveTo(Item.Left, Item.Top);
+            drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
+            RefreshAllMemoFeatureOverlays();
         }
 
         public void NotifiedTransform()
         {
             Width = Item.GetWidth();
             Height = Item.GetHeight();
+
+            drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
+            RefreshAllMemoFeatureOverlays();
+            InvalidateFeatureAlignmentCachesFor(this);
+            UpdateFeatureOverlayTransform();
+            RenderDrawingOverlay();
         }
 
         public void NotifiedEffect()
@@ -298,7 +360,7 @@ namespace Binjyo
         {
             if (!IsVisible) Show();
             image.Opacity = GetCurrentImageOpacity();
-            ApplyDisplayPosition(Item.Left, Item.Top);
+            MoveTo(Item.Left, Item.Top);
         }
 
         private void DisplayAutoHide()
@@ -312,7 +374,7 @@ namespace Binjyo
                 return;
             }
 
-            ApplyDisplayPosition(Item.Left, Item.Top);
+            MoveTo(Item.Left, Item.Top);
             image.Opacity = IsMouseInsideMemoBounds() ? 0 : GetCurrentImageOpacity();
         }
 
@@ -328,7 +390,7 @@ namespace Binjyo
             if (IsVisible) Hide();
         }
 
-        private void ApplyDisplayPosition(double left, double top)
+        private void MoveTo(double left, double top)
         {
             if (Math.Abs(Left - left) < 0.001 && Math.Abs(Top - top) < 0.001)
                 return;
@@ -341,9 +403,9 @@ namespace Binjyo
 
         private void UpdateEvadeDisplayPosition()
         {
-            if (isdrag || isResizing || isEditMode)
+            if (isDragging || isResizing || isDrawMode)
             {
-                ApplyDisplayPosition(anchorLeft, anchorTop);
+                MoveTo(anchorLeft, anchorTop);
                 return;
             }
 
@@ -370,79 +432,13 @@ namespace Binjyo
 
             double targetLeft = Left + vX * MouseEvadeBlend;
             double targetTop = Top + vY * MouseEvadeBlend;
-            ApplyDisplayPosition(targetLeft, targetTop);
+            MoveTo(targetLeft, targetTop);
         }
 
         #endregion
 
-        private bool IsMouseInsideMemoBounds()
-        {
-            var mouse = System.Windows.Forms.Control.MousePosition;
-            double x = mouse.X / dpiFactor;
-            double y = mouse.Y / dpiFactor;
-            return Left <= x && x <= Left + Width && Top <= y && y <= Top + Height;
-        }
 
-        private double GetCurrentImageOpacity()
-        {
-            return isFeaturePointModeEnabled && isdrag ? 0.5 : 1.0;
-        }
-
-        private static double GetRectSignedDistance(System.Windows.Rect rect, double x, double y, out double normalX, out double normalY)
-        {
-            double leftDistance = x - rect.Left;
-            double rightDistance = rect.Right - x;
-            double topDistance = y - rect.Top;
-            double bottomDistance = rect.Bottom - y;
-            bool isInside = leftDistance >= 0 && rightDistance >= 0 && topDistance >= 0 && bottomDistance >= 0;
-
-            if (isInside)
-            {
-                double minDistance = leftDistance;
-                normalX = 1;
-                normalY = 0;
-
-                if (rightDistance < minDistance)
-                {
-                    minDistance = rightDistance;
-                    normalX = -1;
-                    normalY = 0;
-                }
-
-                if (topDistance < minDistance)
-                {
-                    minDistance = topDistance;
-                    normalX = 0;
-                    normalY = 1;
-                }
-
-                if (bottomDistance < minDistance)
-                {
-                    minDistance = bottomDistance;
-                    normalX = 0;
-                    normalY = -1;
-                }
-
-                return -minDistance;
-            }
-
-            double nearestX = Clamp(x, rect.Left, rect.Right);
-            double nearestY = Clamp(y, rect.Top, rect.Bottom);
-            double deltaX = nearestX - x;
-            double deltaY = nearestY - y;
-            double distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
-
-            if (distance < 0.0001)
-            {
-                normalX = 1;
-                normalY = 0;
-                return 0;
-            }
-
-            normalX = deltaX / distance;
-            normalY = deltaY / distance;
-            return distance;
-        }
+        #region ======== IO Ops ========
 
         // physical coordinates
         private void CombineMemosAtPos(double x, double y)
@@ -564,6 +560,6 @@ namespace Binjyo
         {
         }
 
-
+        #endregion
     }
 }

@@ -1,12 +1,26 @@
 using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Media;
 using System.Windows.Interop;
-using System.Runtime.InteropServices;
 
 
 namespace Binjyo
 {
     public partial class Memo
     {
+        public static void RefreshAllMemoScalingModes()
+        {
+            foreach (Memo memo in Application.Current.Windows.OfType<Window>().OfType<Memo>())
+            {
+                memo.ApplyConfiguredBitmapScalingMode();
+            }
+        }
+
+        private void ApplyConfiguredBitmapScalingMode()
+        {
+            RenderOptions.SetBitmapScalingMode(image, Effects.GetConfiguredBitmapScalingMode());
+        }
 
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -38,8 +52,5 @@ namespace Binjyo
             return IntPtr.Zero;
         }
 
-
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr hObject);
     }
 }

@@ -1,7 +1,7 @@
-<Window x:Class="Binjyo.EditModePanel"
+<Window x:Class="Binjyo.DrawPanel"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Edit Mode Panel"
+        Title="Draw Panel"
         Width="170"
         Height="92"
         WindowStyle="None"
@@ -9,17 +9,17 @@
         ShowInTaskbar="False"
         Topmost="True"
         ShowActivated="False"
-        AllowsTransparency="True"
+        AllowsTransparency="False"
         Background="Transparent"
         Focusable="False">
-    <Border Background="#FF000000"
+    <Border Background="Black"
             CornerRadius="4"
             Padding="10">
         <StackPanel>
             <TextBlock Name="TitleText"
                        Foreground="White"
                        FontWeight="Bold"
-                       Text="Edit Mode"/>
+                       Text="Draw Mode"/>
             <TextBlock Name="ToolNameText"
                         Margin="0,8,0,0"
                         Foreground="White"

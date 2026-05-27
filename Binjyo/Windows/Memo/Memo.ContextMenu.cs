@@ -4,7 +4,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Drawing;
 
 
 namespace Binjyo
@@ -63,7 +62,7 @@ namespace Binjyo
 
             resizeModeMenuItem = CreateCheckableMenuItem("Resize Mode", "T", (s, e) => SetResizeMode(!isResizeMode));
             memoContextMenu.Items.Add(resizeModeMenuItem);
-            editModeMenuItem = CreateMenuItem("Edit Mode", "E", (s, e) => EnterEditMode());
+            editModeMenuItem = CreateMenuItem("Edit Mode", "E", (s, e) => EnterDrawMode());
             memoContextMenu.Items.Add(editModeMenuItem);
             featurePointsMenuItem = CreateCheckableMenuItem("Feature Points", "P", (s, e) => ToggleFeaturePoints());
             memoContextMenu.Items.Add(featurePointsMenuItem);
@@ -217,7 +216,7 @@ namespace Binjyo
             if (memoContextMenu == null)
                 return;
 
-            bool isInteractive = !isEditMode;
+            bool isInteractive = !isDrawMode;
             if (resizeModeMenuItem != null)
             {
                 resizeModeMenuItem.IsChecked = isResizeMode;

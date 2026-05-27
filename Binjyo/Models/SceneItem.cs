@@ -73,6 +73,7 @@ namespace Binjyo
         public Rect GetBounds() => new Rect(Left, Top, GetWidth(), GetHeight());
         public double GetMinScale() => Math.Max(25.0 / GetBaseWidth(), 25.0 / GetBaseHeight());
         public double GetMaxScale() => 10;
+        // public bool ContainsPt()
         #endregion
 
 

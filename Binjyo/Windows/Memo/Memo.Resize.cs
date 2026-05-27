@@ -42,11 +42,14 @@ namespace Binjyo
 
         private void SetResizeMode(bool enabled)
         {
-            if (isEditMode) return;
+            if (isDrawMode) return;
 
             isResizeMode = enabled && CanInteract;
             if (!isResizeMode)
+            {
                 StopResize();
+                Cursor = Cursors.Arrow;
+            }
             UpdateResizeVisuals();
         }
 
@@ -97,7 +100,7 @@ namespace Binjyo
 
         private void UpdateResizeVisuals()
         {
-            resizeOverlay.Visibility = isResizeMode && CanInteract && !isEditMode
+            resizeOverlay.Visibility = isResizeMode && CanInteract && !isDrawMode
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
