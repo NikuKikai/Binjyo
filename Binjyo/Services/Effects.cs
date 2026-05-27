@@ -251,6 +251,69 @@ namespace Binjyo
 
         #region ======== Utils =========
 
+        public static byte[] CopyPixels(BitmapSource source)
+        {
+            int stride = source.PixelWidth * 4;
+            byte[] pixels = new byte[stride * source.PixelHeight];
+            source.CopyPixels(pixels, stride, 0);
+            return pixels;
+        }
+
+        public static Bitmap ConvertWBitmapToGdi(WriteableBitmap source)
+        {
+            int width = source.PixelWidth;
+            int height = source.PixelHeight;
+            int stride = width * 4;
+            byte[] pixels = CopyPixels(source);
+
+            Bitmap bitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            BitmapData bitmapData = bitmap.LockBits(
+                new System.Drawing.Rectangle(0, 0, width, height),
+                ImageLockMode.WriteOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    IntPtr rowPointer = IntPtr.Add(bitmapData.Scan0, y * bitmapData.Stride);
+                    Marshal.Copy(pixels, y * stride, rowPointer, stride);
+                }
+            }
+            finally
+            {
+                bitmap.UnlockBits(bitmapData);
+            }
+
+            return bitmap;
+        }
+        public static WriteableBitmap ConvertGdiToWBitmap(Bitmap bitmap)
+        {
+            BitmapData bitmapData = bitmap.LockBits(
+                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                ImageLockMode.ReadOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            try
+            {
+                int stride = bitmap.Width * 4;
+                byte[] pixels = new byte[stride * bitmap.Height];
+                for (int y = 0; y < bitmap.Height; y++)
+                {
+                    IntPtr rowPointer = IntPtr.Add(bitmapData.Scan0, y * bitmapData.Stride);
+                    Marshal.Copy(rowPointer, pixels, y * stride, stride);
+                }
+
+                WriteableBitmap result = new WriteableBitmap(bitmap.Width, bitmap.Height, 96, 96, PixelFormats.Bgra32, null);
+                result.WritePixels(new Int32Rect(0, 0, bitmap.Width, bitmap.Height), pixels, stride, 0);
+                result.Freeze();
+                return result;
+            }
+            finally
+            {
+                bitmap.UnlockBits(bitmapData);
+            }
+        }
+
         public static WriteableBitmap RenderImage(System.Windows.Controls.Image img)
         {
             if (img.ActualWidth == 0 || img.ActualHeight == 0)
