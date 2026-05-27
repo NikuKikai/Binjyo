@@ -7,8 +7,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Drawing;
 
-using Rect = System.Drawing.Rectangle;
-
 
 namespace Binjyo
 {
@@ -23,11 +21,7 @@ namespace Binjyo
 
         public SceneItem Item { get; private set; }
 
-        private Bitmap bitmap = null;
 
-
-        // effect
-        private double scale { get => Item.Scale; }
         private List<char> geometryTransformHistory => Item.GeometryTransformHistory;
 
         private bool isSaving = false;
@@ -37,8 +31,6 @@ namespace Binjyo
         private const double MouseEvadeSpringStrength = 0.4;
         private const double MouseEvadeBlend = 0.35;
         private const double MouseEvadeSettledDistance = 0.5; private ResizeHandle activeResizeHandle = ResizeHandle.None;
-        private double anchorLeft { get => Item.Left; set => Item.Left = value; }
-        private double anchorTop { get => Item.Top; set => Item.Top = value; }
 
 
         public Memo(SceneItem item)    // Physical coordinates
@@ -219,15 +211,13 @@ namespace Binjyo
 
         public void NotifiedMove()
         {
-            MoveTo(Item.Left, Item.Top);
+            ApplyMove(Item.Left, Item.Top);
             drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
             RefreshAllMemoFeatureOverlays();
         }
 
         public void NotifiedTransform()
         {
-            // Width = Item.GetDisplayWidth();
-            // Height = Item.GetDisplayHeight();
             var w = Item.GetBaseWidth();
             var h = Item.GetBaseHeight();
             var tr = new TransformGroup();
@@ -241,11 +231,13 @@ namespace Binjyo
             var rect = tr.TransformBounds(new System.Windows.Rect(0, 0, w, h));
             tr.Children.Add(new TranslateTransform(-rect.X, -rect.Y));
 
-            image.LayoutTransform = tr;
             Width = rect.Width;
             Height = rect.Height;
 
+
             NotifiedMove();
+
+            image.LayoutTransform = tr;
 
             // InvalidateFeatureAlignmentCachesFor(this);
             // UpdateFeatureOverlayTransform();
@@ -269,7 +261,7 @@ namespace Binjyo
 
         #region ======== Transform Ops ========
 
-        private void MoveTo(double left, double top)
+        private void ApplyMove(double left, double top)
         {
             if (Math.Abs(Left - left) < 0.001 && Math.Abs(Top - top) < 0.001)
                 return;
@@ -351,7 +343,7 @@ namespace Binjyo
         {
             if (!IsVisible) Show();
             image.Opacity = GetCurrentImageOpacity();
-            MoveTo(Item.Left, Item.Top);
+            ApplyMove(Item.Left, Item.Top);
         }
 
         private void DisplayAutoHide()
@@ -365,7 +357,7 @@ namespace Binjyo
                 return;
             }
 
-            MoveTo(Item.Left, Item.Top);
+            ApplyMove(Item.Left, Item.Top);
             image.Opacity = IsMouseInsideMemoBounds() ? 0 : GetCurrentImageOpacity();
         }
 
@@ -385,7 +377,7 @@ namespace Binjyo
         {
             if (isDragging || isResizing || isDrawMode)
             {
-                MoveTo(anchorLeft, anchorTop);
+                ApplyMove(Item.Left, Item.Top);
                 return;
             }
 
@@ -396,7 +388,7 @@ namespace Binjyo
             double signedDistance = GetRectSignedDistance(displayRect, mouseX, mouseY, out double normalX, out double normalY);
             if (signedDistance >= MouseEvadeRange)
             {
-                if (Math.Abs(Left - anchorLeft) < MouseEvadeSettledDistance && Math.Abs(Top - anchorTop) < MouseEvadeSettledDistance)
+                if (Math.Abs(Left - Item.Left) < MouseEvadeSettledDistance && Math.Abs(Top - Item.Top) < MouseEvadeSettledDistance)
                     return;
             }
 
@@ -405,14 +397,14 @@ namespace Binjyo
             double forceX = normalX * forceMagnitude;
             double forceY = normalY * forceMagnitude;
             double springCap = 400 * Math.Max(1, signedDistance / MouseEvadeRange);
-            double springX = Clamp(anchorLeft - Left, -springCap, springCap) * MouseEvadeSpringStrength;
-            double springY = Clamp(anchorTop - Top, -springCap, springCap) * MouseEvadeSpringStrength;
+            double springX = Clamp(Item.Left - Left, -springCap, springCap) * MouseEvadeSpringStrength;
+            double springY = Clamp(Item.Top - Top, -springCap, springCap) * MouseEvadeSpringStrength;
             double vX = forceX + springX;
             double vY = forceY + springY;
 
             double targetLeft = Left + vX * MouseEvadeBlend;
             double targetTop = Top + vY * MouseEvadeBlend;
-            MoveTo(targetLeft, targetTop);
+            ApplyMove(targetLeft, targetTop);
         }
 
         #endregion
@@ -541,5 +533,6 @@ namespace Binjyo
         }
 
         #endregion
+
     }
 }

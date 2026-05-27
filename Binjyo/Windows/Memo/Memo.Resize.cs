@@ -58,7 +58,7 @@ namespace Binjyo
             if (handle == ResizeHandle.None) return;
             activeResizeHandle = handle;
             isResizing = true;
-            resizeStartScale = scale;
+            resizeStartScale = Item.Scale;
             resizeStartLeft = Left;
             resizeStartTop = Top;
             resizeStartRight = Left + Width;
@@ -66,7 +66,7 @@ namespace Binjyo
             dragStartMouseX = System.Windows.Forms.Control.MousePosition.X;
             dragStartMouseY = System.Windows.Forms.Control.MousePosition.Y;
             Mouse.Capture(this);
-            UpdateResizeInfoOverlay(scale, Width, Height);
+            UpdateResizeInfoOverlay(Item.Scale, Width, Height);
         }
         private void UpdateResize()
         {

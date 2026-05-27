@@ -281,7 +281,7 @@ namespace Binjyo
                 if (stroke.Points.Count == 0)
                     continue;
 
-                double displayThickness = Math.Max(1, stroke.Size / dpiFactor * scale);
+                double displayThickness = Math.Max(1, stroke.Size / dpiFactor * Item.Scale);
                 if (stroke.Points.Count == 1)
                 {
                     var point = stroke.Points[0];
@@ -290,7 +290,7 @@ namespace Binjyo
                         Width = displayThickness,
                         Height = displayThickness,
                         Fill = new SolidColorBrush(Colors.Red),
-                        Margin = new Thickness(point.X / dpiFactor * scale - displayThickness / 2, point.Y / dpiFactor * scale - displayThickness / 2, 0, 0)
+                        Margin = new Thickness(point.X / dpiFactor * Item.Scale - displayThickness / 2, point.Y / dpiFactor * Item.Scale - displayThickness / 2, 0, 0)
                     });
                     continue;
                 }
@@ -306,7 +306,7 @@ namespace Binjyo
 
                 foreach (DrawingPointData point in stroke.Points)
                 {
-                    polyline.Points.Add(new System.Windows.Point(point.X / dpiFactor * scale, point.Y / dpiFactor * scale));
+                    polyline.Points.Add(new System.Windows.Point(point.X / dpiFactor * Item.Scale, point.Y / dpiFactor * Item.Scale));
                 }
 
                 drawingOverlay.Children.Add(polyline);
@@ -370,8 +370,8 @@ namespace Binjyo
                     var originalPoint = MapTransformedPointToOriginal(point.X, point.Y);
                     mappedStroke.Points.Add(new DrawingPointData
                     {
-                        X = Clamp(originalPoint.X, 0, bitmap.Width - 1),
-                        Y = Clamp(originalPoint.Y, 0, bitmap.Height - 1)
+                        X = Clamp(originalPoint.X, 0, Item.Bitmap.Width - 1),
+                        Y = Clamp(originalPoint.Y, 0, Item.Bitmap.Height - 1)
                     });
                 }
 

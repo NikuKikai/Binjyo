@@ -88,7 +88,7 @@ namespace Binjyo
 
         private void HandleDisplayedBitmapUpdated(Bitmap displayedBitmap)
         {
-            if (displayedBitmap == null || bitmap == null)
+            if (displayedBitmap == null )
             {
                 featurePoints.Clear();
                 areFeaturePointsDirty = false;
@@ -105,7 +105,7 @@ namespace Binjyo
             if (!showFeaturePoints || !areFeaturePointsDirty)
                 return;
 
-            RecomputeFeaturePoints(bitmap);
+            // RecomputeFeaturePoints(bitmap);
         }
 
         private void RecomputeFeaturePoints(Bitmap sourceBitmap)
@@ -128,7 +128,7 @@ namespace Binjyo
             featureOverlay.Children.Clear();
             UpdateFeatureOverlayTransform();
 
-            if (!ShouldShowFeaturePointsOnThisMemo() || bitmap == null)
+            if (!ShouldShowFeaturePointsOnThisMemo())
                 return;
 
             EnsureFeaturePoints();
@@ -187,11 +187,11 @@ namespace Binjyo
             if (featureOverlay == null)
                 return;
 
-            double safeScale = Math.Max(scale, 0.0001);
+            double safeScale = Math.Max(Item.Scale, 0.0001);
             featureOverlay.Width = Width / safeScale;
             featureOverlay.Height = Height / safeScale;
             featureOverlay.RenderTransformOrigin = new System.Windows.Point(0, 0);
-            featureOverlay.RenderTransform = new ScaleTransform(scale, scale);
+            featureOverlay.RenderTransform = new ScaleTransform(Item.Scale, Item.Scale);
         }
 
         private HashSet<int> GetMatchedFeaturePointIndices(Memo focusedMemo)
@@ -233,7 +233,6 @@ namespace Binjyo
         private bool CanParticipateInFeatureMatching()
         {
             return showFeaturePoints &&
-                   bitmap != null &&
                    geometryTransformHistory.Count == 0 &&
                    Scene.DisplayMode != EDisplayMode.Minimized;
         }
@@ -504,7 +503,7 @@ namespace Binjyo
         {
             EnsureFeaturePoints();
             if (cachedFeatureLocalDisplayPositions != null &&
-                Math.Abs(cachedFeatureGeometryScale - scale) < 0.0001 &&
+                Math.Abs(cachedFeatureGeometryScale - Item.Scale) < 0.0001 &&
                 Math.Abs(cachedFeatureGeometryDpi - dpiFactor) < 0.0001)
             {
                 return cachedFeatureLocalDisplayPositions;
@@ -514,7 +513,7 @@ namespace Binjyo
                 .Select(GetFeaturePointLocalDisplayPosition)
                 .ToList();
             cachedFeatureSignatures = null;
-            cachedFeatureGeometryScale = scale;
+            cachedFeatureGeometryScale = Item.Scale;
             cachedFeatureGeometryDpi = dpiFactor;
             return cachedFeatureLocalDisplayPositions;
         }
@@ -642,16 +641,16 @@ namespace Binjyo
         {
             System.Windows.Point displayedPoint = MapOriginalPointToDisplayed(point.X, point.Y);
             return new System.Windows.Point(
-                Left + displayedPoint.X / dpiFactor * scale,
-                Top + displayedPoint.Y / dpiFactor * scale);
+                Left + displayedPoint.X / dpiFactor * Item.Scale,
+                Top + displayedPoint.Y / dpiFactor * Item.Scale);
         }
 
         private System.Windows.Point GetFeaturePointLocalDisplayPosition(FastCornerPoint point)
         {
             System.Windows.Point displayedPoint = MapOriginalPointToDisplayed(point.X, point.Y);
             return new System.Windows.Point(
-                displayedPoint.X / dpiFactor * scale,
-                displayedPoint.Y / dpiFactor * scale);
+                displayedPoint.X / dpiFactor * Item.Scale,
+                displayedPoint.Y / dpiFactor * Item.Scale);
         }
 
         private static bool TryGetFeatureAlignmentSnapOffset(
@@ -679,8 +678,8 @@ namespace Binjyo
                     if (cacheEntry == null || !cacheEntry.IsValid)
                         continue;
 
-                    double targetLeft = stationaryMemo.anchorLeft + cacheEntry.TargetLeftOffset;
-                    double targetTop = stationaryMemo.anchorTop + cacheEntry.TargetTopOffset;
+                    double targetLeft = stationaryMemo.Item.Left + cacheEntry.TargetLeftOffset;
+                    double targetTop = stationaryMemo.Item.Top + cacheEntry.TargetTopOffset;
                     double candidateOffsetX = targetLeft - proposedPosition.X;
                     double candidateOffsetY = targetTop - proposedPosition.Y;
                     if (Math.Abs(candidateOffsetX) > FeatureAlignmentSnapDistance || Math.Abs(candidateOffsetY) > FeatureAlignmentSnapDistance)
