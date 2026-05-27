@@ -21,9 +21,7 @@ float4 ApplyBinarize(float4 color, float threshold)
 {
     threshold = threshold / 255.0;
     float4 res;
-    res.r = color.r > threshold ? 1.0 : 0.0;
-    res.g = color.g > threshold ? 1.0 : 0.0;
-    res.b = color.b > threshold ? 1.0 : 0.0;
+    res.rgb = step(threshold, color.rgb);
     res.a = color.a;
     return res;
 }
@@ -44,11 +42,10 @@ float4 ApplyHuemap(float4 color)
 {
     float maxVal = max(color.r, max(color.g, color.b));
     float minVal = min(color.r, min(color.g, color.b));
-    float quant = 10.0 / 255.0;
 
-    if ((maxVal - minVal) < quant)
+    if ((maxVal - minVal) < 0.02)
     {
-        return float4(128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, color.a);
+        return float4(0.5, 0.5, 0.5, color.a);
     }
     else
     {
@@ -71,34 +68,9 @@ float4 ApplyHuemap(float4 color)
             h += 360.0;
         }
 
-        h = round(h / 10.0) * 10.0;
+        h = round(h / 10.0) / 36.0; // * 10.0 / 360.0;
 
-        float3 rgb;
-        if (h >= 0.0 && h < 60.0)
-        {
-            rgb = float3(1.0, h / 60.0, 0.0);
-        }
-        else if (h >= 60.0 && h < 120.0)
-        {
-            rgb = float3((120.0 - h) / 60.0, 1.0, 0.0);
-        }
-        else if (h >= 120.0 && h < 180.0)
-        {
-            rgb = float3(0.0, 1.0, (h - 120.0) / 60.0);
-        }
-        else if (h >= 180.0 && h < 240.0)
-        {
-            rgb = float3(0.0, (240.0 - h) / 60.0, 1.0);
-        }
-        else if (h >= 240.0 && h < 300.0)
-        {
-            rgb = float3((h - 240.0) / 60.0, 0.0, 1.0);
-        }
-        else
-        {
-            rgb = float3(1.0, 0.0, (360.0 - h) / 60.0);
-        }
-
+        float3 rgb = saturate(float3(abs(h * 6.0 - 3.0) - 1.0, 2.0 - abs(h * 6.0 - 2.0), 2.0 - abs(h * 6.0 - 4.0)));
         return float4(rgb, color.a);
     }
 }

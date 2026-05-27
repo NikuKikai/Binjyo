@@ -28,6 +28,11 @@ namespace Binjyo
         private bool isCombinePreviewHighlighted = false;
         private double lastContextMenuScreenX = 0;
         private double lastContextMenuScreenY = 0;
+        private readonly int[] binarizePercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
+        private readonly int[] quantizeLevelOptions = new[] { 3, 4, 5, 6, 8, 12, 16 };
+        private readonly int[] transparencyPercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
+
+
         private void InitializeContextMenu()
         {
             memoContextMenu = new ContextMenu

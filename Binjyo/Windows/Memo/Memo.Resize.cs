@@ -36,6 +36,8 @@ namespace Binjyo
         private double resizeStartTop = 0;
         private double resizeStartRight = 0;
         private double resizeStartBottom = 0;
+        private const double ResizeHandleSize = 14;
+        private const double ResizeHandleInset = 2;
 
 
         private void SetResizeMode(bool enabled)
@@ -192,7 +194,7 @@ namespace Binjyo
             double rawRight = rawLeft + rawWidth;
             double rawBottom = rawTop + rawHeight;
             double bestScale = rawScale;
-            double bestDistance = SnapDistance + 1;
+            double bestDistance = Scene.SnapDistance + 1;
 
             foreach (var screen in System.Windows.Forms.Screen.AllScreens)
             {
@@ -268,7 +270,7 @@ namespace Binjyo
                 : (IsResizeTop ? candidateTop : candidateTop + candidateHeight);
 
             double distance = Math.Abs(rawMovingEdge - targetEdge);
-            if (distance <= SnapDistance && distance < bestDistance && Math.Abs(candidateMovingEdge - targetEdge) < 0.001)
+            if (distance <= Scene.SnapDistance && distance < bestDistance && Math.Abs(candidateMovingEdge - targetEdge) < 0.001)
             {
                 bestScale = candidateScale;
                 bestDistance = distance;

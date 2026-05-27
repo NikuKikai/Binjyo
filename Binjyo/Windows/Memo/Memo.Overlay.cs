@@ -154,11 +154,6 @@ namespace Binjyo
             popup.IsOpen = false;
         }
 
-        private bool ShouldShowHSVWheel()
-        {
-            return isHSVWheel && !isEditMode && !isdrag && !isResizing && Scene.DisplayMode != EDisplayMode.Minimized;
-        }
-
         private void RefreshHSVWheelVisibility()
         {
             if (isHSVWheel && !isEditMode && !isdrag && !isResizing && Scene.DisplayMode == EDisplayMode.Expanded)
@@ -182,9 +177,9 @@ namespace Binjyo
 
             // Render(Bmp2UI) Order: scale -> flip (-> rotate)
             // Reverse flip
-            if (Item.IsFlippedHorizontal)
+            if (Item.IsFlipX)
                 x = w - 1 - x;
-            if (Item.IsFlippedVertical)
+            if (Item.IsFlipY)
                 y = h - 1 - y;
             // Reverse scale
             x /= Item.Scale;

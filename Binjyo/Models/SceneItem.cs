@@ -38,8 +38,8 @@ namespace Binjyo
         public double Left { get; internal set; }
         public double Top { get; internal set; } // Logical pixels (WPF units)
         public double Scale { get; internal set; } = 1;
-        public bool IsFlippedHorizontal { get; private set; } = false;
-        public bool IsFlippedVertical { get; private set; } = false;
+        public bool IsFlipX { get; private set; } = false;
+        public bool IsFlipY { get; private set; } = false;
         public double Rotation { get; private set; } = 0; // degrees
         public bool IsEffectGray { get; private set; }
         public bool IsEffectBinarize { get; private set; }
@@ -122,10 +122,10 @@ namespace Binjyo
         }
         public void SetFlip(bool isFlippedHorizontal, bool isFlippedVertical)
         {
-            if (IsFlippedHorizontal == isFlippedHorizontal && IsFlippedVertical == isFlippedVertical)
+            if (IsFlipX == isFlippedHorizontal && IsFlipY == isFlippedVertical)
                 return;
-            IsFlippedHorizontal = isFlippedHorizontal;
-            IsFlippedVertical = isFlippedVertical;
+            IsFlipX = isFlippedHorizontal;
+            IsFlipY = isFlippedVertical;
             views.ForEach(view => view.NotifiedTransform());
         }
         public void SetRotation(double rotation)
@@ -140,41 +140,6 @@ namespace Binjyo
 
 
         #region ======== Imaging ========
-
-        private void ApplyEffects(Bitmap bitmapToUpdate)
-        {
-            if (IsEffectGray)
-                Effects.Gray(bitmapToUpdate);
-
-            if (IsEffectBinarize && PEffectBinarize > 0)
-                Effects.Binarize(bitmapToUpdate, PEffectBinarize);
-            else if (IsEffectQuantize && PEffectQuantize > 2)
-                Effects.Quantize(bitmapToUpdate, PEffectQuantize);
-
-            if (IsEffectHuemap)
-                Effects.Huemap(bitmapToUpdate);
-
-            if (IsEffectTransparent && PEffectTransparent > 0)
-                Effects.Transparent(bitmapToUpdate, PEffectTransparent);
-        }
-
-        public BitmapSource RenderBitmapSource()
-        {
-            return null;
-            // Bitmap bitmap = Bitmap.Clone(
-            //     new Rectangle(0, 0, Bitmap.Width, Bitmap.Height),
-            //     System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-            // ApplyEffects(bitmap);
-
-            // // todo: should not map, instead drawing data should be stored in original coordinate space
-            // // DrawingDocumentData documentToRender = MapDrawingDocumentToOriginal(item);
-            // // ApplyDrawingToBitmap(bitmap, documentToRender);
-
-            // BitmapSource bitmapSource = bitmap.ToBitmapSource(System.Windows.Media.PixelFormats.Bgra32);
-            // bitmapSource.Freeze();
-            // return bitmapSource;
-        }
 
         public void SetEffectGray(bool enabled)
         {

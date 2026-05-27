@@ -94,6 +94,7 @@
     <Compile Include="Models\Scene.Focus.cs" />
     <Compile Include="Models\Scene.Geometry.cs" />
     <Compile Include="Models\Scene.Move.cs" />
+    <Compile Include="Models\Scene.Render.cs" />
     <Compile Include="Services\Effects.cs" />
     <Compile Include="Utils\BitmapExt.cs" />
     <Compile Include="Utils\CaptureScreen.cs" />

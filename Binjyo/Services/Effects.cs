@@ -17,7 +17,7 @@ namespace Binjyo
 {
     public static class Effects
     {
-        public static void Gray(Bitmap src)
+        public static void  Gray(Bitmap src)
         {
             // Bitmap newBitmap = new Bitmap(src.Width, src.Height);
             using (Graphics g = Graphics.FromImage(src))

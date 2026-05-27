@@ -52,19 +52,11 @@ namespace Binjyo
         private bool flashOnNextActivation = false;
         private bool isSuspendingDisplayPosition = false;
         private EventHandler centerInfoFadeCompletedHandler = null;
-        private const double SnapDistance = 12;
-        private const double MinVisiblePixels = 2;
-        private const double ResizeHandleSize = 14;
-        private const double ResizeHandleInset = 2;
         private const double MouseEvadeRange = 200;
         private const double MouseEvadeBaseStrength = 300;
         private const double MouseEvadeSpringStrength = 0.4;
         private const double MouseEvadeBlend = 0.35;
-        private const double MouseEvadeSettledDistance = 0.5;
-        private readonly int[] binarizePercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
-        private readonly int[] quantizeLevelOptions = new[] { 3, 4, 5, 6, 8, 12, 16 };
-        private readonly int[] transparencyPercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
-        private ResizeHandle activeResizeHandle = ResizeHandle.None;
+        private const double MouseEvadeSettledDistance = 0.5; private ResizeHandle activeResizeHandle = ResizeHandle.None;
         private double anchorLeft { get => Item.Left; set => Item.Left = value; }
         private double anchorTop { get => Item.Top; set => Item.Top = value; }
 
@@ -503,12 +495,11 @@ namespace Binjyo
             return distance;
         }
 
-        public void Save(bool includeDrawing = true)
+        public void Save(bool edited = true)
         {
-            if (isSaving)
-                return;
-
+            if (isSaving) return;
             isSaving = true;
+
             try
             {
                 Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
@@ -516,12 +507,16 @@ namespace Binjyo
                 string formattedTime = time.ToString("yyyy-MM-dd-hh-mm-ss");
                 dlg.FileName = formattedTime;
                 dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
+
                 if (dlg.ShowDialog() == true)
                 {
-                    using (Bitmap outputBitmap = CreateOutputBitmap(includeDrawing))
+                    var wbmp = edited ? Scene.RenderOffscreen(Item) : Item.Bitmap;
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(wbmp));
+
                     using (var stream = dlg.OpenFile())
                     {
-                        outputBitmap.Save(stream, ImageFormat.Png);
+                        encoder.Save(stream);
                     }
                 }
             }
