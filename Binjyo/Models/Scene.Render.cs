@@ -1,22 +1,15 @@
-using SharpDX;
 using SharpDX.Direct3D9;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Resources;
+
 
 namespace Binjyo
 {
     public static partial class Scene
     {
-
         /// <summary>
         /// Render the edited scene item into an offscreen bitmap.
         /// Effects are evaluated with D3D9/ps_3_0 so WPF offscreen shader limits are avoided.
@@ -44,10 +37,10 @@ namespace Binjyo
                 int height = Math.Max(1, source.PixelHeight);
                 using (var direct3D = new Direct3D())
                 using (var device = DX9.CreateDevice(direct3D, width, height))
-                using (var sourceTexture = DX9.CreateSourceTexture(device, source))
-                using (var renderTexture = new Texture(device, width, height, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default))
-                using (var renderSurface = renderTexture.GetSurfaceLevel(0))
-                using (var readbackSurface = Surface.CreateOffscreenPlain(device, width, height, Format.A8R8G8B8, Pool.SystemMemory))
+                using (var sourceTex = DX9.CreateSourceTexture(device, source))
+                using (var renderTex = new Texture(device, width, height, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default))
+                using (var renderSurf = renderTex.GetSurfaceLevel(0))
+                using (var resultSurf = Surface.CreateOffscreenPlain(device, width, height, Format.A8R8G8B8, Pool.SystemMemory))
                 using (var shaderBytecode = new ShaderBytecode(DX9.LoadPS("/Resources/Effect.ps")))
                 using (var pixelShader = new PixelShader(device, shaderBytecode))
                 {
@@ -58,9 +51,9 @@ namespace Binjyo
                     device.SetPixelShaderConstant(4, new[] { item.PEffectQuantize, 0f, 0f, 0f });
                     device.SetPixelShaderConstant(5, new[] { item.IsEffectHuemap ? 1f : 0f, 0f, 0f, 0f });
 
-                    DX9.RenderTextureWithShader(device, sourceTexture, renderSurface, pixelShader, width, height);
-                    device.GetRenderTargetData(renderSurface, readbackSurface);
-                    return DX9.GetWBitmapFromSurface(readbackSurface, width, height);
+                    DX9.RenderTextureWithShader(device, sourceTex, renderSurf, pixelShader, width, height);
+                    device.GetRenderTargetData(renderSurf, resultSurf);
+                    return DX9.GetWBitmapFromSurface(resultSurf, width, height);
                 }
             }
             catch

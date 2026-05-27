@@ -31,24 +31,12 @@ namespace Binjyo
             return Keyboard.IsKeyDown(Key.Space);
         }
 
-        private List<Memo> GetVisibleMemos()
-        {
-            return GetAllMemos()
-                .Where(item => item.IsVisible)
-                .ToList();
-        }
-
 
         private static double Clamp(double value, double minimum, double maximum)
         {
             if (maximum < minimum)
                 return minimum;
             return Math.Max(minimum, Math.Min(maximum, value));
-        }
-
-        private static int PercentToThreshold(int percent)
-        {
-            return (int)Math.Round(255 * percent / 100.0);
         }
 
         private static int ThresholdToPercent(int threshold)
@@ -121,23 +109,23 @@ namespace Binjyo
                         if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
                             Save(false);
                         else
-                            Save();
+                            Save(true);
                     }
                     e.Handled = true;
                     break;
                 case Key.C:
                     if (!e.IsRepeat)
                     {
-                        bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
-                        CopyMemoToClipboard(includeDrawing);
+                        bool edited = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
+                        CopyToClipboard(edited);
                         e.Handled = true;
                     }
                     break;
                 case Key.X:
                     if (!e.IsRepeat)
                     {
-                        bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
-                        CopyMemoToClipboard(includeDrawing);
+                        bool edited = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
+                        CopyToClipboard(edited);
                         Scene.CloseItem(Item.Id);
                         e.Handled = true;
                     }
@@ -325,9 +313,6 @@ namespace Binjyo
 
         private void Window_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            lastContextMenuScreenX = System.Windows.Forms.Control.MousePosition.X;
-            lastContextMenuScreenY = System.Windows.Forms.Control.MousePosition.Y;
-
             if (isResizeMode)
             {
                 SetResizeMode(false);
@@ -341,7 +326,7 @@ namespace Binjyo
                 return;
             }
 
-            UpdateContextMenuState();
+            UpdateContextMenu();
         }
 
 
@@ -417,7 +402,7 @@ namespace Binjyo
                 return;
 
             bool includeDrawing = !(Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift));
-            CopyMemoToClipboard(includeDrawing);
+            CopyToClipboard(includeDrawing);
             Scene.CloseItem(Item.Id);
         }
 
@@ -488,7 +473,7 @@ namespace Binjyo
             if (flashOnNextActivation)
             {
                 flashOnNextActivation = false;
-                FlashFocusCue();
+                FlashHighlight();
             }
             RefreshHSVWheelVisibility();
         }

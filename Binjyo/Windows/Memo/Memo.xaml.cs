@@ -5,11 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Reflection;
 
 using Rect = System.Drawing.Rectangle;
 
@@ -23,8 +19,6 @@ namespace Binjyo
     public partial class Memo : Window, ISceneItemView
     {
         private static bool isFeaturePointModeEnabled { get => Scene.IsStitchMode; set => Scene.IsStitchMode = value; }
-        private static readonly FieldInfo menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", BindingFlags.NonPublic | BindingFlags.Static);
-
         private double dpiFactor { get => Item.DpiFactor; set => Item.DpiFactor = value; }
 
         public SceneItem Item { get; private set; }
@@ -96,6 +90,10 @@ namespace Binjyo
         {
             return Application.Current.Windows.OfType<Window>().OfType<Memo>().ToList();
         }
+        private List<Memo> GetVisibleMemos()
+        {
+            return GetAllMemos().Where(item => item.IsVisible).ToList();
+        }
 
 
         #region ======= ISceneItemView Implementation ========
@@ -162,7 +160,7 @@ namespace Binjyo
 
             flashOnNextActivation = false;
             Focus();
-            FlashFocusCue();
+            FlashHighlight();
         }
 
         public void NotifiedMove()
@@ -194,58 +192,7 @@ namespace Binjyo
         #endregion
 
 
-        private void SaveToHistory()
-        {
-            // HistoryStore.Save(bitmapsource, Left, Top, Width, Height, drawingDocument.Clone());
-        }
-
-
-        private Bitmap CreateOutputBitmap(bool exportCurrentView)
-        {
-            if (!exportCurrentView)
-                return bitmap.Clone(new Rect(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-            bool applyTransform = Properties.Settings.Default.ExportApplyTransform;
-            bool applyEffects = Properties.Settings.Default.ExportApplyEffects;
-            Bitmap baseBitmap = applyTransform ? bitmapTransformed : bitmap;
-            Bitmap outputBitmap = baseBitmap.Clone(new Rect(0, 0, baseBitmap.Width, baseBitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-            if (applyEffects)
-                ApplyConfiguredEffects(outputBitmap);
-
-            DrawingDocumentData documentToRender = applyTransform
-                ? drawingDocument
-                : MapDrawingDocumentToOriginal();
-            ApplyDrawingToBitmap(outputBitmap, documentToRender);
-
-            int targetWidth = Math.Max(1, (int)Math.Round(Width * dpiFactor));
-            int targetHeight = Math.Max(1, (int)Math.Round(Height * dpiFactor));
-            if (outputBitmap.Width == targetWidth && outputBitmap.Height == targetHeight)
-                return outputBitmap;
-
-            Bitmap resizedBitmap = ResizeBitmapForExport(outputBitmap, targetWidth, targetHeight);
-            outputBitmap.Dispose();
-            return resizedBitmap;
-        }
-
-        private BitmapSource CreateOutputBitmapSource(bool exportCurrentView)
-        {
-            using (Bitmap outputBitmap = CreateOutputBitmap(exportCurrentView))
-            {
-                BitmapSource bitmapSource = outputBitmap.ToBitmapSource(PixelFormats.Bgra32);
-                bitmapSource.Freeze();
-                return bitmapSource;
-            }
-        }
-
-        private void CopyMemoToClipboard(bool exportCurrentView)
-        {
-            Clipboard.SetImage(CreateOutputBitmapSource(exportCurrentView));
-        }
-
-        protected void UpdateBitmap()
-        {
-        }
+        #region ======== Transform Ops ========
 
         private void ApplyConfiguredEffects(Bitmap bitmapToUpdate)
         {
@@ -304,6 +251,11 @@ namespace Binjyo
             UpdateBitmap();
         }
 
+        #endregion
+
+
+        #region ======== Effect Ops ========
+
         private void ToggleGrayscale()
         {
             Item.SetEffectGray(!Item.IsEffectGray);
@@ -315,9 +267,6 @@ namespace Binjyo
             Item.SetEffectHuemap(!Item.IsEffectHuemap);
             ShowCenterInfoFading("Hue Map", Item.IsEffectHuemap ? "On" : "Off");
         }
-
-
-        #region ======== Effect Ops ========
 
         private void SetEffectBinarize(bool enabled, int? percent = null)
         {
@@ -495,29 +444,102 @@ namespace Binjyo
             return distance;
         }
 
-        public void Save(bool edited = true)
+        // physical coordinates
+        private void CombineMemosAtPos(double x, double y)
+        {
+            var ids = Scene.GetIdsAtPos(x, y);
+            if (ids.Count < 2) return;
+
+            var sceneItems = ids.Select(id => Scene.Items[id]).Where(item => item != null).ToList();
+
+            CombinePreview(); // clear preview highlights
+
+            var renderedItems = sceneItems
+                .Select(item => new
+                {
+                    // Memo = memo,
+                    Bitmap = Scene.RenderOffscreen(item),
+                    Left = (int)Math.Round(item.Left * item.DpiFactor),
+                    Top = (int)Math.Round(item.Top * item.DpiFactor),
+                    Right = (int)Math.Round((item.Left + item.GetWidth()) * item.DpiFactor),
+                    Bottom = (int)Math.Round((item.Top + item.GetHeight()) * item.DpiFactor)
+                })
+                .ToList();
+
+            // Calculate union bounds
+            int unionLeft = renderedItems.Min(item => item.Left);
+            int unionTop = renderedItems.Min(item => item.Top);
+            int unionRight = renderedItems.Max(item => item.Right);
+            int unionBottom = renderedItems.Max(item => item.Bottom);
+            int unionWidth = Math.Max(1, unionRight - unionLeft);
+            int unionHeight = Math.Max(1, unionBottom - unionTop);
+
+            // Render combined bitmap
+            var visual = new DrawingVisual();
+            using (var dc = visual.RenderOpen())
+            {
+                foreach (var item in renderedItems)
+                {
+                    dc.DrawImage(item.Bitmap, new System.Windows.Rect(
+                        item.Left - unionLeft,
+                        item.Top - unionTop,
+                        item.Right - item.Left,
+                        item.Bottom - item.Top
+                    ));
+                }
+            }
+            var rtb = new RenderTargetBitmap(unionWidth, unionHeight, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(visual);
+            var wb = new WriteableBitmap(rtb);
+
+            // Create new SceneItem and Memo
+            var sceneItem = Scene.CreateItem(wb, unionLeft, unionTop);
+            Memo combinedMemo = new Memo(sceneItem);
+            CanvasWindow.CreateItem(sceneItem);
+            Scene.Focus(sceneItem.Id);
+
+            // Close original memos
+            foreach (var id in ids)
+                Scene.CloseItem(id);
+
+        }
+
+        public void Save(bool edited = true, bool dialog = true)
         {
             if (isSaving) return;
             isSaving = true;
 
             try
             {
-                Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
-                var time = DateTime.Now;
-                string formattedTime = time.ToString("yyyy-MM-dd-hh-mm-ss");
-                dlg.FileName = formattedTime;
-                dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
-
-                if (dlg.ShowDialog() == true)
+                if (dialog)
                 {
+                    Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+                    string name = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss");
+                    dlg.FileName = name;
+                    dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
+
+                    if (dlg.ShowDialog() == true)
+                    {
+                        var wbmp = edited ? Scene.RenderOffscreen(Item) : Item.Bitmap;
+                        var encoder = new PngBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(wbmp));
+
+                        using (var stream = dlg.OpenFile())
+                            encoder.Save(stream);
+                    }
+                }
+                else
+                {
+                    var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    string name = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss");
+                    string filePath = System.IO.Path.Combine(desktopPath, $"{name}.png");
+
                     var wbmp = edited ? Scene.RenderOffscreen(Item) : Item.Bitmap;
                     var encoder = new PngBitmapEncoder();
                     encoder.Frames.Add(BitmapFrame.Create(wbmp));
 
-                    using (var stream = dlg.OpenFile())
-                    {
+                    using (var stream = System.IO.File.Create(filePath))
                         encoder.Save(stream);
-                    }
                 }
             }
             finally
@@ -525,6 +547,23 @@ namespace Binjyo
                 isSaving = false;
             }
         }
+
+        private void CopyToClipboard(bool edited)
+        {
+            var wbmp = edited ? Scene.RenderOffscreen(Item) : Item.Bitmap;
+            wbmp.Freeze();
+            Clipboard.SetImage(wbmp);
+        }
+
+        private void SaveToHistory()
+        {
+            // HistoryStore.Save(bitmapsource, Left, Top, Width, Height, drawingDocument.Clone());
+        }
+
+        protected void UpdateBitmap()
+        {
+        }
+
 
     }
 }

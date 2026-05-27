@@ -11,16 +11,18 @@ namespace Binjyo
     public partial class Memo
     {
 
-        private void FlashFocusCue()
+        private void FlashHighlight()
         {
-            if (focusFlashOverlay == null)
-                return;
-
             var animation = new DoubleAnimationUsingKeyFrames();
             animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(0.5, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70))));
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(180))));
             focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, animation);
+        }
+        private void SetHighlight(bool on)
+        {
+            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, null);
+            focusFlashOverlay.Opacity = on ? 0.35 : 0;
         }
 
 

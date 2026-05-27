@@ -60,15 +60,21 @@ namespace Binjyo
         {
             double mouseX = System.Windows.Forms.Control.MousePosition.X;
             double mouseY = System.Windows.Forms.Control.MousePosition.Y;
-
+            return GetIdsAtPos(mouseX, mouseY);
+        }
+        /// <summary>
+        /// pos is of physical pixels
+        /// </summary>
+        public static List<Guid> GetIdsAtPos(double x, double y)
+        {
             return Items.Keys.ToList()
                 .Where(id =>
                 {
                     if (!Items.ContainsKey(id))
                         return false;
                     var item = Items[id];
-                    double localX = mouseX / item.DpiFactor - item.Left;
-                    double localY = mouseY / item.DpiFactor - item.Top;
+                    double localX = x / item.DpiFactor - item.Left;
+                    double localY = y / item.DpiFactor - item.Top;
                     return localX >= 0 && localX < item.GetWidth() && localY >= 0 && localY < item.GetHeight();
                 })
                 .ToList();

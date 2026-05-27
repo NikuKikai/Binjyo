@@ -11,6 +11,8 @@ namespace Binjyo
 {
     public partial class Memo
     {
+        private static readonly System.Reflection.FieldInfo menuDropAlignmentField = typeof(SystemParameters).GetField("_menuDropAlignment", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
         private ContextMenu memoContextMenu = null;
         private MenuItem resizeModeMenuItem = null;
         private MenuItem editModeMenuItem = null;
@@ -25,9 +27,9 @@ namespace Binjyo
         private MenuItem transparencyOffMenuItem = null;
         private Dictionary<int, MenuItem> transparencyMenuItems = null;
         private bool? originalMenuDropAlignment = null;
-        private bool isCombinePreviewHighlighted = false;
-        private double lastContextMenuScreenX = 0;
-        private double lastContextMenuScreenY = 0;
+        private bool isCombinePreviewOn = false;
+        private double contextMenuX = 0;
+        private double contextMenuY = 0;
         private readonly int[] binarizePercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
         private readonly int[] quantizeLevelOptions = new[] { 3, 4, 5, 6, 8, 12, 16 };
         private readonly int[] transparencyPercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
@@ -42,16 +44,16 @@ namespace Binjyo
             memoContextMenu.Opened += MemoContextMenu_Opened;
             memoContextMenu.Closed += MemoContextMenu_Closed;
 
-            memoContextMenu.Items.Add(CreateMenuItem("Copy", "C / Ctrl+C", (s, e) => CopyMemoToClipboard(true)));
-            memoContextMenu.Items.Add(CreateMenuItem("Copy Original", "Shift+C", (s, e) => CopyMemoToClipboard(false)));
+            memoContextMenu.Items.Add(CreateMenuItem("Copy", "C / Ctrl+C", (s, e) => CopyToClipboard(true)));
+            memoContextMenu.Items.Add(CreateMenuItem("Copy Original", "Shift+C", (s, e) => CopyToClipboard(false)));
             memoContextMenu.Items.Add(CreateMenuItem("Cut", "X / Ctrl+X", (s, e) =>
             {
-                CopyMemoToClipboard(true);
+                CopyToClipboard(true);
                 Scene.CloseItem(Item.Id);
             }));
             memoContextMenu.Items.Add(CreateMenuItem("Cut Original", "Shift+X", (s, e) =>
             {
-                CopyMemoToClipboard(false);
+                CopyToClipboard(false);
                 Scene.CloseItem(Item.Id);
             }));
             memoContextMenu.Items.Add(CreateMenuItem("Save...", "S", (s, e) => Save(true)));
@@ -65,7 +67,7 @@ namespace Binjyo
             memoContextMenu.Items.Add(editModeMenuItem);
             featurePointsMenuItem = CreateCheckableMenuItem("Feature Points", "P", (s, e) => ToggleFeaturePoints());
             memoContextMenu.Items.Add(featurePointsMenuItem);
-            combineMenuItem = CreateMenuItem("Combine", null, (s, e) => CombineMemosAtLastContextMenuPoint());
+            combineMenuItem = CreateMenuItem("Combine", null, (s, e) => CombineMemosAtPos(contextMenuX, contextMenuY));
             combineMenuItem.MouseEnter += CombineMenuItem_MouseEnter;
             combineMenuItem.MouseLeave += CombineMenuItem_MouseLeave;
             memoContextMenu.Items.Add(combineMenuItem);
@@ -156,10 +158,11 @@ namespace Binjyo
             MenuItem trayMenu = new MenuItem { Header = "Tray Menu", FlowDirection = FlowDirection.LeftToRight };
             App app = (App)Application.Current;
 
+            var viewModeGestureText = $"{FormatModifiers((ModifierKeys)Properties.Settings.Default.ModifierDisplayMode)}X";
             MenuItem viewModeMenu = new MenuItem { Header = "View mode", FlowDirection = FlowDirection.LeftToRight };
-            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => app.SetViewMode(EDisplayMode.Expanded));
-            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => app.SetViewMode(EDisplayMode.AutoHide));
-            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => app.SetViewMode(EDisplayMode.Minimized));
+            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", viewModeGestureText, (s, e) => app.SetViewMode(EDisplayMode.Expanded));
+            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", viewModeGestureText, (s, e) => app.SetViewMode(EDisplayMode.AutoHide));
+            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", viewModeGestureText, (s, e) => app.SetViewMode(EDisplayMode.Minimized));
             viewModeMenu.SubmenuOpened += (s, e) =>
             {
                 EDisplayMode mode = Scene.DisplayMode;
@@ -206,8 +209,11 @@ namespace Binjyo
             return item;
         }
 
-        private void UpdateContextMenuState()
+        private void UpdateContextMenu()
         {
+            contextMenuX = System.Windows.Forms.Control.MousePosition.X;
+            contextMenuY = System.Windows.Forms.Control.MousePosition.Y;
+
             if (memoContextMenu == null)
                 return;
 
@@ -268,19 +274,8 @@ namespace Binjyo
 
         private void MemoContextMenu_Opened(object sender, RoutedEventArgs e)
         {
-            ForceMenuDropAlignmentRight();
-        }
-
-        private void MemoContextMenu_Closed(object sender, RoutedEventArgs e)
-        {
-            ClearCombinePreviewHighlights();
-            RestoreMenuDropAlignment();
-        }
-
-        private void ForceMenuDropAlignmentRight()
-        {
-            if (menuDropAlignmentField == null)
-                return;
+            // Force Menu Drop Alignment Right
+            if (menuDropAlignmentField == null) return;
 
             if (!originalMenuDropAlignment.HasValue)
                 originalMenuDropAlignment = SystemParameters.MenuDropAlignment;
@@ -288,8 +283,11 @@ namespace Binjyo
             menuDropAlignmentField.SetValue(null, false);
         }
 
-        private void RestoreMenuDropAlignment()
+        private void MemoContextMenu_Closed(object sender, RoutedEventArgs e)
         {
+            CombinePreview(); // clear
+
+            // Restore Menu Drop Alignment
             if (menuDropAlignmentField == null || !originalMenuDropAlignment.HasValue)
                 return;
 
@@ -297,111 +295,34 @@ namespace Binjyo
             originalMenuDropAlignment = null;
         }
 
-        private static string FormatDisplayModeGestureText()
-        {
-            ModifierKeys modifiers = (ModifierKeys)Properties.Settings.Default.ModifierDisplayMode;
-            return $"{FormatModifiers(modifiers)}X";
-        }
 
         private void CombineMenuItem_MouseEnter(object sender, MouseEventArgs e)
         {
-            HighlightCombinePreviewTargets(GetMemosAtContextMenuPoint());
+            CombinePreview(GetMemosAtContextMenuPoint());
         }
 
         private void CombineMenuItem_MouseLeave(object sender, MouseEventArgs e)
         {
-            ClearCombinePreviewHighlights();
+            CombinePreview(); // clear
         }
 
         private List<Memo> GetMemosAtContextMenuPoint()
         {
-            return GetMemosAtScreenPoint(lastContextMenuScreenX, lastContextMenuScreenY);
-        }
-
-        private List<Memo> GetMemosAtScreenPoint(double screenX, double screenY)
-        {
             return GetVisibleMemos()
-                .Where(memo => memo.ContainsScreenPoint(screenX, screenY))
+                .Where(memo => memo.ContainsScreenPoint(contextMenuX, contextMenuY))
                 .OrderBy(memo => memo.Item.FocusOrder)
                 .ToList();
         }
 
-        private void HighlightCombinePreviewTargets(IEnumerable<Memo> memos)
+        private void CombinePreview(IEnumerable<Memo> memos = null)
         {
             HashSet<Memo> targetSet = new HashSet<Memo>(memos ?? Enumerable.Empty<Memo>());
             foreach (Memo memo in GetVisibleMemos())
             {
-                memo.SetCombinePreviewHighlight(targetSet.Contains(memo));
-            }
-        }
-
-        private void ClearCombinePreviewHighlights()
-        {
-            HighlightCombinePreviewTargets(Enumerable.Empty<Memo>());
-        }
-
-        private void SetCombinePreviewHighlight(bool enabled)
-        {
-            if (focusFlashOverlay == null || isCombinePreviewHighlighted == enabled)
-                return;
-
-            isCombinePreviewHighlighted = enabled;
-            focusFlashOverlay.BeginAnimation(UIElement.OpacityProperty, null);
-            focusFlashOverlay.Opacity = enabled ? 0.35 : 0;
-        }
-
-        private void CombineMemosAtLastContextMenuPoint()
-        {
-            List<Memo> memosToCombine = GetMemosAtContextMenuPoint();
-            if (memosToCombine.Count < 2)
-                return;
-
-            ClearCombinePreviewHighlights();
-
-            var renderedItems = memosToCombine
-                .Select(memo => new
-                {
-                    Memo = memo,
-                    Bitmap = memo.CreateOutputBitmap(true),
-                    Left = (int)Math.Round(memo.Left * memo.dpiFactor),
-                    Top = (int)Math.Round(memo.Top * memo.dpiFactor)
-                })
-                .ToList();
-
-            try
-            {
-                int unionLeft = renderedItems.Min(item => item.Left);
-                int unionTop = renderedItems.Min(item => item.Top);
-                int unionRight = renderedItems.Max(item => item.Left + item.Bitmap.Width);
-                int unionBottom = renderedItems.Max(item => item.Top + item.Bitmap.Height);
-                int combinedWidth = Math.Max(1, unionRight - unionLeft);
-                int combinedHeight = Math.Max(1, unionBottom - unionTop);
-
-                Bitmap combinedBitmap = new Bitmap(combinedWidth, combinedHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                using (Graphics graphics = Graphics.FromImage(combinedBitmap))
-                {
-                    graphics.Clear(System.Drawing.Color.Transparent);
-                    foreach (var item in renderedItems)
-                    {
-                        graphics.DrawImage(item.Bitmap, item.Left - unionLeft, item.Top - unionTop, item.Bitmap.Width, item.Bitmap.Height);
-                    }
-                }
-
-                // var sceneItem = Scene.CreateItem(combinedBitmap, unionLeft, unionTop);
-                // Memo combinedMemo = new Memo(sceneItem);
-                // Scene.Focus(sceneItem.Id);
-
-                foreach (Memo memo in memosToCombine)
-                {
-                    Scene.CloseItem(memo.Item.Id);
-                }
-            }
-            finally
-            {
-                foreach (var item in renderedItems)
-                {
-                    item.Bitmap.Dispose();
-                }
+                var isTarget = targetSet.Contains(memo);
+                if (memo.isCombinePreviewOn != isTarget)
+                    memo.SetHighlight(isTarget);
+                memo.isCombinePreviewOn = isTarget;
             }
         }
 
