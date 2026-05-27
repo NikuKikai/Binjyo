@@ -24,8 +24,8 @@ namespace Binjyo
             {
                 left = Math.Min(left, item.Left);
                 top = Math.Min(top, item.Top);
-                right = Math.Max(right, item.Left + item.GetWidth());
-                bottom = Math.Max(bottom, item.Top + item.GetHeight());
+                right = Math.Max(right, item.Left + item.GetDisplayWidth());
+                bottom = Math.Max(bottom, item.Top + item.GetDisplayHeight());
             }
 
             if (double.IsInfinity(left) || double.IsInfinity(top))
@@ -46,8 +46,8 @@ namespace Binjyo
                 var item = Items[kvp.Key];
                 left = Math.Min(left, kvp.Value.X);
                 top = Math.Min(top, kvp.Value.Y);
-                right = Math.Max(right, kvp.Value.X + item.GetWidth());
-                bottom = Math.Max(bottom, kvp.Value.Y + item.GetHeight());
+                right = Math.Max(right, kvp.Value.X + item.GetDisplayWidth());
+                bottom = Math.Max(bottom, kvp.Value.Y + item.GetDisplayHeight());
             }
 
             if (double.IsInfinity(left) || double.IsInfinity(top))
@@ -75,7 +75,7 @@ namespace Binjyo
                     var item = Items[id];
                     double localX = x / item.DpiFactor - item.Left;
                     double localY = y / item.DpiFactor - item.Top;
-                    return localX >= 0 && localX < item.GetWidth() && localY >= 0 && localY < item.GetHeight();
+                    return localX >= 0 && localX < item.GetDisplayWidth() && localY >= 0 && localY < item.GetDisplayHeight();
                 })
                 .ToList();
         }
@@ -137,13 +137,13 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                if (!Geo.DoSegmentsOverlap(top, bottom, item.Top, item.Top + item.GetHeight()))
+                if (!Geo.DoSegmentsOverlap(top, bottom, item.Top, item.Top + item.GetDisplayHeight()))
                     continue;
 
                 candidates.Add(item.Left);
-                candidates.Add(item.Left + item.GetWidth());
+                candidates.Add(item.Left + item.GetDisplayWidth());
                 candidates.Add(item.Left - width);
-                candidates.Add(item.Left + item.GetWidth() - width);
+                candidates.Add(item.Left + item.GetDisplayWidth() - width);
             }
 
             return FindNextSnapCandidate(boundingBox.Left, candidates, forward);
@@ -171,13 +171,13 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                if (!Geo.DoSegmentsOverlap(left, right, item.Left, item.Left + item.GetWidth()))
+                if (!Geo.DoSegmentsOverlap(left, right, item.Left, item.Left + item.GetDisplayWidth()))
                     continue;
 
                 candidates.Add(item.Top);
-                candidates.Add(item.Top + item.GetHeight());
+                candidates.Add(item.Top + item.GetDisplayHeight());
                 candidates.Add(item.Top - height);
-                candidates.Add(item.Top + item.GetHeight() - height);
+                candidates.Add(item.Top + item.GetDisplayHeight() - height);
             }
 
             return FindNextSnapCandidate(boundingBox.Top, candidates, forward);
@@ -222,8 +222,8 @@ namespace Binjyo
 
                 double otherLeft = item.Left;
                 double otherTop = item.Top;
-                double otherRight = item.Left + item.GetWidth();
-                double otherBottom = item.Top + item.GetHeight();
+                double otherRight = item.Left + item.GetDisplayWidth();
+                double otherBottom = item.Top + item.GetDisplayHeight();
 
                 if (!Geo.DoSegmentsOverlap(top, top + height, otherTop, otherBottom))
                     continue;
@@ -249,8 +249,8 @@ namespace Binjyo
                 var item = Items[other];
                 double otherLeft = item.Left;
                 double otherTop = item.Top;
-                double otherRight = item.Left + item.GetWidth();
-                double otherBottom = item.Top + item.GetHeight();
+                double otherRight = item.Left + item.GetDisplayWidth();
+                double otherBottom = item.Top + item.GetDisplayHeight();
 
                 if (!Geo.DoSegmentsOverlap(left, left + width, otherLeft, otherRight))
                     continue;

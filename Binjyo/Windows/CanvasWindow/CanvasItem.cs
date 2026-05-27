@@ -92,8 +92,8 @@ namespace Binjyo
 
         public void NotifiedTransform()
         {
-            Border.Width = Item.GetWidth();
-            Border.Height = Item.GetHeight();
+            Border.Width = Item.GetDisplayWidth();
+            Border.Height = Item.GetDisplayHeight();
         }
 
         public void NotifiedEffect()

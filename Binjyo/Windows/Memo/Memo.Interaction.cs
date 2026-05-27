@@ -154,17 +154,12 @@ namespace Binjyo
                     {
                         if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
                         {
-                            FlipDrawingVertically();
-                            this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                            geometryTransformHistory.Add('V');
+                            // FlipDrawingVertically();
                         }
                         else
                         {
-                            FlipDrawingHorizontally();
-                            this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
-                            geometryTransformHistory.Add('H');
+                            // FlipDrawingHorizontally();
                         }
-                        UpdateBitmap();
                     }
                     break;
                 case Key.G:
@@ -188,8 +183,9 @@ namespace Binjyo
                     }
                     break;
                 case Key.R:
+                    if (!e.IsRepeat)
+                        Item.RotateAroundCenter(30);
                     // RotateDrawing90();
-                    // this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     break;
                 case Key.Left:
                 case Key.Right:

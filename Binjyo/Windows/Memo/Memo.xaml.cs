@@ -24,7 +24,7 @@ namespace Binjyo
         public SceneItem Item { get; private set; }
 
         private Bitmap bitmap = null;
-        private Bitmap bitmapTransformed { get => Item.BitmapTransformed; set => Item.BitmapTransformed = value; }
+
 
         // effect
         private double scale { get => Item.Scale; }
@@ -51,10 +51,10 @@ namespace Binjyo
             this.image.Source = item.Bitmap;
             Left = item.Left;
             Top = item.Top;
-            Width = item.GetWidth();
-            Height = item.GetHeight();
+            Width = item.GetDisplayWidth();
+            Height = item.GetDisplayHeight();
 
-            Console.WriteLine($"Memo created for item {Id} at ({Left}, {Top}) with size ({item.GetWidth()}x{item.GetHeight()})");
+            Console.WriteLine($"Memo created for item {Id} at ({Left}, {Top}) with size ({item.GetDisplayWidth()}x{item.GetDisplayHeight()})");
 
             InitializeContextMenu();
             UpdateResizeVisuals();
@@ -219,9 +219,6 @@ namespace Binjyo
 
         public void NotifiedMove()
         {
-            if (isSuspendingDisplayPosition)
-                return;
-
             MoveTo(Item.Left, Item.Top);
             drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
             RefreshAllMemoFeatureOverlays();
@@ -229,14 +226,30 @@ namespace Binjyo
 
         public void NotifiedTransform()
         {
-            Width = Item.GetWidth();
-            Height = Item.GetHeight();
+            // Width = Item.GetDisplayWidth();
+            // Height = Item.GetDisplayHeight();
+            var w = Item.GetBaseWidth();
+            var h = Item.GetBaseHeight();
+            var tr = new TransformGroup();
+            tr.Children.Add(new ScaleTransform(
+                Item.IsFlipX ? -1 : 1,
+                Item.IsFlipY ? -1 : 1,
+                w / 2,
+                h / 2));
+            tr.Children.Add(new ScaleTransform(Item.Scale, Item.Scale));
+            tr.Children.Add(new RotateTransform(Item.Rotation, 0, 0));
+            var rect = tr.TransformBounds(new System.Windows.Rect(0, 0, w, h));
+            tr.Children.Add(new TranslateTransform(-rect.X, -rect.Y));
 
-            drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
-            RefreshAllMemoFeatureOverlays();
-            InvalidateFeatureAlignmentCachesFor(this);
-            UpdateFeatureOverlayTransform();
-            RenderDrawingOverlay();
+            image.LayoutTransform = tr;
+            Width = rect.Width;
+            Height = rect.Height;
+
+            NotifiedMove();
+
+            // InvalidateFeatureAlignmentCachesFor(this);
+            // UpdateFeatureOverlayTransform();
+            // RenderDrawingOverlay();
         }
 
         public void NotifiedEffect()
@@ -256,61 +269,39 @@ namespace Binjyo
 
         #region ======== Transform Ops ========
 
-        private void ApplyConfiguredEffects(Bitmap bitmapToUpdate)
+        private void MoveTo(double left, double top)
         {
-            if (Item.IsEffectGray)
-                Effects.Gray(bitmapToUpdate);
+            if (Math.Abs(Left - left) < 0.001 && Math.Abs(Top - top) < 0.001)
+                return;
 
-            if (Item.IsEffectBinarize && Item.PEffectBinarize > 0)
-                Effects.Binarize(bitmapToUpdate, Item.PEffectBinarize);
-            else if (Item.IsEffectQuantize && Item.PEffectQuantize > 2)
-                Effects.Quantize(bitmapToUpdate, Item.PEffectQuantize);
-
-            if (Item.IsEffectHuemap)
-                Effects.Huemap(bitmapToUpdate);
-
-            if (Item.IsEffectTransparent && Item.PEffectTransparent > 0)
-                Effects.Transparent(bitmapToUpdate, Item.PEffectTransparent);
-        }
-
-        private Bitmap ResizeBitmapForExport(Bitmap sourceBitmap, int width, int height)
-        {
-            var resizedBitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            using (Graphics graphics = Graphics.FromImage(resizedBitmap))
-            {
-                graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
-                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                graphics.InterpolationMode = Effects.GetConfiguredInterpolationMode();
-                graphics.DrawImage(sourceBitmap, new Rect(0, 0, width, height), 0, 0, sourceBitmap.Width, sourceBitmap.Height, GraphicsUnit.Pixel);
-            }
-
-            return resizedBitmap;
+            isSuspendingDisplayPosition = true;
+            Left = left;
+            Top = top;
+            isSuspendingDisplayPosition = false;
         }
 
         private void RotateMemo90()
         {
-            RotateDrawing90();
-            this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
-            geometryTransformHistory.Add('R');
-            UpdateBitmap();
+            // RotateDrawing90();
+            // this.bitmapTransformed.RotateFlip(RotateFlipType.Rotate90FlipNone);
+            // geometryTransformHistory.Add('R');
+            // UpdateBitmap();
         }
 
         private void FlipMemoHorizontally()
         {
-            FlipDrawingHorizontally();
-            this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
-            geometryTransformHistory.Add('H');
-            UpdateBitmap();
+            // FlipDrawingHorizontally();
+            // this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipX);
+            // geometryTransformHistory.Add('H');
+            // UpdateBitmap();
         }
 
         private void FlipMemoVertically()
         {
-            FlipDrawingVertically();
-            this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
-            geometryTransformHistory.Add('V');
-            UpdateBitmap();
+            // FlipDrawingVertically();
+            // this.bitmapTransformed.RotateFlip(RotateFlipType.RotateNoneFlipY);
+            // geometryTransformHistory.Add('V');
+            // UpdateBitmap();
         }
 
         #endregion
@@ -390,17 +381,6 @@ namespace Binjyo
             if (IsVisible) Hide();
         }
 
-        private void MoveTo(double left, double top)
-        {
-            if (Math.Abs(Left - left) < 0.001 && Math.Abs(Top - top) < 0.001)
-                return;
-
-            isSuspendingDisplayPosition = true;
-            Left = left;
-            Top = top;
-            isSuspendingDisplayPosition = false;
-        }
-
         private void UpdateEvadeDisplayPosition()
         {
             if (isDragging || isResizing || isDrawMode)
@@ -457,8 +437,8 @@ namespace Binjyo
                     Bitmap = Scene.RenderOffscreen(item),
                     Left = (int)Math.Round(item.Left * item.DpiFactor),
                     Top = (int)Math.Round(item.Top * item.DpiFactor),
-                    Right = (int)Math.Round((item.Left + item.GetWidth()) * item.DpiFactor),
-                    Bottom = (int)Math.Round((item.Top + item.GetHeight()) * item.DpiFactor)
+                    Right = (int)Math.Round((item.Left + item.GetDisplayWidth()) * item.DpiFactor),
+                    Bottom = (int)Math.Round((item.Top + item.GetDisplayHeight()) * item.DpiFactor)
                 })
                 .ToList();
 

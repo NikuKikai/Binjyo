@@ -169,16 +169,16 @@ namespace Binjyo
         {
             point = null;
 
-            if (bitmapTransformed == null || localPosition.X < 0 || localPosition.X >= Width || localPosition.Y < 0 || localPosition.Y >= Height)
-                return false;
+            // if (localPosition.X < 0 || localPosition.X >= Width || localPosition.Y < 0 || localPosition.Y >= Height)
+            //     return false;
 
-            double imageX = Math.Max(0, Math.Min(bitmapTransformed.Width - 1, localPosition.X / scale));
-            double imageY = Math.Max(0, Math.Min(bitmapTransformed.Height - 1, localPosition.Y / scale));
-            point = new DrawingPointData
-            {
-                X = imageX,
-                Y = imageY
-            };
+            // double imageX = Math.Max(0, Math.Min(bitmapTransformed.Width - 1, localPosition.X / scale));
+            // double imageY = Math.Max(0, Math.Min(bitmapTransformed.Height - 1, localPosition.Y / scale));
+            // point = new DrawingPointData
+            // {
+            //     X = imageX,
+            //     Y = imageY
+            // };
             return true;
         }
 
@@ -383,35 +383,36 @@ namespace Binjyo
 
         private System.Windows.Point MapTransformedPointToOriginal(double transformedX, double transformedY)
         {
-            int currentWidth = bitmapTransformed.Width;
-            int currentHeight = bitmapTransformed.Height;
-            double x = transformedX;
-            double y = transformedY;
+            return new System.Windows.Point(0, 0);
+            // int currentWidth = bitmapTransformed.Width;
+            // int currentHeight = bitmapTransformed.Height;
+            // double x = transformedX;
+            // double y = transformedY;
 
-            for (int i = geometryTransformHistory.Count - 1; i >= 0; i--)
-            {
-                switch (geometryTransformHistory[i])
-                {
-                    case 'H':
-                        x = currentWidth - 1 - x;
-                        break;
-                    case 'V':
-                        y = currentHeight - 1 - y;
-                        break;
-                    case 'R':
-                        int previousWidth = currentHeight;
-                        int previousHeight = currentWidth;
-                        double rotatedX = y;
-                        double rotatedY = currentWidth - 1 - x;
-                        x = rotatedX;
-                        y = rotatedY;
-                        currentWidth = previousWidth;
-                        currentHeight = previousHeight;
-                        break;
-                }
-            }
+            // for (int i = geometryTransformHistory.Count - 1; i >= 0; i--)
+            // {
+            //     switch (geometryTransformHistory[i])
+            //     {
+            //         case 'H':
+            //             x = currentWidth - 1 - x;
+            //             break;
+            //         case 'V':
+            //             y = currentHeight - 1 - y;
+            //             break;
+            //         case 'R':
+            //             int previousWidth = currentHeight;
+            //             int previousHeight = currentWidth;
+            //             double rotatedX = y;
+            //             double rotatedY = currentWidth - 1 - x;
+            //             x = rotatedX;
+            //             y = rotatedY;
+            //             currentWidth = previousWidth;
+            //             currentHeight = previousHeight;
+            //             break;
+            //     }
+            // }
 
-            return new System.Windows.Point(x, y);
+            // return new System.Windows.Point(x, y);
         }
 
         public void RestoreDrawingData(DrawingDocumentData data)
@@ -421,44 +422,6 @@ namespace Binjyo
             RenderDrawingOverlay();
         }
 
-        private void FlipDrawingHorizontally()
-        {
-            ClearDrawingUndoHistory();
-            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
-            {
-                foreach (DrawingPointData point in stroke.Points)
-                {
-                    point.X = bitmapTransformed.Width - 1 - point.X;
-                }
-            }
-        }
-
-        private void FlipDrawingVertically()
-        {
-            ClearDrawingUndoHistory();
-            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
-            {
-                foreach (DrawingPointData point in stroke.Points)
-                {
-                    point.Y = bitmapTransformed.Height - 1 - point.Y;
-                }
-            }
-        }
-
-        private void RotateDrawing90()
-        {
-            ClearDrawingUndoHistory();
-            foreach (DrawingStrokeData stroke in drawingDocument.Strokes)
-            {
-                foreach (DrawingPointData point in stroke.Points)
-                {
-                    double rotatedX = bitmapTransformed.Height - 1 - point.Y;
-                    double rotatedY = point.X;
-                    point.X = rotatedX;
-                    point.Y = rotatedY;
-                }
-            }
-        }
 
     }
 }

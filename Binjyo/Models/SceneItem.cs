@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -32,7 +31,6 @@ namespace Binjyo
         public WriteableBitmap Bitmap { get; internal set; }
 
         // TODO remove
-        public Bitmap BitmapTransformed { get; internal set; }
         public double DpiFactor { get; internal set; } = 1;
 
         public double Left { get; internal set; }
@@ -66,14 +64,73 @@ namespace Binjyo
         }
 
         #region ======== Informations =======
-        public double GetBaseWidth() => Bitmap.Width / DpiFactor;
+        public double GetBaseWidth() => Bitmap.Width / DpiFactor;  // logical
         public double GetBaseHeight() => Bitmap.Height / DpiFactor;
-        public double GetWidth() => GetBaseWidth() * Scale;
-        public double GetHeight() => GetBaseHeight() * Scale;
-        public Rect GetBounds() => new Rect(Left, Top, GetWidth(), GetHeight());
+        public Size GetBaseSize() => new Size(GetBaseWidth(), GetBaseHeight());
+
+        public double GetDisplayWidth() => GetDisplaySize().Width;  // logical
+        public double GetDisplayHeight() => GetDisplaySize().Height;
+        public Size GetDisplaySize()
+        {
+            var w = GetBaseWidth();
+            var h = GetBaseHeight();
+            // rotation
+            var tr = new TransformGroup();
+            tr.Children.Add(new ScaleTransform(Scale, Scale));
+            tr.Children.Add(new RotateTransform(Rotation));
+            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
+            return new Size(rect.Width, rect.Height);
+        }
+
+        public Rect GetBounds() // logical
+        {
+            var size = GetDisplaySize();
+            return new Rect(Left, Top, size.Width, size.Height);
+        }
         public double GetMinScale() => Math.Max(25.0 / GetBaseWidth(), 25.0 / GetBaseHeight());
         public double GetMaxScale() => 10;
-        // public bool ContainsPt()
+        /// <summary>
+        /// Input x,y is physical
+        /// </summary>
+        public bool ContainsPt(double x, double y)
+        {
+            return GetBounds().Contains(x / DpiFactor, y / DpiFactor);
+        }
+        /// <summary>
+        /// logical
+        /// </summary>
+        public Point GetCenter()
+        {
+            var size = GetDisplaySize();
+            return new Point(Left + size.Width / 2, Top + size.Height / 2);
+        }
+        /// <summary>
+        /// Input x,y is logical and local to Window. Output is physical and local to bitmap.
+        /// </summary>
+        public Point PtDisplay2Bitmap(double x, double y)
+        {
+            var w = GetBaseWidth();
+            var h = GetBaseHeight();
+
+            var tr = new TransformGroup();
+            tr.Children.Add(new ScaleTransform(Scale, Scale));
+            tr.Children.Add(new RotateTransform(Rotation));
+            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
+
+            x += rect.X;
+            y += rect.Y;
+
+            var trInv = new TransformGroup();
+            trInv.Children.Add(new RotateTransform(-Rotation));
+            trInv.Children.Add(new ScaleTransform(1.0 / Scale, 1.0 / Scale));
+            var pt = trInv.Transform(new Point(x, y)); // logical on non-transformed UI
+
+            pt.X = IsFlipX ? w - pt.X : pt.X;
+            pt.Y = IsFlipY ? h - pt.Y : pt.Y;
+
+            return new Point(Math.Round(pt.X * DpiFactor), Math.Round(pt.Y * DpiFactor)); // physical on bitmap
+        }
+
         #endregion
 
 
@@ -131,9 +188,34 @@ namespace Binjyo
         }
         public void SetRotation(double rotation)
         {
-            rotation = rotation % 360;
+            rotation %= 360;
             if (Rotation == rotation) return;
             Rotation = rotation;
+            views.ForEach(view => view.NotifiedTransform());
+        }
+        public void RotateAroundCenter(double deg)
+        {
+            if (deg % 360 == 0) return;
+            var rot = (Rotation + deg) % 360;
+            var w = GetBaseWidth();
+            var h = GetBaseHeight();
+
+            var tr = new TransformGroup();
+            tr.Children.Add(new ScaleTransform(Scale, Scale));
+            tr.Children.Add(new RotateTransform(Rotation));
+            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
+
+            var centerX = Left + rect.Width / 2;
+            var centerY = Top + rect.Height / 2;
+
+            var trTgt = new TransformGroup();
+            trTgt.Children.Add(new ScaleTransform(Scale, Scale));
+            trTgt.Children.Add(new RotateTransform(rot));
+            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, w, h));
+
+            Left = centerX - rectTgt.Width / 2;
+            Top = centerY - rectTgt.Height / 2;
+            Rotation = rot;
             views.ForEach(view => view.NotifiedTransform());
         }
         #endregion

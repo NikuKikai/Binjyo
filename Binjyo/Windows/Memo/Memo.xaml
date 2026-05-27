@@ -27,7 +27,8 @@
         SizeChanged="Window_SizeChanged"
         >
     <Grid Margin="0,0,0,0">
-        <Image Name="image" Margin="0,0,0,0" Stretch="Fill">
+        <Image Name="image" Stretch="None" RenderTransformOrigin="0, 0" HorizontalAlignment="Left" 
+       VerticalAlignment="Top">
             <Image.Effect>
                 <local:ImageEffect x:Name="effect"/>
             </Image.Effect>

@@ -234,14 +234,13 @@ namespace Binjyo
         {
             return showFeaturePoints &&
                    bitmap != null &&
-                   bitmapTransformed != null &&
                    geometryTransformHistory.Count == 0 &&
                    Scene.DisplayMode != EDisplayMode.Minimized;
         }
 
         private bool ShouldShowFeaturePointsOnThisMemo()
         {
-            if (!showFeaturePoints || !isFeaturePointModeEnabled || bitmapTransformed == null)
+            if (!showFeaturePoints || !isFeaturePointModeEnabled)
                 return false;
 
             Memo focusedMemo = GetFocusedMemo();
