@@ -1,4 +1,5 @@
 @echo off
+setlocal
 set FXC_PATH=""
 
 rem Search for fxc.exe in typical Windows SDK paths
@@ -24,12 +25,29 @@ if %FXC_PATH% == "" (
 )
 
 echo Using compiler: %FXC_PATH%
-echo Compiling Binjyo\Shaders\Effect.hlsl...
-%FXC_PATH% Binjyo\Shaders\Effect.hlsl /T ps_3_0 /Fo Binjyo\Resources\Effect.ps
-
-if %errorlevel% equ 0 (
-    echo Shader compiled successfully.
-) else (
-    echo Error: Shader compilation failed.
+echo Compiling Binjyo\Shaders\Effect.D11.vs.hlsl to vs_4_0...
+%FXC_PATH% Binjyo\Shaders\Effect.D11.vs.hlsl /T vs_4_0 /Fo Binjyo\Resources\Effect.D11.vs
+if %errorlevel% neq 0 (
+    echo Error: vs_4_0 shader compilation failed.
     pause
+    exit /b 1
 )
+
+echo Compiling Binjyo\Shaders\Effect.hlsl to ps_3_0...
+%FXC_PATH% Binjyo\Shaders\Effect.hlsl /T ps_3_0 /Fo Binjyo\Resources\Effect.ps
+if %errorlevel% neq 0 (
+    echo Error: ps_3_0 shader compilation failed.
+    pause
+    exit /b 1
+)
+
+echo Compiling Binjyo\Shaders\Effect.D11.hlsl to ps_4_0...
+%FXC_PATH% Binjyo\Shaders\Effect.D11.hlsl /T ps_4_0 /Fo Binjyo\Resources\Effect.D11.ps
+if %errorlevel% neq 0 (
+    echo Error: ps_4_0 shader compilation failed.
+    pause
+    exit /b 1
+)
+
+echo Shaders compiled successfully.
+endlocal

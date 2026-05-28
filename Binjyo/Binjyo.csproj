@@ -111,6 +111,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Graphics\DX11.cs" />
     <Compile Include="Graphics\DX9.cs" />
     <Compile Include="Models\Scene.cs" />
     <Compile Include="Models\Scene.Focus.cs" />
@@ -160,6 +161,21 @@
     <Compile Include="Windows\Memo\Memo.Features.cs" />
     <Compile Include="Windows\Memo\Memo.Interaction.cs" />
     <Compile Include="Windows\Memo\Memo.Imaging.cs" />
+    <Compile Include="Windows\MemoD11\MemoD11.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Helpers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Interaction.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Render.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.View.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Page Include="Windows\CanvasWindow\CanvasWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -226,6 +242,8 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <Resource Include="Resources\Effect.D11.vs" />
+    <Resource Include="Resources\Effect.D11.ps" />
     <Resource Include="Resources\Effect.ps" />
     <Resource Include="Resources\HueWheelShader.ps" />
     <Resource Include="Resources\SVRectShader.ps" />

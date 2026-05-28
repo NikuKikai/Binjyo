@@ -23,7 +23,7 @@ namespace Binjyo
 
         #region ======== Create / CLose ========
         public static Dictionary<Guid, SceneItem> Items { get; } = new Dictionary<Guid, SceneItem>();
-        public static SceneItem CreateItem(WriteableBitmap bmp, int left, int top)
+        public static SceneItem CreateItem(WriteableBitmap bmp, double left, double top)
         {
             var item = new SceneItem(bmp, left, top);
             Items.Add(item.Id, item);

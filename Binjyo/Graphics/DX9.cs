@@ -171,7 +171,7 @@ namespace Binjyo
         }
 
 
-        public static byte[] LoadPS(string path)
+        public static ShaderBytecode LoadPS(string path)
         {
             StreamResourceInfo resourceInfo = Application.GetResourceStream(new Uri(path, UriKind.Relative));
 
@@ -182,7 +182,7 @@ namespace Binjyo
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 stream.CopyTo(memoryStream);
-                return memoryStream.ToArray();
+                return new ShaderBytecode(memoryStream.ToArray());
             }
         }
 

@@ -20,8 +20,8 @@ namespace Binjyo
         private bool isshot = false;
         private bool isdrag = false;
 
-        private int w, h, l, t;  // Physical Pixel
-        private int startx, starty;  // Physical Pixel
+        private int w, h, l, t;  // Screen bounds in Physical Pixel
+        private int startx, starty;  // Mouse start position in Physical Pixel
         private int selectedLeft, selectedTop, selectedWidth, selectedHeight;  // Physical Pixel
 
         private Bitmap bitmap;
@@ -192,24 +192,24 @@ namespace Binjyo
             x /= dpiFactor; y /= dpiFactor;
             int xint = (int)(x + 0.499); int yint = (int)(y + 0.499);
 
-            this.selectedWidth = xint > startx ? xint - startx + 2 : startx - xint + 2;
-            this.selectedHeight = yint > starty ? yint - starty + 2 : starty - yint + 2;
-            this.selectedLeft = xint > startx ? startx - 1 : xint - 1;
-            this.selectedTop = yint > starty ? starty - 1 : yint - 1;
+            this.selectedWidth = xint > startx ? xint - startx + 1 : startx - xint + 1;
+            this.selectedHeight = yint > starty ? yint - starty + 1 : starty - yint + 1;
+            this.selectedLeft = xint > startx ? startx : xint;
+            this.selectedTop = yint > starty ? starty : yint;
 
-            double selectionLeft = selectedLeft / dpiFactor;
-            double selectionTop = selectedTop / dpiFactor;
-            double selectionWidth = selectedWidth / dpiFactor;
-            double selectionHeight = selectedHeight / dpiFactor;
+            double mx = (selectedLeft - 1) / dpiFactor;
+            double my = (selectedTop - 1) / dpiFactor;
+            double mw = (selectedWidth + 2) / dpiFactor;
+            double mh = (selectedHeight + 2) / dpiFactor;
 
-            maskTop.Height = Math.Max(0, selectionTop);
+            maskTop.Height = Math.Max(0, my);
 
-            maskBottom.Height = Math.Max(0, Height - (selectionTop + selectionHeight));
+            maskBottom.Height = Math.Max(0, Height - (my + mh));
 
-            maskLeft.Width = Math.Max(0, selectionLeft);
+            maskLeft.Width = Math.Max(0, mx);
             // maskLeft.Height = Math.Max(0, selectionHeight);
 
-            maskRight.Width = Math.Max(0, Width - (selectionLeft + selectionWidth));
+            maskRight.Width = Math.Max(0, Width - (mx + mw));
             // maskRight.Height = Math.Max(0, selectionHeight);
         }
 
@@ -310,16 +310,17 @@ namespace Binjyo
             }
 
             // Get center DPI
-            double left = selectedLeft + 1 + l;
-            double top = selectedTop + 1 + t;
+            double left = selectedLeft + l;
+            double top = selectedTop + t;
             double dpiFactor = Geo.GetDpiFactorAt(
                 left + croppedImage.Width / 2,
                 top + croppedImage.Height / 2
             );
 
             // Create Memo from cropped bitmap
-            var item = Scene.CreateItem(croppedImage, (int)(left / dpiFactor), (int)(top / dpiFactor));
-            Memo memo = new Memo(item);
+            var item = Scene.CreateItem(croppedImage, left / dpiFactor, top / dpiFactor);
+            // Memo memo = new Memo(item);
+            MemoD11 memo = new MemoD11(item);
             CanvasWindow.CreateItem(item);
             Scene.Focus(item.Id);
         }

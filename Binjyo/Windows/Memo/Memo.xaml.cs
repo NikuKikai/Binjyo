@@ -6,7 +6,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Drawing;
-
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace Binjyo
 {
@@ -211,7 +213,7 @@ namespace Binjyo
 
         public void NotifiedMove()
         {
-            ApplyMove(Item.Left, Item.Top);
+            // ApplyMove(Item.Left, Item.Top);
             drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
             RefreshAllMemoFeatureOverlays();
         }
@@ -231,13 +233,17 @@ namespace Binjyo
             var rect = tr.TransformBounds(new System.Windows.Rect(0, 0, w, h));
             tr.Children.Add(new TranslateTransform(-rect.X, -rect.Y));
 
-            Width = rect.Width;
-            Height = rect.Height;
+            // Width = rect.Width;
+            // Height = rect.Height;
+            // NotifiedMove();
 
+            DisableAnimations();
 
-            NotifiedMove();
+            // ApplyWindowRect(Item.Left, Item.Top, rect.Width, rect.Height);
+            MoveSmoothly((int)Math.Round(Item.Left), (int)Math.Round(Item.Top), (int)Math.Round(rect.Width), (int)Math.Round(rect.Height));
 
             image.LayoutTransform = tr;
+            // image.RenderTransform = tr;
 
             // InvalidateFeatureAlignmentCachesFor(this);
             // UpdateFeatureOverlayTransform();
@@ -533,6 +539,78 @@ namespace Binjyo
         }
 
         #endregion
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(
+            IntPtr hWnd,
+            IntPtr hWndInsertAfter,
+            int X,
+            int Y,
+            int cx,
+            int cy,
+            uint uFlags);
+
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_NOOWNERZORDER = 0x0200;
+        private const uint SWP_NOCOPYBITS = 0x0100;
+
+        private void ApplyWindowRect(double left, double top, double width, double height)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+                return;
+
+            isSuspendingDisplayPosition = true;
+            try
+            {
+                SetWindowPos(
+                    hwnd,
+                    IntPtr.Zero,
+                    (int)Math.Round(left),
+                    (int)Math.Round(top),
+                    Math.Max(1, (int)Math.Round(width)),
+                    Math.Max(1, (int)Math.Round(height)),
+                    SWP_NOZORDER);
+                //SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOCOPYBITS
+            }
+            finally
+            {
+                isSuspendingDisplayPosition = false;
+            }
+        }
+        [DllImport("dwmapi.dll")]
+        static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
+
+        public void DisableAnimations()
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            int True = 1;
+            DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, ref True, sizeof(int));
+        }
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr BeginDeferWindowPos(int nNumWindows);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr DeferWindowPos(IntPtr hWinPosInfo, IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool EndDeferWindowPos(IntPtr hWinPosInfo);
+
+        public void MoveSmoothly(int x, int y, int width, int height)
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            IntPtr hWinPosInfo = BeginDeferWindowPos(1);
+
+            if (hWinPosInfo != IntPtr.Zero)
+            {
+                // SWP_NOZORDER = 0x0004 | SWP_NOACTIVATE = 0x0010
+                hWinPosInfo = DeferWindowPos(hWinPosInfo, hwnd, IntPtr.Zero, x, y, width, height, 0x0014);
+                EndDeferWindowPos(hWinPosInfo);
+            }
+        }
 
     }
 }

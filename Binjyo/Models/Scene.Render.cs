@@ -41,7 +41,7 @@ namespace Binjyo
                 using (var renderTex = new Texture(device, width, height, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default))
                 using (var renderSurf = renderTex.GetSurfaceLevel(0))
                 using (var resultSurf = Surface.CreateOffscreenPlain(device, width, height, Format.A8R8G8B8, Pool.SystemMemory))
-                using (var shaderBytecode = new ShaderBytecode(DX9.LoadPS("/Resources/Effect.ps")))
+                using (var shaderBytecode = DX9.LoadPS("/Resources/Effect.ps"))
                 using (var pixelShader = new PixelShader(device, shaderBytecode))
                 {
                     device.SetPixelShaderConstant(0, new[] { item.IsEffectGray ? 1f : 0f, 0f, 0f, 0f });

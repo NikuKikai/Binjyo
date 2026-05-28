@@ -56,11 +56,17 @@ namespace Binjyo
         public WriteableBitmap RenderedWBitmap { get; private set; }
 
 
-        public SceneItem(WriteableBitmap bmp, int left, int top)
+        public SceneItem(WriteableBitmap bmp, double left, double top)
         {
             Bitmap = bmp;
             Left = left;
             Top = top;
+        }
+        public static SceneItem FromScreenPos(double screenX, double screenY, double dpiFactor)
+        {
+            var x = screenX / dpiFactor;
+            var y = screenY / dpiFactor;
+            return new SceneItem(null, x, y);
         }
 
         #region ======== Informations =======
@@ -216,6 +222,60 @@ namespace Binjyo
             Left = centerX - rectTgt.Width / 2;
             Top = centerY - rectTgt.Height / 2;
             Rotation = rot;
+            views.ForEach(view => view.NotifiedTransform());
+        }
+        public void SetRotationAroundCenter(double rotation)
+        {
+            rotation %= 360;
+            if (Rotation == rotation) return;
+
+            var w = GetBaseWidth();
+            var h = GetBaseHeight();
+
+            var tr = new TransformGroup();
+            tr.Children.Add(new ScaleTransform(Scale, Scale));
+            tr.Children.Add(new RotateTransform(Rotation));
+            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
+
+            var centerX = Left + rect.Width / 2;
+            var centerY = Top + rect.Height / 2;
+
+            var trTgt = new TransformGroup();
+            trTgt.Children.Add(new ScaleTransform(Scale, Scale));
+            trTgt.Children.Add(new RotateTransform(rotation));
+            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, w, h));
+
+            Left = centerX - rectTgt.Width / 2;
+            Top = centerY - rectTgt.Height / 2;
+            Rotation = rotation;
+            views.ForEach(view => view.NotifiedTransform());
+        }
+        public void SetRotationAroundScrCenter(double rotation, double centerX, double centerY)
+        {
+            rotation %= 360;
+            if (Rotation == rotation) return;
+
+            var w = GetBaseWidth();
+            var h = GetBaseHeight();
+
+            // var tr = new TransformGroup();
+            // tr.Children.Add(new ScaleTransform(Scale, Scale));
+            // tr.Children.Add(new RotateTransform(Rotation));
+            // var rect = tr.TransformBounds(new Rect(0, 0, w, h));
+
+            // var centerX = Left + rect.Width / 2;
+            // var centerY = Top + rect.Height / 2;
+            centerX /= DpiFactor;
+            centerY /= DpiFactor;
+
+            var trTgt = new TransformGroup();
+            trTgt.Children.Add(new ScaleTransform(Scale, Scale));
+            trTgt.Children.Add(new RotateTransform(rotation));
+            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, w, h));
+
+            Left = centerX - rectTgt.Width / 2;
+            Top = centerY - rectTgt.Height / 2;
+            Rotation = rotation;
             views.ForEach(view => view.NotifiedTransform());
         }
         #endregion

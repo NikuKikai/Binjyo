@@ -12,10 +12,15 @@ namespace Binjyo
 {
     public partial class Memo
     {
+        private bool isEditedDuringKeyR = false;
         private bool isEditedDuringKeyB = false;
         private bool isEditedDuringKeyQ = false;
         private bool isEditedDuringKeyO = false;
         private bool isDragging { get => Scene.IsDragMoving; }
+        private bool isRotating = false;
+        private System.Drawing.Point rotateStartMousePt;
+        private System.Drawing.Point rotateStartCenterPt;
+        private double rotateStartAngle;
         private double dragStartMouseX, dragStartMouseY;
         private Dictionary<Memo, System.Windows.Point> dragStartPositions = new Dictionary<Memo, System.Windows.Point>();
 
@@ -184,8 +189,7 @@ namespace Binjyo
                     break;
                 case Key.R:
                     if (!e.IsRepeat)
-                        Item.RotateAroundCenter(30);
-                    // RotateDrawing90();
+                        isEditedDuringKeyR = false;
                     break;
                 case Key.Left:
                 case Key.Right:
@@ -254,6 +258,13 @@ namespace Binjyo
                         ShowCenterInfoFading("Transparency", ThrToPercentInfo(Item.IsEffectTransparent, Item.PEffectTransparent));
                     }
                     break;
+                case Key.R:
+                    if (!isEditedDuringKeyR)
+                    {
+                        Item.RotateAroundCenter(30);
+                        isRotating = false;
+                    }
+                    break;
                 default:
                     break;
             }
@@ -297,6 +308,15 @@ namespace Binjyo
             {
                 ResizeHandle handle = GetResizeHandleAtMousePosition();
                 BeginResize(handle);
+                return;
+            }
+
+            if (Keyboard.IsKeyDown(Key.R))
+            {
+                isRotating = true;
+                rotateStartMousePt = System.Windows.Forms.Control.MousePosition;
+                rotateStartCenterPt = new System.Drawing.Point((int)((Left + Width / 2) * dpiFactor), (int)((Top + Height / 2) * dpiFactor));
+                rotateStartAngle = Item.Rotation;
                 return;
             }
 
@@ -365,6 +385,22 @@ namespace Binjyo
                 else
                     Scene.DragMoveEnd();
             }
+            if (isRotating)
+            {
+                if (Mouse.LeftButton == MouseButtonState.Pressed)
+                {
+                    isEditedDuringKeyR = true;
+                    var pt = System.Windows.Forms.Control.MousePosition;
+                    var center = rotateStartCenterPt;
+                    double angle = Math.Atan2(pt.Y - center.Y, pt.X - center.X) -
+                                   Math.Atan2(rotateStartMousePt.Y - center.Y, rotateStartMousePt.X - center.X);
+                    Item.SetRotationAroundScrCenter(rotateStartAngle + angle * 180 / Math.PI, center.X, center.Y);
+                }
+                else
+                {
+                    isRotating = false;
+                }
+            }
 
             RefreshHSVWheelVisibility();
         }
@@ -380,6 +416,12 @@ namespace Binjyo
             if (isResizeMode && isResizing)
             {
                 StopResize();
+                e.Handled = true;
+                return;
+            }
+            if (isRotating)
+            {
+                isRotating = false;
                 e.Handled = true;
                 return;
             }
