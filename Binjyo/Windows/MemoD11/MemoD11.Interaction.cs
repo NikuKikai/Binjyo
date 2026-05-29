@@ -238,7 +238,7 @@ namespace Binjyo
                     }
                     else if (!isEditedDuringKeyR)
                     {
-                        keyRotatePendingDegrees += 30;
+                        keyRotatePendingDegrees = Math.Ceiling(Item.Rotation / 90 + 0.001) * 90 - Item.Rotation;
                         if (!keyRotateTimer.Enabled)
                             keyRotateTimer.Start();
                     }
