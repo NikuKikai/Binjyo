@@ -137,8 +137,6 @@ namespace Binjyo
         private void MemoD11_FormClosed(object sender, FormClosedEventArgs e)
         {
             Animator.Clear(Id);
-            stopwatch.Stop();
-            stopwatch = null;
             DisposeGraphics();
             if (Item.views.Contains(this))
                 Item.UnregisterView(this);
@@ -152,7 +150,6 @@ namespace Binjyo
                 if ((EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == EAutoHideBehavior.HideOnHover)
                 {
                     var isMouseInside = IsMouseInside();
-                    Console.WriteLine($"Mouse inside: {isMouseInside}");
                     if (isMouseInside != lastMouseInside)
                     {
                         Opacity = FinalOpacity;
