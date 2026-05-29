@@ -1,6 +1,8 @@
 using System;
 using System.Windows.Forms;
 using Form = System.Windows.Forms.Form;
+using System.Windows.Media.Imaging;
+
 
 namespace Binjyo
 {
@@ -9,7 +11,6 @@ namespace Binjyo
         #region ======== Types ========
 
         private const int WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
-
 
         #endregion
 
@@ -45,6 +46,7 @@ namespace Binjyo
             KeyDown += MemoD11_KeyDown;
             KeyUp += MemoD11_KeyUp;
             FormClosed += MemoD11_FormClosed;
+            MouseDoubleClick += MemoD11_MouseDoubleClick;
 
             keyRotateTimer = new Timer { Interval = 8 };
             keyRotateTimer.Tick += KeyRotateTimer_Tick;
@@ -128,5 +130,6 @@ namespace Binjyo
         }
 
         #endregion
+
     }
 }

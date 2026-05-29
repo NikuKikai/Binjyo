@@ -34,6 +34,7 @@ namespace Binjyo
         {
             if (FocusedId == id)
                 FocusedId = Guid.Empty;
+            DragMoveEnd();
 
             if (Items.ContainsKey(id))
             {

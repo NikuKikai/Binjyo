@@ -5,10 +5,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
-using System.Windows.Media;
+
 
 namespace Binjyo
 {

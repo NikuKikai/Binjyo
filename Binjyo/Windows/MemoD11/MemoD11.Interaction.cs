@@ -1,6 +1,6 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Point = System.Drawing.Point;
 
 namespace Binjyo
 {
@@ -8,22 +8,42 @@ namespace Binjyo
     {
         #region ======== Interaction State ========
 
+        // Binarize
         private bool isEditedDuringKeyB;
+        private bool isKeyDownB;
+        // Quantize
         private bool isEditedDuringKeyQ;
+        private bool isKeyDownQ;
+        // Opacity
         private bool isEditedDuringKeyO;
-        private bool isRotateKeyDown;
+        private bool isKeyDownO;
+        // Rotate
+        private bool isKeyDownR;
         private bool isRotateDragging;
-        private bool isRotateEditedDuringKeyR;
+        private bool isEditedDuringKeyR;
         private double rotateStartPointerAngle;
         private double rotateStartItemRotation;
         private double rotateCenterScreenX;
         private double rotateCenterScreenY;
         private Timer keyRotateTimer;
         private double keyRotatePendingDegrees;
+        // Save
+        private bool isKeyDownS;
 
         #endregion
 
         #region ======== Interaction ========
+
+        /// <summary>
+        /// Double-click to clip
+        /// </summary>
+        private void MemoD11_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (Scene.IsDragMoving) return;
+            var isShiftDown = (ModifierKeys & Keys.Control) == Keys.Control;
+            Item.CopyToClipboard(!isShiftDown);
+            Scene.CloseItem(Id);
+        }
 
         /// <summary>
         /// Start drag-move interactions and set scene focus on mouse down.
@@ -39,10 +59,10 @@ namespace Binjyo
             if (e.Button != MouseButtons.Left || Scene.DisplayMode != EDisplayMode.Expanded)
                 return;
 
-            if (isRotateKeyDown)
+            if (isKeyDownR)
             {
                 isRotateDragging = true;
-                isRotateEditedDuringKeyR = true;
+                isEditedDuringKeyR = true;
 
                 var center = Item.GetCenter();
                 rotateCenterScreenX = center.X;
@@ -112,7 +132,7 @@ namespace Binjyo
                 return;
             }
 
-            if ((ModifierKeys & Keys.B) == Keys.B)
+            if (IsKeyDown(Keys.B))
             {
                 isEditedDuringKeyB = true;
                 Item.SetEffectQuantize(false);
@@ -120,7 +140,7 @@ namespace Binjyo
                 return;
             }
 
-            if ((ModifierKeys & Keys.Q) == Keys.Q)
+            if (IsKeyDown(Keys.Q))
             {
                 isEditedDuringKeyQ = true;
                 Item.SetEffectBinarize(false);
@@ -128,10 +148,11 @@ namespace Binjyo
                 return;
             }
 
-            if ((ModifierKeys & Keys.O) == Keys.O)
+            if (IsKeyDown(Keys.O))
             {
                 isEditedDuringKeyO = true;
                 Item.SetEffectTransparent(true, Item.PEffectTransparent + 15 * Math.Sign(e.Delta));
+                return;
             }
         }
 
@@ -147,11 +168,9 @@ namespace Binjyo
                     e.Handled = true;
                     break;
                 case Keys.R:
-                    if (!isRotateKeyDown)
-                    {
-                        isRotateKeyDown = true;
-                        isRotateEditedDuringKeyR = false;
-                    }
+                    if (!isKeyDownR)
+                        isEditedDuringKeyR = false;
+                    isKeyDownR = true;
                     e.Handled = true;
                     break;
                 case Keys.G:
@@ -173,13 +192,31 @@ namespace Binjyo
                     e.Handled = true;
                     break;
                 case Keys.B:
-                    isEditedDuringKeyB = false;
+                    if (!isKeyDownB)
+                        isEditedDuringKeyB = false;
+                    isKeyDownB = true;
                     break;
                 case Keys.Q:
-                    isEditedDuringKeyQ = false;
+                    if (!isKeyDownQ)
+                        isEditedDuringKeyQ = false;
+                    isKeyDownQ = true;
                     break;
                 case Keys.O:
-                    isEditedDuringKeyO = false;
+                    if (!isKeyDownO)
+                        isEditedDuringKeyO = false;
+                    isKeyDownO = true;
+                    break;
+                case Keys.C:
+                    Item.CopyToClipboard(!e.Shift);
+                    break;
+                case Keys.X:
+                    Item.CopyToClipboard(!e.Shift);
+                    Scene.CloseItem(Id);
+                    break;
+                case Keys.S:
+                    if (isKeyDownS) break;
+                    isKeyDownS = true;
+                    Item.Save(!e.Shift);
                     break;
             }
         }
@@ -192,14 +229,14 @@ namespace Binjyo
             switch (e.KeyCode)
             {
                 case Keys.R:
-                    isRotateKeyDown = false;
+                    isKeyDownR = false;
                     if (isRotateDragging)
                     {
                         isRotateDragging = false;
                         if (Capture)
                             Capture = false;
                     }
-                    else if (!isRotateEditedDuringKeyR)
+                    else if (!isEditedDuringKeyR)
                     {
                         keyRotatePendingDegrees += 30;
                         if (!keyRotateTimer.Enabled)
@@ -207,26 +244,22 @@ namespace Binjyo
                     }
                     break;
                 case Keys.B:
+                    isKeyDownB = false;
                     if (!isEditedDuringKeyB)
-                    {
                         Item.SetEffectBinarize(!Item.IsEffectBinarize);
-                        if (Item.IsEffectBinarize)
-                            Item.SetEffectQuantize(false);
-                    }
                     break;
                 case Keys.Q:
+                    isKeyDownQ = false;
                     if (!isEditedDuringKeyQ)
-                    {
                         Item.SetEffectQuantize(!Item.IsEffectQuantize);
-                        if (Item.IsEffectQuantize)
-                            Item.SetEffectBinarize(false);
-                    }
                     break;
                 case Keys.O:
+                    isKeyDownO = false;
                     if (!isEditedDuringKeyO)
-                    {
                         Item.SetEffectTransparent(!Item.IsEffectTransparent);
-                    }
+                    break;
+                case Keys.S:
+                    isKeyDownS = false;
                     break;
             }
         }
@@ -249,5 +282,12 @@ namespace Binjyo
         }
 
         #endregion
+
+        [DllImport("user32.dll")]
+        private static extern short GetKeyState(int nVirtKey);
+        private static bool IsKeyDown(Keys key)
+        {
+            return (GetKeyState((int)key) & 0x8000) != 0;
+        }
     }
 }

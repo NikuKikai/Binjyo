@@ -3,8 +3,8 @@ SamplerState InputSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float4 SourceAndOpacity;
-    float4 RenderAndFlags;
+    float4 SourceAndOpacity;  // baseWidth, baseHeight, opacity, unused
+    float4 RenderAndFlags;    // renderWidth, renderHeight, borderSize, unused
     float4 EffectParamsA;
     float4 EffectParamsB;
     float4 InverseRow0;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -320,5 +321,42 @@ namespace Binjyo
             views.ForEach(view => view.NotifiedEffect());
         }
         #endregion
+
+
+        private void RenderSaveTo(Stream stream, bool applyEdit = true)
+        {
+            var wbmp = applyEdit ? Scene.RenderOffscreen(this) : Bitmap;
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(wbmp));
+            using (var s = stream)
+                encoder.Save(stream);
+        }
+
+        internal void Save(bool applyEdit = true, bool dialog = true)
+        {
+            if (dialog)
+            {
+                Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+                string name = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss");
+                dlg.FileName = name;
+                dlg.Filter = "Png Image|*.png"; //|Bitmap Image|*.bmp|Gif Image|*.gif";
+
+                if (dlg.ShowDialog() == true)
+                    RenderSaveTo(dlg.OpenFile(), applyEdit);
+            }
+            else
+            {
+                var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string name = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss");
+                string filePath = System.IO.Path.Combine(desktopPath, $"{name}.png");
+                RenderSaveTo(File.Create(filePath), applyEdit);
+            }
+        }
+        internal void CopyToClipboard(bool applyEdit)
+        {
+            var wbmp = applyEdit ? Scene.RenderOffscreen(this) : Bitmap;
+            wbmp.Freeze();
+            Clipboard.SetImage(wbmp);
+        }
     }
 }

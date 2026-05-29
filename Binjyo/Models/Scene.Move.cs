@@ -95,6 +95,7 @@ namespace Binjyo
 
             dragStartMouseX = Control.MousePosition.X;
             dragStartMouseY = Control.MousePosition.Y;
+            dragMoveStartPts.Clear();
             foreach (var tid in targetIds)
             {
                 var item = Items[tid];
