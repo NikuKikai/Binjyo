@@ -119,6 +119,7 @@
     <Compile Include="Models\Scene.Move.cs" />
     <Compile Include="Models\Scene.Render.cs" />
     <Compile Include="Services\Effects.cs" />
+    <Compile Include="Utils\Animator.cs" />
     <Compile Include="Utils\BitmapExt.cs" />
     <Compile Include="Utils\CaptureScreen.cs" />
     <Compile Include="Utils\Geometry.cs" />

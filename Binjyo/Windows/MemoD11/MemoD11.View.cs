@@ -91,7 +91,6 @@ namespace Binjyo
                     RenderSceneItem();
                 }
 
-                Console.WriteLine("Notified x" + bounds.X + ", y" + bounds.Y);
                 Bounds = bounds;
                 return;
             }

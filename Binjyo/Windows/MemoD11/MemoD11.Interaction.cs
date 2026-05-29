@@ -25,8 +25,6 @@ namespace Binjyo
         private double rotateStartItemRotation;
         private double rotateCenterScreenX;
         private double rotateCenterScreenY;
-        private Timer keyRotateTimer;
-        private double keyRotatePendingDegrees;
         // Save
         private bool isKeyDownS;
 
@@ -238,9 +236,13 @@ namespace Binjyo
                     }
                     else if (!isEditedDuringKeyR)
                     {
-                        keyRotatePendingDegrees = Math.Ceiling(Item.Rotation / 90 + 0.001) * 90 - Item.Rotation;
-                        if (!keyRotateTimer.Enabled)
-                            keyRotateTimer.Start();
+                        var delta = Math.Ceiling(Item.Rotation / 90 + 0.001) * 90 - Item.Rotation;
+                        Animator.Start(
+                            Id, "rotate", this, step =>
+                            {
+                                Item.SetRotationAroundCenter(Item.Rotation + step);
+                            }, speed: 720, targetDelta: delta
+                        );
                     }
                     break;
                 case Keys.B:
@@ -262,23 +264,6 @@ namespace Binjyo
                     isKeyDownS = false;
                     break;
             }
-        }
-
-        /// <summary>
-        /// Apply keyboard rotation in small increments so top-level window bounds do not jump by a large angle in one frame.
-        /// </summary>
-        private void KeyRotateTimer_Tick(object sender, EventArgs e)
-        {
-            if (Math.Abs(keyRotatePendingDegrees) < 0.001)
-            {
-                keyRotatePendingDegrees = 0;
-                keyRotateTimer.Stop();
-                return;
-            }
-
-            double step = Math.Sign(keyRotatePendingDegrees) * Math.Min(6.0, Math.Abs(keyRotatePendingDegrees));
-            keyRotatePendingDegrees -= step;
-            Item.SetRotationAroundCenter(Item.Rotation + step);
         }
 
         #endregion

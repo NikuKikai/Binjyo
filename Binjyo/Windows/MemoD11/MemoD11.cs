@@ -48,9 +48,6 @@ namespace Binjyo
             FormClosed += MemoD11_FormClosed;
             MouseDoubleClick += MemoD11_MouseDoubleClick;
 
-            keyRotateTimer = new Timer { Interval = 8 };
-            keyRotateTimer.Tick += KeyRotateTimer_Tick;
-
             item.RegisterView(this);
             Show();
             NotifiedTransform();
@@ -120,10 +117,7 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_FormClosed(object sender, FormClosedEventArgs e)
         {
-            keyRotateTimer?.Stop();
-            keyRotateTimer?.Dispose();
-            keyRotateTimer = null;
-
+            Animator.Clear(Id);
             DisposeGraphics();
             if (Item.views.Contains(this))
                 Item.UnregisterView(this);
