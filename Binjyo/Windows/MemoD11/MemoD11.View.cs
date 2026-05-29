@@ -42,8 +42,7 @@ namespace Binjyo
             if (!Visible)
                 Show();
 
-            NotifiedTransform();
-            NotifiedEffect();
+            NotifiedTransform(false);
         }
 
         /// <summary>
@@ -67,34 +66,33 @@ namespace Binjyo
             RenderSceneItem();
         }
 
-        /// <summary>
-        /// Move the native window to the scene item's logical position.
-        /// </summary>
-        public void NotifiedMove()
+        public void NotifiedOpacity()
         {
-            Rectangle bounds = GetTargetBounds();
-            if (Bounds != bounds)
-                Bounds = bounds;
+            Opacity = FinalOpacity;
         }
 
         /// <summary>
         /// Resize the window to the transformed bounding box and redraw the item.
         /// </summary>
-        public void NotifiedTransform()
+        public void NotifiedTransform(bool moveOnly)
         {
-            Rectangle bounds = GetTargetBounds();
-            if (Bounds != bounds)
+            Rectangle bounds = new Rectangle(
+                (int)Math.Round(Item.Left),
+                (int)Math.Round(Item.Top),
+                Math.Max(1, (int)Math.Ceiling(Item.Width)),
+                Math.Max(1, (int)Math.Ceiling(Item.Height)));
+            if (moveOnly)
             {
-                if (isGraphicsReady)
-                {
-                    ResizeSwapChain(Math.Max(1, bounds.Width), Math.Max(1, bounds.Height));
-                    RenderSceneItem();
-                }
-
-                Bounds = bounds;
+                if (Bounds != bounds)
+                    Bounds = bounds;
                 return;
             }
-
+            if (Bounds != bounds)
+            {
+                if (isGraphicsReady && (bounds.Width != Bounds.Width || bounds.Height != Bounds.Height))
+                    ResizeSwapChain(Math.Max(1, bounds.Width), Math.Max(1, bounds.Height));
+                Bounds = bounds;
+            }
             RenderSceneItem();
         }
 

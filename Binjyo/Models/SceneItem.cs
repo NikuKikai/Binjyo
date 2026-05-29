@@ -15,9 +15,9 @@ namespace Binjyo
         bool IsRenderer { get; }
         void NotifiedClose();
         void NotifiedFocus();
-        void NotifiedMove();
-        void NotifiedTransform();  // scale, flip, rotate
+        void NotifiedTransform(bool moveOnly);
         void NotifiedEffect();
+        void NotifiedOpacity();
 
         // Scene-level notifications
         void NotifiedCanvasActive();
@@ -34,8 +34,12 @@ namespace Binjyo
         // TODO remove
         public double DpiFactor { get; internal set; } = 1;
 
-        public double Left { get; internal set; }
-        public double Top { get; internal set; } // Logical pixels (WPF units)
+        public double Left { get; private set; }
+        public double Top { get; private set; } // Logical pixels (WPF units)
+        public double Right { get; private set; }
+        public double Bottom { get; private set; } // Logical pixels (WPF units)
+        public double Width => Right - Left;
+        public double Height => Bottom - Top;
         public double Scale { get; internal set; } = 1;
         public bool IsFlipX { get; private set; } = false;
         public bool IsFlipY { get; private set; } = false;
@@ -45,8 +49,8 @@ namespace Binjyo
         public int PEffectBinarize { get; private set; } = 128;
         public bool IsEffectQuantize { get; private set; }  // exclusive to IsEffectBinarize
         public int PEffectQuantize { get; private set; } = 3;
-        public bool IsEffectTransparent { get; private set; }
-        public int PEffectTransparent { get; private set; } = 128;
+        public bool IsOpacity { get; private set; }
+        public double Opacity { get; private set; } = 0.5;
         public bool IsEffectHuemap { get; private set; }
 
         public List<char> GeometryTransformHistory { get; } = new List<char>();
@@ -62,6 +66,8 @@ namespace Binjyo
             Bitmap = bmp;
             Left = left;
             Top = top;
+            Right = left + GetBaseWidth();
+            Bottom = top + GetBaseHeight();
         }
         public static SceneItem FromScreenPos(double screenX, double screenY, double dpiFactor)
         {
@@ -73,27 +79,24 @@ namespace Binjyo
         #region ======== Informations =======
         public double GetBaseWidth() => Bitmap.Width / DpiFactor;  // logical
         public double GetBaseHeight() => Bitmap.Height / DpiFactor;
-        public Size GetBaseSize() => new Size(GetBaseWidth(), GetBaseHeight());
-
-        public double GetDisplayWidth() => GetDisplaySize().Width;  // logical
-        public double GetDisplayHeight() => GetDisplaySize().Height;
-        public Size GetDisplaySize()
+        public Point GetCenter() => new Point(Left + Width / 2, Top + Height / 2);
+        public Rect GetBounds() => new Rect(Left, Top, Width, Height);
+        public TransformGroup GetTransformGroup()
         {
-            var w = GetBaseWidth();
-            var h = GetBaseHeight();
-            // rotation
-            var tr = new TransformGroup();
-            tr.Children.Add(new ScaleTransform(Scale, Scale));
-            tr.Children.Add(new RotateTransform(Rotation));
-            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
-            return new Size(rect.Width, rect.Height);
+            var baseWidth = GetBaseWidth();
+            var baseHeight = GetBaseHeight();
+
+            var tg = new TransformGroup();
+            tg.Children.Add(new ScaleTransform(
+                IsFlipX ? -1 : 1, IsFlipY ? -1 : 1,
+                baseWidth / 2, baseHeight / 2));
+            tg.Children.Add(new ScaleTransform(Scale, Scale));
+            tg.Children.Add(new RotateTransform(Rotation, 0, 0));
+            var rect = tg.TransformBounds(new Rect(0, 0, baseWidth, baseHeight));
+            tg.Children.Add(new TranslateTransform(-rect.X, -rect.Y));
+            return tg;
         }
 
-        public Rect GetBounds() // logical
-        {
-            var size = GetDisplaySize();
-            return new Rect(Left, Top, size.Width, size.Height);
-        }
         public double GetMinScale() => Math.Max(25.0 / GetBaseWidth(), 25.0 / GetBaseHeight());
         public double GetMaxScale() => 10;
         /// <summary>
@@ -103,14 +106,7 @@ namespace Binjyo
         {
             return GetBounds().Contains(x / DpiFactor, y / DpiFactor);
         }
-        /// <summary>
-        /// logical
-        /// </summary>
-        public Point GetCenter()
-        {
-            var size = GetDisplaySize();
-            return new Point(Left + size.Width / 2, Top + size.Height / 2);
-        }
+
         /// <summary>
         /// Input x,y is logical and local to Window. Output is physical and local to bitmap.
         /// </summary>
@@ -172,9 +168,11 @@ namespace Binjyo
 
         public void SetPos(double left, double top)
         {
+            Right += left - Left;
+            Bottom += top - Top;
             Left = left;
             Top = top;
-            views.ForEach(view => view.NotifiedMove());
+            views.ForEach(view => view.NotifiedTransform(true));
         }
 
         public void SetScale(double scale)
@@ -182,8 +180,10 @@ namespace Binjyo
             scale = Math.Max(GetMinScale(), Math.Min(GetMaxScale(), scale));
 
             if (Scale == scale) return;
+            Right = Left + (Right - Left) / Scale * scale;
+            Bottom = Top + (Bottom - Top) / Scale * scale;
             Scale = scale;
-            views.ForEach(view => view.NotifiedTransform());
+            views.ForEach(view => view.NotifiedTransform(false));
         }
         public void SetFlip(bool isFlippedHorizontal, bool isFlippedVertical)
         {
@@ -191,96 +191,41 @@ namespace Binjyo
                 return;
             IsFlipX = isFlippedHorizontal;
             IsFlipY = isFlippedVertical;
-            views.ForEach(view => view.NotifiedTransform());
+            views.ForEach(view => view.NotifiedTransform(false));
         }
-        public void SetRotation(double rotation)
+        public void ResetTransform()
+        {
+            IsFlipX = false;
+            IsFlipY = false;
+            Rotation = 0;
+            Scale = 1;
+            var tg = GetTransformGroup();
+            var rect = tg.TransformBounds(new Rect(Left, Top, GetBaseWidth(), GetBaseHeight()));
+            Left = rect.X;
+            Top = rect.Y;
+            Right = Left + rect.Width;
+            Bottom = Top + rect.Height;
+            views.ForEach(view => view.NotifiedTransform(false));
+        }
+        public void SetRotationCentered(double rotation)
         {
             rotation %= 360;
             if (Rotation == rotation) return;
-            Rotation = rotation;
-            views.ForEach(view => view.NotifiedTransform());
-        }
-        public void RotateAroundCenter(double deg)
-        {
-            if (deg % 360 == 0) return;
-            var rot = (Rotation + deg) % 360;
-            var w = GetBaseWidth();
-            var h = GetBaseHeight();
-
-            var tr = new TransformGroup();
-            tr.Children.Add(new ScaleTransform(Scale, Scale));
-            tr.Children.Add(new RotateTransform(Rotation));
-            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
-
-            var centerX = Left + rect.Width / 2;
-            var centerY = Top + rect.Height / 2;
-
-            var trTgt = new TransformGroup();
-            trTgt.Children.Add(new ScaleTransform(Scale, Scale));
-            trTgt.Children.Add(new RotateTransform(rot));
-            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, w, h));
-
-            Left = centerX - rectTgt.Width / 2;
-            Top = centerY - rectTgt.Height / 2;
-            Rotation = rot;
-            views.ForEach(view => view.NotifiedTransform());
-        }
-        public void SetRotationAroundCenter(double rotation)
-        {
-            rotation %= 360;
-            if (Rotation == rotation) return;
-
-            var w = GetBaseWidth();
-            var h = GetBaseHeight();
-
-            var tr = new TransformGroup();
-            tr.Children.Add(new ScaleTransform(Scale, Scale));
-            tr.Children.Add(new RotateTransform(Rotation));
-            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
-
-            var centerX = Left + rect.Width / 2;
-            var centerY = Top + rect.Height / 2;
 
             var trTgt = new TransformGroup();
             trTgt.Children.Add(new ScaleTransform(Scale, Scale));
             trTgt.Children.Add(new RotateTransform(rotation));
-            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, w, h));
+            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, GetBaseWidth(), GetBaseHeight()));
 
-            Left = centerX - rectTgt.Width / 2;
-            Top = centerY - rectTgt.Height / 2;
+            var center = GetCenter();
+            Left = center.X - rectTgt.Width / 2;
+            Top = center.Y - rectTgt.Height / 2;
+            Right = Left + rectTgt.Width;
+            Bottom = Top + rectTgt.Height;
             Rotation = rotation;
-            views.ForEach(view => view.NotifiedTransform());
-        }
-        public void SetRotationAroundScrCenter(double rotation, double centerX, double centerY)
-        {
-            rotation %= 360;
-            if (Rotation == rotation) return;
-
-            var w = GetBaseWidth();
-            var h = GetBaseHeight();
-
-            // var tr = new TransformGroup();
-            // tr.Children.Add(new ScaleTransform(Scale, Scale));
-            // tr.Children.Add(new RotateTransform(Rotation));
-            // var rect = tr.TransformBounds(new Rect(0, 0, w, h));
-
-            // var centerX = Left + rect.Width / 2;
-            // var centerY = Top + rect.Height / 2;
-            centerX /= DpiFactor;
-            centerY /= DpiFactor;
-
-            var trTgt = new TransformGroup();
-            trTgt.Children.Add(new ScaleTransform(Scale, Scale));
-            trTgt.Children.Add(new RotateTransform(rotation));
-            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, w, h));
-
-            Left = centerX - rectTgt.Width / 2;
-            Top = centerY - rectTgt.Height / 2;
-            Rotation = rotation;
-            views.ForEach(view => view.NotifiedTransform());
+            views.ForEach(view => view.NotifiedTransform(false));
         }
         #endregion
-
 
 
         #region ======== Imaging ========
@@ -299,12 +244,12 @@ namespace Binjyo
             views.ForEach(view => view.NotifiedEffect());
         }
 
-        public void SetEffectTransparent(bool enabled, int? p = null)
+        public void SetOpacity(bool enabled, double? p = null)
         {
-            if (IsEffectTransparent == enabled && PEffectTransparent == p) return;
-            IsEffectTransparent = enabled;
-            if (p.HasValue) PEffectTransparent = Math.Max(Math.Min(p.Value, 245), 10);
-            views.ForEach(view => view.NotifiedEffect());
+            if (IsOpacity == enabled && Opacity == p) return;
+            IsOpacity = enabled;
+            if (p.HasValue) Opacity = Math.Max(Math.Min(p.Value, 0.9), 0.1);
+            views.ForEach(view => view.NotifiedOpacity());
         }
         public void SetEffectBinarize(bool enabled, int? p = null)
         {

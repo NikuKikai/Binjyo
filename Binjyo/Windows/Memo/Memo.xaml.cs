@@ -44,10 +44,10 @@ namespace Binjyo
             this.image.Source = item.Bitmap;
             Left = item.Left;
             Top = item.Top;
-            Width = item.GetDisplayWidth();
-            Height = item.GetDisplayHeight();
+            Width = item.Width;
+            Height = item.Height;
 
-            Console.WriteLine($"Memo created for item {Id} at ({Left}, {Top}) with size ({item.GetDisplayWidth()}x{item.GetDisplayHeight()})");
+            Console.WriteLine($"Memo created for item {Id} at ({Left}, {Top}) with size ({item.Width}x{item.Height})");
 
             InitializeContextMenu();
             UpdateResizeVisuals();
@@ -210,14 +210,12 @@ namespace Binjyo
             FlashHighlight();
         }
 
-        public void NotifiedMove()
+        public void NotifiedOpacity()
         {
-            // ApplyMove(Item.Left, Item.Top);
-            drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
-            RefreshAllMemoFeatureOverlays();
+            Opacity = Item.IsOpacity ? Item.Opacity : 1;
         }
 
-        public void NotifiedTransform()
+        public void NotifiedTransform(bool moveOnly)
         {
             var w = Item.GetBaseWidth();
             var h = Item.GetBaseHeight();
@@ -234,7 +232,9 @@ namespace Binjyo
 
             // Width = rect.Width;
             // Height = rect.Height;
-            // NotifiedMove();
+            // ApplyMove(Item.Left, Item.Top);
+            drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
+            RefreshAllMemoFeatureOverlays();
 
             DisableAnimations();
 
@@ -258,7 +258,6 @@ namespace Binjyo
             e.BinarizeThreshold = Item.PEffectBinarize;
             e.IsQuantize = Item.IsEffectQuantize ? 1 : 0;
             e.QuantizeLevels = Item.PEffectQuantize;
-            Opacity = Item.IsEffectTransparent ? Item.PEffectTransparent / 255.0 : 1;
         }
 
         #endregion
@@ -336,8 +335,8 @@ namespace Binjyo
         private void SetEffectTransparent(bool enabled, int? percent = null)
         {
             var p = percent.HasValue ? (int?)Math.Round(255 * percent.Value / 100.0) : null;
-            Item.SetEffectTransparent(enabled, p);
-            ShowCenterInfoFading("Opacity", ThrToPercentInfo(enabled, Item.PEffectTransparent));
+            Item.SetOpacity(enabled, p);
+            ShowCenterInfoFading("Opacity", ThrToPercentInfo(enabled, (int)(Item.Opacity * 255)));
         }
         #endregion
 
@@ -434,8 +433,8 @@ namespace Binjyo
                     Bitmap = Scene.RenderOffscreen(item),
                     Left = (int)Math.Round(item.Left * item.DpiFactor),
                     Top = (int)Math.Round(item.Top * item.DpiFactor),
-                    Right = (int)Math.Round((item.Left + item.GetDisplayWidth()) * item.DpiFactor),
-                    Bottom = (int)Math.Round((item.Top + item.GetDisplayHeight()) * item.DpiFactor)
+                    Right = (int)Math.Round((item.Left + item.Width) * item.DpiFactor),
+                    Bottom = (int)Math.Round((item.Top + item.Height) * item.DpiFactor)
                 })
                 .ToList();
 

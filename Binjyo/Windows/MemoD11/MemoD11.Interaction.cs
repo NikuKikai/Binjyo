@@ -8,6 +8,12 @@ namespace Binjyo
     {
         #region ======== Interaction State ========
 
+        // Move
+        private bool isKeyDownLeft = false;
+        private bool isKeyDownRight = false;
+        private bool isKeyDownUp = false;
+        private bool isKeyDownDown = false;
+        private bool isKeyDownArrow => isKeyDownLeft || isKeyDownRight || isKeyDownUp || isKeyDownDown;
         // Binarize
         private bool isEditedDuringKeyB;
         private bool isKeyDownB;
@@ -89,7 +95,7 @@ namespace Binjyo
                 double currentAngle = GetPointerAngleToFixedCenter();
                 double deltaFromStart = NormalizeAngleDelta(currentAngle - rotateStartPointerAngle);
                 double targetRotation = rotateStartItemRotation + deltaFromStart;
-                Item.SetRotationAroundCenter(targetRotation);
+                Item.SetRotationCentered(targetRotation);
                 return;
             }
 
@@ -149,7 +155,7 @@ namespace Binjyo
             if (IsKeyDown(Keys.O))
             {
                 isEditedDuringKeyO = true;
-                Item.SetEffectTransparent(true, Item.PEffectTransparent + 15 * Math.Sign(e.Delta));
+                Item.SetOpacity(true, Item.Opacity + 0.1 * Math.Sign(e.Delta));
                 return;
             }
         }
@@ -163,6 +169,33 @@ namespace Binjyo
             {
                 case Keys.Escape:
                     Scene.CloseItem(Id);
+                    e.Handled = true;
+                    break;
+                case Keys.Left:
+                    Scene.MoveByKey(Id, -1, 0, isKeyDownArrow);
+                    isKeyDownLeft = true;
+                    e.Handled = true;
+                    break;
+                case Keys.Right:
+                    Scene.MoveByKey(Id, 1, 0, isKeyDownArrow);
+                    isKeyDownRight = true;
+                    e.Handled = true;
+                    break;
+                case Keys.Up:
+                    Scene.MoveByKey(Id, 0, -1, isKeyDownArrow);
+                    isKeyDownUp = true;
+                    e.Handled = true;
+                    break;
+                case Keys.Down:
+                    Scene.MoveByKey(Id, 0, 1, isKeyDownArrow);
+                    isKeyDownDown = true;
+                    e.Handled = true;
+                    break;
+                case Keys.F:
+                    if (e.Shift)
+                        Item.SetFlip(Item.IsFlipX, !Item.IsFlipY);
+                    else
+                        Item.SetFlip(!Item.IsFlipX, Item.IsFlipY);
                     e.Handled = true;
                     break;
                 case Keys.R:
@@ -180,9 +213,7 @@ namespace Binjyo
                     e.Handled = true;
                     break;
                 case Keys.Oemtilde:
-                    Item.SetScale(1);
-                    Item.SetRotation(0);
-                    Item.SetFlip(false, false);
+                    Item.ResetTransform();
                     e.Handled = true;
                     break;
                 case Keys.Tab:
@@ -226,6 +257,18 @@ namespace Binjyo
         {
             switch (e.KeyCode)
             {
+                case Keys.Left:
+                    isKeyDownLeft = false;
+                    break;
+                case Keys.Right:
+                    isKeyDownRight = false;
+                    break;
+                case Keys.Up:
+                    isKeyDownUp = false;
+                    break;
+                case Keys.Down:
+                    isKeyDownDown = false;
+                    break;
                 case Keys.R:
                     isKeyDownR = false;
                     if (isRotateDragging)
@@ -240,7 +283,7 @@ namespace Binjyo
                         Animator.Start(
                             Id, "rotate", this, step =>
                             {
-                                Item.SetRotationAroundCenter(Item.Rotation + step);
+                                Item.SetRotationCentered(Item.Rotation + step);
                             }, speed: 720, targetDelta: delta
                         );
                     }
@@ -258,7 +301,7 @@ namespace Binjyo
                 case Keys.O:
                     isKeyDownO = false;
                     if (!isEditedDuringKeyO)
-                        Item.SetEffectTransparent(!Item.IsEffectTransparent);
+                        Item.SetOpacity(!Item.IsOpacity);
                     break;
                 case Keys.S:
                     isKeyDownS = false;

@@ -1,7 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Windows.Forms;
 using Form = System.Windows.Forms.Form;
-using System.Windows.Media.Imaging;
 
 
 namespace Binjyo
@@ -18,6 +18,20 @@ namespace Binjyo
 
         private readonly SceneItem Item;
         private readonly bool IsRendererField = false;
+        private bool lastMouseInside = false;
+        private Timer timer = new Timer();
+
+        private double FinalOpacity
+        {
+            get
+            {
+                if (Scene.DisplayMode == EDisplayMode.AutoHide
+                    && (EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == EAutoHideBehavior.HideOnHover
+                    && IsMouseInside())
+                    return 0;
+                return Item.IsOpacity ? Item.Opacity : 1;
+            }
+        }
 
         #endregion
 
@@ -36,6 +50,7 @@ namespace Binjyo
             KeyPreview = true;
             DoubleBuffered = false;
             BackColor = System.Drawing.Color.Black;
+            TopMost = true;
 
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque | ControlStyles.UserPaint, true);
 
@@ -47,12 +62,16 @@ namespace Binjyo
             KeyUp += MemoD11_KeyUp;
             FormClosed += MemoD11_FormClosed;
             MouseDoubleClick += MemoD11_MouseDoubleClick;
+            // Application.Idle += OnApplicationIdle;
 
             item.RegisterView(this);
             Show();
-            NotifiedTransform();
-            NotifiedEffect();
+            NotifiedTransform(false);
             NotifiedDisplayMode();
+
+            timer.Interval = 16;
+            timer.Tick += (s, e) => PerFrameUpdate();
+            timer.Start();
         }
 
         /// <summary>
@@ -118,9 +137,32 @@ namespace Binjyo
         private void MemoD11_FormClosed(object sender, FormClosedEventArgs e)
         {
             Animator.Clear(Id);
+            stopwatch.Stop();
+            stopwatch = null;
             DisposeGraphics();
             if (Item.views.Contains(this))
                 Item.UnregisterView(this);
+        }
+
+        private void PerFrameUpdate()
+        {
+            // DisplayMode: AutoHide
+            if (Scene.DisplayMode == EDisplayMode.AutoHide)
+            {
+                if ((EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == EAutoHideBehavior.HideOnHover)
+                {
+                    var isMouseInside = IsMouseInside();
+                    Console.WriteLine($"Mouse inside: {isMouseInside}");
+                    if (isMouseInside != lastMouseInside)
+                    {
+                        Opacity = FinalOpacity;
+                        lastMouseInside = isMouseInside;
+                    }
+                }
+                else
+                {
+                }
+            }
         }
 
         #endregion

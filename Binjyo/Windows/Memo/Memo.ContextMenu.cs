@@ -262,12 +262,12 @@ namespace Binjyo
             }
 
             if (transparencyOffMenuItem != null)
-                transparencyOffMenuItem.IsChecked = !Item.IsEffectTransparent;
+                transparencyOffMenuItem.IsChecked = !Item.IsOpacity;
             if (transparencyMenuItems != null)
             {
-                int currentPercent = GetClosestOption(ThresholdToPercent(Item.PEffectTransparent), transparencyPercentOptions);
+                int currentPercent = GetClosestOption(ThresholdToPercent((int)(Item.Opacity * 255)), transparencyPercentOptions);
                 foreach (var pair in transparencyMenuItems)
-                    pair.Value.IsChecked = Item.IsEffectTransparent && pair.Key == currentPercent;
+                    pair.Value.IsChecked = Item.IsOpacity && pair.Key == currentPercent;
             }
         }
 

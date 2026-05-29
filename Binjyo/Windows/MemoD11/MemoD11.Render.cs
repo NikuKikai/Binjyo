@@ -20,7 +20,7 @@ namespace Binjyo
         [StructLayout(LayoutKind.Sequential)]
         private struct ShaderConstants
         {
-            public System.Numerics.Vector4 SourceAndOpacity;
+            public System.Numerics.Vector4 Sizes;
             public System.Numerics.Vector4 RenderAndFlags;
             public System.Numerics.Vector4 EffectParamsA;
             public System.Numerics.Vector4 EffectParamsB;
@@ -265,26 +265,18 @@ namespace Binjyo
             double baseWidth = Item.GetBaseWidth();
             double baseHeight = Item.GetBaseHeight();
 
-            var transform = new TransformGroup();
-            transform.Children.Add(new System.Windows.Media.ScaleTransform(Item.IsFlipX ? -1 : 1, Item.IsFlipY ? -1 : 1, baseWidth / 2, baseHeight / 2));
-            transform.Children.Add(new System.Windows.Media.ScaleTransform(Item.Scale, Item.Scale));
-            transform.Children.Add(new System.Windows.Media.RotateTransform(Item.Rotation, 0, 0));
-
-            var rect = transform.TransformBounds(new System.Windows.Rect(0, 0, baseWidth, baseHeight));
-            transform.Children.Add(new System.Windows.Media.TranslateTransform(-rect.X, -rect.Y));
-
-            Matrix inverse = transform.Value;
+            var inverse = Item.GetTransformGroup().Value;
             inverse.Invert();
 
-            shaderConstants.SourceAndOpacity = new System.Numerics.Vector4(
+            shaderConstants.Sizes = new System.Numerics.Vector4(
                 (float)baseWidth,
                 (float)baseHeight,
-                Item.IsEffectTransparent ? Item.PEffectTransparent / 255f : 1f,
-                0f);
-            shaderConstants.RenderAndFlags = new System.Numerics.Vector4(
                 Math.Max(1, renderWidth),
-                Math.Max(1, renderHeight),
+                Math.Max(1, renderHeight));
+            shaderConstants.RenderAndFlags = new System.Numerics.Vector4(
                 Scene.FocusedId == Id ? 1f : 0f,
+                0f,
+                0f,
                 0f);
             shaderConstants.EffectParamsA = new System.Numerics.Vector4(
                 Item.IsEffectGray ? 1f : 0f,

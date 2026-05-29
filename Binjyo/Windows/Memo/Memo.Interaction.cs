@@ -136,9 +136,7 @@ namespace Binjyo
                     }
                     break;
                 case Key.OemTilde:
-                    Item.SetScale(1);
-                    Item.SetRotation(0);
-                    Item.SetFlip(false, false);
+                    Item.ResetTransform();
                     break;
                 case Key.T:
                     if (!e.IsRepeat)
@@ -192,11 +190,23 @@ namespace Binjyo
                         isEditedDuringKeyR = false;
                     break;
                 case Key.Left:
+                    HideHSVWheel();
+                    Scene.MoveByKey(Id, -1, 0, e.IsRepeat);
+                    e.Handled = true;
+                    break;
                 case Key.Right:
+                    HideHSVWheel();
+                    Scene.MoveByKey(Id, 1, 0, e.IsRepeat);
+                    e.Handled = true;
+                    break;
                 case Key.Up:
+                    HideHSVWheel();
+                    Scene.MoveByKey(Id, 0, -1, e.IsRepeat);
+                    e.Handled = true;
+                    break;
                 case Key.Down:
                     HideHSVWheel();
-                    Scene.MoveByKey(Id, actualKey, e.IsRepeat);
+                    Scene.MoveByKey(Id, 0, 1, e.IsRepeat);
                     e.Handled = true;
                     break;
                 case Key.Tab:
@@ -254,14 +264,14 @@ namespace Binjyo
                 case Key.O:
                     if (!isEditedDuringKeyO)
                     {
-                        Item.SetEffectTransparent(!Item.IsEffectTransparent);
-                        ShowCenterInfoFading("Transparency", ThrToPercentInfo(Item.IsEffectTransparent, Item.PEffectTransparent));
+                        Item.SetOpacity(!Item.IsOpacity);
+                        ShowCenterInfoFading("Transparency", ThrToPercentInfo(Item.IsOpacity, (int)(Item.Opacity*255)));
                     }
                     break;
                 case Key.R:
                     if (!isEditedDuringKeyR)
                     {
-                        Item.RotateAroundCenter(30);
+                        Item.SetRotationCentered(Item.Rotation + 30);
                         isRotating = false;
                     }
                     break;
@@ -394,7 +404,7 @@ namespace Binjyo
                     var center = rotateStartCenterPt;
                     double angle = Math.Atan2(pt.Y - center.Y, pt.X - center.X) -
                                    Math.Atan2(rotateStartMousePt.Y - center.Y, rotateStartMousePt.X - center.X);
-                    Item.SetRotationAroundScrCenter(rotateStartAngle + angle * 180 / Math.PI, center.X, center.Y);
+                    Item.SetRotationCentered(rotateStartAngle + angle * 180 / Math.PI);
                 }
                 else
                 {
@@ -481,8 +491,8 @@ namespace Binjyo
             else if (Keyboard.IsKeyDown(Key.O))
             {
                 isEditedDuringKeyO = true;
-                Item.SetEffectTransparent(true, Item.PEffectTransparent + 15 * Math.Sign(e.Delta));
-                ShowCenterInfoFading("Opacity", $"{ThresholdToPercent(Item.PEffectTransparent)}%");
+                Item.SetOpacity(true, Item.Opacity + 0.1 * Math.Sign(e.Delta));
+                ShowCenterInfoFading("Opacity", $"{ThresholdToPercent((int)(Item.Opacity * 255))}%");
             }
         }
 

@@ -10,19 +10,6 @@ namespace Binjyo
         #region ======== Helpers ========
 
         /// <summary>
-        /// Compute the transformed scene item bounds in screen coordinates for this top-level window.
-        /// </summary>
-        private Rectangle GetTargetBounds()
-        {
-            var size = Item.GetDisplaySize();
-            return new Rectangle(
-                (int)Math.Round(Item.Left),
-                (int)Math.Round(Item.Top),
-                Math.Max(1, (int)Math.Ceiling(size.Width)),
-                Math.Max(1, (int)Math.Ceiling(size.Height)));
-        }
-
-        /// <summary>
         /// Measure the current mouse pointer angle around the fixed drag-rotation center.
         /// </summary>
         private double GetPointerAngleToFixedCenter()
@@ -41,6 +28,14 @@ namespace Binjyo
             while (delta <= -180.0) delta += 360.0;
             while (delta > 180.0) delta -= 360.0;
             return delta;
+        }
+
+        private bool IsMouseInside()
+        {
+            var mouse = MousePosition;
+            double x = mouse.X;
+            double y = mouse.Y;
+            return Left <= x && x <= Left + Width && Top <= y && y <= Top + Height;
         }
 
         #endregion

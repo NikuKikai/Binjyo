@@ -129,7 +129,7 @@ namespace Binjyo
             DrawingVisual drawingVisual = new DrawingVisual();
             using (DrawingContext dc = drawingVisual.RenderOpen())
             {
-                dc.PushOpacity(item.IsEffectTransparent ? item.PEffectTransparent / 255.0 : 1.0);
+                dc.PushOpacity(item.IsOpacity ? item.Opacity : 1.0);
                 dc.DrawImage(source, rect);
                 dc.Pop();
             }

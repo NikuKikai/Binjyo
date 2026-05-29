@@ -24,8 +24,8 @@ namespace Binjyo
             {
                 left = Math.Min(left, item.Left);
                 top = Math.Min(top, item.Top);
-                right = Math.Max(right, item.Left + item.GetDisplayWidth());
-                bottom = Math.Max(bottom, item.Top + item.GetDisplayHeight());
+                right = Math.Max(right, item.Right);
+                bottom = Math.Max(bottom, item.Bottom);
             }
 
             if (double.IsInfinity(left) || double.IsInfinity(top))
@@ -46,8 +46,8 @@ namespace Binjyo
                 var item = Items[kvp.Key];
                 left = Math.Min(left, kvp.Value.X);
                 top = Math.Min(top, kvp.Value.Y);
-                right = Math.Max(right, kvp.Value.X + item.GetDisplayWidth());
-                bottom = Math.Max(bottom, kvp.Value.Y + item.GetDisplayHeight());
+                right = Math.Max(right, kvp.Value.X + item.Width);
+                bottom = Math.Max(bottom, kvp.Value.Y + item.Height);
             }
 
             if (double.IsInfinity(left) || double.IsInfinity(top))
@@ -75,7 +75,7 @@ namespace Binjyo
                     var item = Items[id];
                     double localX = x / item.DpiFactor - item.Left;
                     double localY = y / item.DpiFactor - item.Top;
-                    return localX >= 0 && localX < item.GetDisplayWidth() && localY >= 0 && localY < item.GetDisplayHeight();
+                    return localX >= 0 && localX < item.Width && localY >= 0 && localY < item.Height;
                 })
                 .ToList();
         }
@@ -137,13 +137,13 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                if (!Geo.DoSegmentsOverlap(top, bottom, item.Top, item.Top + item.GetDisplayHeight()))
+                if (!Geo.DoSegmentsOverlap(top, bottom, item.Top, item.Bottom))
                     continue;
 
                 candidates.Add(item.Left);
-                candidates.Add(item.Left + item.GetDisplayWidth());
+                candidates.Add(item.Right);
                 candidates.Add(item.Left - width);
-                candidates.Add(item.Left + item.GetDisplayWidth() - width);
+                candidates.Add(item.Right - width);
             }
 
             return FindNextSnapCandidate(boundingBox.Left, candidates, forward);
@@ -171,13 +171,13 @@ namespace Binjyo
                 if (movingSet.Contains(item))
                     continue;
 
-                if (!Geo.DoSegmentsOverlap(left, right, item.Left, item.Left + item.GetDisplayWidth()))
+                if (!Geo.DoSegmentsOverlap(left, right, item.Left, item.Right))
                     continue;
 
                 candidates.Add(item.Top);
-                candidates.Add(item.Top + item.GetDisplayHeight());
+                candidates.Add(item.Bottom);
                 candidates.Add(item.Top - height);
-                candidates.Add(item.Top + item.GetDisplayHeight() - height);
+                candidates.Add(item.Bottom - height);
             }
 
             return FindNextSnapCandidate(boundingBox.Top, candidates, forward);
@@ -222,8 +222,8 @@ namespace Binjyo
 
                 double otherLeft = item.Left;
                 double otherTop = item.Top;
-                double otherRight = item.Left + item.GetDisplayWidth();
-                double otherBottom = item.Top + item.GetDisplayHeight();
+                double otherRight = item.Right;
+                double otherBottom = item.Bottom;
 
                 if (!Geo.DoSegmentsOverlap(top, top + height, otherTop, otherBottom))
                     continue;
@@ -249,8 +249,8 @@ namespace Binjyo
                 var item = Items[other];
                 double otherLeft = item.Left;
                 double otherTop = item.Top;
-                double otherRight = item.Left + item.GetDisplayWidth();
-                double otherBottom = item.Top + item.GetDisplayHeight();
+                double otherRight = item.Right;
+                double otherBottom = item.Bottom;
 
                 if (!Geo.DoSegmentsOverlap(left, left + width, otherLeft, otherRight))
                     continue;

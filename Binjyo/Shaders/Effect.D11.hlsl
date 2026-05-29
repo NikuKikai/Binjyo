@@ -3,8 +3,8 @@ SamplerState InputSampler : register(s0);
 
 cbuffer Constants : register(b0)
 {
-    float4 SourceAndOpacity;  // baseWidth, baseHeight, opacity, unused
-    float4 RenderAndFlags;    // renderWidth, renderHeight, borderSize, unused
+    float4 Sizes;  // baseWidth, baseHeight, renderWidth, renderHeight
+    float4 RenderAndFlags;    // borderSize, unused
     float4 EffectParamsA;
     float4 EffectParamsB;
     float4 InverseRow0;
@@ -64,7 +64,7 @@ float4 main(float4 position : SV_POSITION) : SV_Target
     localPoint.x = outputPoint.x * InverseRow0.x + outputPoint.y * InverseRow0.y + InverseRow0.z;
     localPoint.y = outputPoint.x * InverseRow1.x + outputPoint.y * InverseRow1.y + InverseRow1.z;
 
-    float2 uv = localPoint / SourceAndOpacity.xy;
+    float2 uv = localPoint / Sizes.xy;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return float4(0.0, 0.0, 0.0, 0.0);
 
@@ -79,13 +79,10 @@ float4 main(float4 position : SV_POSITION) : SV_Target
     if (EffectParamsB.y > 0.5)
         color = ApplyHuemap(color);
 
-    color.a *= SourceAndOpacity.z;
-    color.rgb *= color.a;
-
     float border = EffectParamsB.z;
-    if (RenderAndFlags.z > 0.5 &&
+    if (RenderAndFlags.x > 0.5 &&
         (outputPoint.x < border || outputPoint.y < border ||
-         outputPoint.x >= (RenderAndFlags.x - border) || outputPoint.y >= (RenderAndFlags.y - border)))
+         outputPoint.x >= (Sizes.z - border) || outputPoint.y >= (Sizes.w - border)))
     {
         return float4(0.0, 1.0, 0.0, 1.0);
     }

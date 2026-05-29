@@ -65,8 +65,7 @@ namespace Binjyo
             Image.Source = item.Bitmap;
             Image.Effect = Effect;
 
-            NotifiedMove();
-            NotifiedTransform();
+            NotifiedTransform(false);
 
             item.RegisterView(this);
         }
@@ -84,16 +83,17 @@ namespace Binjyo
             owner.UpdateStatusText();
         }
 
-        public void NotifiedMove()
+        public void NotifiedOpacity()
+        {
+            Image.Opacity = Item.IsOpacity ? Item.Opacity : 1;
+        }
+
+        public void NotifiedTransform(bool moveOnly)
         {
             Canvas.SetLeft(Container, Item.Left);
             Canvas.SetTop(Container, Item.Top);
-        }
-
-        public void NotifiedTransform()
-        {
-            Border.Width = Item.GetDisplayWidth();
-            Border.Height = Item.GetDisplayHeight();
+            Border.Width = Item.Width;
+            Border.Height = Item.Height;
         }
 
         public void NotifiedEffect()
@@ -104,7 +104,7 @@ namespace Binjyo
             Effect.BinarizeThreshold = Item.PEffectBinarize;
             Effect.IsQuantize = Item.IsEffectQuantize ? 1 : 0;
             Effect.QuantizeLevels = Item.PEffectQuantize;
-            Image.Opacity = Item.IsEffectTransparent ? Item.PEffectTransparent / 255.0 : 1;
+            Image.Opacity = Item.IsOpacity ? Item.Opacity : 1;
         }
 
 

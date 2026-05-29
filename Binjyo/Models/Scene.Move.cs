@@ -16,55 +16,55 @@ namespace Binjyo
         private static double dragStartMouseX, dragStartMouseY;
         private static Dictionary<Guid, Point> dragMoveStartPts = new Dictionary<Guid, Point>();
 
-        public static void MoveByKey(Guid id, Key key, bool isRepeat)
+        public static void MoveByKey(Guid id, double dx, double dy, bool isRepeat)
         {
             bool isGroup = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
             List<Guid> targetIds = isGroup ? GetConnectedIds(id) : new List<Guid> { id };
 
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
-                MoveToNextSnap(targetIds, key);
+                MoveToNextSnap(targetIds, dx, dy);
                 return;
             }
 
             double multiplier = (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) ? 10 : 1;
-            moveSpeed = isRepeat ? moveSpeed + 1 / 4 : 1;
-            double delta = multiplier * moveSpeed;
-            double deltaX = key == Key.Left ? -delta : key == Key.Right ? delta : 0;
-            double deltaY = key == Key.Up ? -delta : key == Key.Down ? delta : 0;
+            moveSpeed = isRepeat ? moveSpeed + 0.5 : 1.0;
+            double delta = Math.Min(multiplier * moveSpeed, 100);
+            double deltaX = dx * delta;
+            double deltaY = dy * delta;
 
             MoveBy(targetIds, deltaX, deltaY);
         }
 
-        private static void MoveToNextSnap(List<Guid> ids, Key key)
+        private static void MoveToNextSnap(List<Guid> ids, double dx, double dy)
         {
             if (ids.Count == 0) return;
             if (DisplayMode != EDisplayMode.Expanded) return;
 
             var boundingBox = GetBounds(ids);
-            double? target = null;
-            switch (key)
+            if (dx < 0)
             {
-                case Key.Left:
-                    target = GetNextSnapPositionX(ids, boundingBox, false);
-                    if (target.HasValue)
-                        MoveBy(ids, target.Value - boundingBox.Left, 0);
-                    break;
-                case Key.Right:
-                    target = GetNextSnapPositionX(ids, boundingBox, true);
-                    if (target.HasValue)
-                        MoveBy(ids, target.Value - boundingBox.Left, 0);
-                    break;
-                case Key.Up:
-                    target = GetNextSnapPositionY(ids, boundingBox, false);
-                    if (target.HasValue)
-                        MoveBy(ids, 0, target.Value - boundingBox.Top);
-                    break;
-                case Key.Down:
-                    target = GetNextSnapPositionY(ids, boundingBox, true);
-                    if (target.HasValue)
-                        MoveBy(ids, 0, target.Value - boundingBox.Top);
-                    break;
+                var target = GetNextSnapPositionX(ids, boundingBox, false);
+                if (target.HasValue)
+                    MoveBy(ids, target.Value - boundingBox.Left, 0);
+            }
+            else if (dx > 0)
+            {
+                var target = GetNextSnapPositionX(ids, boundingBox, true);
+                if (target.HasValue)
+                    MoveBy(ids, target.Value - boundingBox.Left, 0);
+            }
+            if (dy < 0)
+            {
+                var target = GetNextSnapPositionY(ids, boundingBox, false);
+                if (target.HasValue)
+                    MoveBy(ids, 0, target.Value - boundingBox.Top);
+            }
+            else if (dy > 0)
+            {
+                var target = GetNextSnapPositionY(ids, boundingBox, true);
+                if (target.HasValue)
+                    MoveBy(ids, 0, target.Value - boundingBox.Top);
             }
         }
 
