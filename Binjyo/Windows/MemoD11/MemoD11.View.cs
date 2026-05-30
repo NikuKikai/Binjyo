@@ -76,7 +76,7 @@ namespace Binjyo
         /// </summary>
         public void NotifiedTransform(bool moveOnly)
         {
-            Rectangle bounds = new Rectangle(
+            var bounds = new Rectangle(
                 (int)Math.Round(Item.Left),
                 (int)Math.Round(Item.Top),
                 Math.Max(1, (int)Math.Ceiling(Item.Width)),

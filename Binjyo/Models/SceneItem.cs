@@ -52,6 +52,10 @@ namespace Binjyo
         public bool IsOpacity { get; private set; }
         public double Opacity { get; private set; } = 0.5;
         public bool IsEffectHuemap { get; private set; }
+        public TransformGroup Transform { get; internal set; } = new TransformGroup();
+        public TransformGroup TransformInv { get; internal set; } = new TransformGroup();
+
+        public Clipper2Lib.Paths64 Collider { get; internal set; }
 
         public List<char> GeometryTransformHistory { get; } = new List<char>();
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
@@ -68,12 +72,10 @@ namespace Binjyo
             Top = top;
             Right = left + GetBaseWidth();
             Bottom = top + GetBaseHeight();
-        }
-        public static SceneItem FromScreenPos(double screenX, double screenY, double dpiFactor)
-        {
-            var x = screenX / dpiFactor;
-            var y = screenY / dpiFactor;
-            return new SceneItem(null, x, y);
+            Collider = new Clipper2Lib.Paths64();
+            Collider.Add(Clipper2Lib.Clipper.MakePath(new int[] {
+                    0, 0, bmp.PixelWidth, 0, bmp.PixelWidth, bmp.PixelHeight, 0, bmp.PixelHeight
+            }));
         }
 
         #region ======== Informations =======
@@ -81,58 +83,44 @@ namespace Binjyo
         public double GetBaseHeight() => Bitmap.Height / DpiFactor;
         public Point GetCenter() => new Point(Left + Width / 2, Top + Height / 2);
         public Rect GetBounds() => new Rect(Left, Top, Width, Height);
-        public TransformGroup GetTransformGroup()
-        {
-            var baseWidth = GetBaseWidth();
-            var baseHeight = GetBaseHeight();
-
-            var tg = new TransformGroup();
-            tg.Children.Add(new ScaleTransform(
-                IsFlipX ? -1 : 1, IsFlipY ? -1 : 1,
-                baseWidth / 2, baseHeight / 2));
-            tg.Children.Add(new ScaleTransform(Scale, Scale));
-            tg.Children.Add(new RotateTransform(Rotation, 0, 0));
-            var rect = tg.TransformBounds(new Rect(0, 0, baseWidth, baseHeight));
-            tg.Children.Add(new TranslateTransform(-rect.X, -rect.Y));
-            return tg;
-        }
 
         public double GetMinScale() => Math.Max(25.0 / GetBaseWidth(), 25.0 / GetBaseHeight());
         public double GetMaxScale() => 10;
-        /// <summary>
-        /// Input x,y is physical
-        /// </summary>
-        public bool ContainsPt(double x, double y)
-        {
-            return GetBounds().Contains(x / DpiFactor, y / DpiFactor);
-        }
-
         /// <summary>
         /// Input x,y is logical and local to Window. Output is physical and local to bitmap.
         /// </summary>
         public Point PtDisplay2Bitmap(double x, double y)
         {
-            var w = GetBaseWidth();
-            var h = GetBaseHeight();
-
-            var tr = new TransformGroup();
-            tr.Children.Add(new ScaleTransform(Scale, Scale));
-            tr.Children.Add(new RotateTransform(Rotation));
-            var rect = tr.TransformBounds(new Rect(0, 0, w, h));
-
-            x += rect.X;
-            y += rect.Y;
-
-            var trInv = new TransformGroup();
-            trInv.Children.Add(new RotateTransform(-Rotation));
-            trInv.Children.Add(new ScaleTransform(1.0 / Scale, 1.0 / Scale));
-            var pt = trInv.Transform(new Point(x, y)); // logical on non-transformed UI
-
-            pt.X = IsFlipX ? w - pt.X : pt.X;
-            pt.Y = IsFlipY ? h - pt.Y : pt.Y;
-
-            return new Point(Math.Round(pt.X * DpiFactor), Math.Round(pt.Y * DpiFactor)); // physical on bitmap
+            var pt = TransformInv.Transform(new Point(x, y));
+            return new Point(pt.X * DpiFactor, pt.Y * DpiFactor); // physical on bitmap
         }
+        /// <summary>
+        /// Input x,y is physical on screen
+        /// </summary>
+        public bool InWindow(int x, int y)
+        {
+            return GetBounds().Contains(x / DpiFactor, y / DpiFactor);
+        }
+        public bool InCollider(int x, int y)
+        {
+            var pt = PtDisplay2Bitmap(x / DpiFactor, y / DpiFactor);
+
+            int containCnt = 0;
+            foreach (var path in Collider)
+            {
+                var hit = Clipper2Lib.Clipper.PointInPolygon(
+                    new Clipper2Lib.Point64(pt.X, pt.Y),
+                    path
+                );
+                if (hit != Clipper2Lib.PointInPolygonResult.IsOutside)
+                {
+                    var positive = Clipper2Lib.Clipper.IsPositive(path);
+                    containCnt += positive? 1: -1;
+                }
+            }
+            return containCnt > 0;
+        }
+
 
         #endregion
 
@@ -165,6 +153,28 @@ namespace Binjyo
 
 
         #region ======== Transform =======
+        private Rect UpdateTransform()
+        {
+            var w = GetBaseWidth();
+            var h = GetBaseHeight();
+            Transform.Children.Clear();
+            Transform.Children.Add(new ScaleTransform(
+                IsFlipX ? -1 : 1, IsFlipY ? -1 : 1,
+                w / 2, h / 2));
+            Transform.Children.Add(new ScaleTransform(Scale, Scale));
+            Transform.Children.Add(new RotateTransform(Rotation, 0, 0));
+            var rect = Transform.TransformBounds(new Rect(0, 0, w, h));
+            Transform.Children.Add(new TranslateTransform(-rect.X, -rect.Y));
+
+            TransformInv.Children.Clear();
+            TransformInv.Children.Add(new TranslateTransform(rect.X, rect.Y));
+            TransformInv.Children.Add(new RotateTransform(-Rotation, 0, 0));
+            TransformInv.Children.Add(new ScaleTransform(1.0 / Scale, 1.0 / Scale));
+            TransformInv.Children.Add(new ScaleTransform(
+                IsFlipX ? -1.0 : 1.0, IsFlipY ? -1.0 : 1.0,
+                w / 2, h / 2));
+            return rect;
+        }
 
         public void SetPos(double left, double top)
         {
@@ -183,6 +193,7 @@ namespace Binjyo
             Right = Left + (Right - Left) / Scale * scale;
             Bottom = Top + (Bottom - Top) / Scale * scale;
             Scale = scale;
+            UpdateTransform();
             views.ForEach(view => view.NotifiedTransform(false));
         }
         public void SetFlip(bool isFlippedHorizontal, bool isFlippedVertical)
@@ -191,6 +202,7 @@ namespace Binjyo
                 return;
             IsFlipX = isFlippedHorizontal;
             IsFlipY = isFlippedVertical;
+            UpdateTransform();
             views.ForEach(view => view.NotifiedTransform(false));
         }
         public void ResetTransform()
@@ -199,30 +211,28 @@ namespace Binjyo
             IsFlipY = false;
             Rotation = 0;
             Scale = 1;
-            var tg = GetTransformGroup();
-            var rect = tg.TransformBounds(new Rect(Left, Top, GetBaseWidth(), GetBaseHeight()));
-            Left = rect.X;
-            Top = rect.Y;
-            Right = Left + rect.Width;
-            Bottom = Top + rect.Height;
+            Right = Left + GetBaseWidth();
+            Bottom = Top + GetBaseHeight();
+            UpdateTransform();
             views.ForEach(view => view.NotifiedTransform(false));
         }
         public void SetRotationCentered(double rotation)
         {
             rotation %= 360;
             if (Rotation == rotation) return;
+            Rotation = rotation;
+            var rectTgt = UpdateTransform();
 
-            var trTgt = new TransformGroup();
-            trTgt.Children.Add(new ScaleTransform(Scale, Scale));
-            trTgt.Children.Add(new RotateTransform(rotation));
-            var rectTgt = trTgt.TransformBounds(new Rect(0, 0, GetBaseWidth(), GetBaseHeight()));
+            // var trTgt = new TransformGroup();
+            // trTgt.Children.Add(new ScaleTransform(Scale, Scale));
+            // trTgt.Children.Add(new RotateTransform(rotation));
+            // var rectTgt = trTgt.TransformBounds(new Rect(0, 0, GetBaseWidth(), GetBaseHeight()));
 
             var center = GetCenter();
             Left = center.X - rectTgt.Width / 2;
             Top = center.Y - rectTgt.Height / 2;
             Right = Left + rectTgt.Width;
             Bottom = Top + rectTgt.Height;
-            Rotation = rotation;
             views.ForEach(view => view.NotifiedTransform(false));
         }
         #endregion

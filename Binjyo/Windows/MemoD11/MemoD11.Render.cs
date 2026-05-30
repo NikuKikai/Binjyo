@@ -110,7 +110,7 @@ namespace Binjyo
             {
                 Content = swapChain,
                 BitmapInterpolationMode = BitmapInterpolationMode.NearestNeighbor,
-                CompositeMode = CompositeMode.SourceOver
+                CompositeMode = CompositeMode.SourceOver,
             };
 
             dcompTarget.Root = dcompVisual;
@@ -265,8 +265,7 @@ namespace Binjyo
             double baseWidth = Item.GetBaseWidth();
             double baseHeight = Item.GetBaseHeight();
 
-            var inverse = Item.GetTransformGroup().Value;
-            inverse.Invert();
+            var inverse = Item.TransformInv.Value;
 
             shaderConstants.Sizes = new System.Numerics.Vector4(
                 (float)baseWidth,

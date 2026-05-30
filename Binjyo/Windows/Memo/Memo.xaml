@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Binjyo"
         mc:Ignorable="d"
         Title="Memo" Height="100" Width="100"
-        AllowsTransparency="False"
+        AllowsTransparency="True"
         WindowStyle="None"
         Background="Transparent"
         Topmost="True"
