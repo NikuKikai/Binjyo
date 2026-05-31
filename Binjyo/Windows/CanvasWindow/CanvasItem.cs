@@ -70,6 +70,11 @@ namespace Binjyo
             item.RegisterView(this);
         }
 
+        internal void RefreshBitmapScalingMode()
+        {
+            RenderOptions.SetBitmapScalingMode(Image, GetConfiguredBitmapScalingMode());
+        }
+
 
         public void NotifiedClose()
         {

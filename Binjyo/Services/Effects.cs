@@ -314,45 +314,6 @@ namespace Binjyo
             }
         }
 
-        public static WriteableBitmap RenderImage(System.Windows.Controls.Image img)
-        {
-            if (img.ActualWidth == 0 || img.ActualHeight == 0)
-                return null;
-
-            // Physical size
-            double dpiFactor = 1.0;  // physical / logical
-            var source = PresentationSource.FromVisual(img);
-            if (source?.CompositionTarget != null)
-                dpiFactor = source.CompositionTarget.TransformToDevice.M11;
-            int w = (int)Math.Round(img.ActualWidth * dpiFactor);
-            int h = (int)Math.Round(img.ActualHeight * dpiFactor);
-
-            // Render
-            var renderTarget = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
-            renderTarget.Render(img);
-
-            return new WriteableBitmap(renderTarget);
-        }
-
-        public static System.Windows.Media.Color GetPixel(this WriteableBitmap wbitmap, int x, int y)
-        {
-            if (x < 0 || x >= wbitmap.PixelWidth || y < 0 || y >= wbitmap.PixelHeight)
-            {
-                return Colors.Transparent;
-            }
-
-            byte[] pixel = new byte[4];
-
-            wbitmap.CopyPixels(new Int32Rect(x, y, 1, 1), pixel, 4, 0);
-
-            // 配列の中身は B, G, R, A の順
-            byte b = pixel[0];
-            byte g = pixel[1];
-            byte r = pixel[2];
-            byte a = pixel[3];
-
-            return System.Windows.Media.Color.FromArgb(a, r, g, b);
-        }
         public static float GetH(this System.Windows.Media.Color color)
         {
             return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B).GetHue();

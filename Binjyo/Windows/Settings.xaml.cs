@@ -290,7 +290,7 @@ namespace Binjyo
 
             Properties.Settings.Default.BitmapScalingMode = value;
             Properties.Settings.Default.Save();
-            Memo.RefreshAllMemoScalingModes();
+            CanvasWindow.RefreshAllCanvasItemScalingModes();
         }
 
         private void CheckShowFeatureMatchLines_Changed(object sender, RoutedEventArgs e)

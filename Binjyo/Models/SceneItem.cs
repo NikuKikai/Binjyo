@@ -55,7 +55,6 @@ namespace Binjyo
         public TransformGroup Transform { get; internal set; } = new TransformGroup();
         public TransformGroup TransformInv { get; internal set; } = new TransformGroup();
 
-        public Clipper2Lib.Paths64 Collider { get; internal set; }
 
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
 
@@ -70,10 +69,6 @@ namespace Binjyo
             Top = top;
             Right = left + GetBaseWidth();
             Bottom = top + GetBaseHeight();
-            Collider = new Clipper2Lib.Paths64();
-            Collider.Add(Clipper2Lib.Clipper.MakePath(new int[] {
-                    0, 0, bmp.PixelWidth, 0, bmp.PixelWidth, bmp.PixelHeight, 0, bmp.PixelHeight
-            }));
         }
 
         #region ======== Informations =======
@@ -99,26 +94,6 @@ namespace Binjyo
         {
             return GetBounds().Contains(x / DpiFactor, y / DpiFactor);
         }
-        public bool InCollider(int x, int y)
-        {
-            var pt = PtDisplay2Bitmap(x / DpiFactor, y / DpiFactor);
-
-            int containCnt = 0;
-            foreach (var path in Collider)
-            {
-                var hit = Clipper2Lib.Clipper.PointInPolygon(
-                    new Clipper2Lib.Point64(pt.X, pt.Y),
-                    path
-                );
-                if (hit != Clipper2Lib.PointInPolygonResult.IsOutside)
-                {
-                    var positive = Clipper2Lib.Clipper.IsPositive(path);
-                    containCnt += positive ? 1 : -1;
-                }
-            }
-            return containCnt > 0;
-        }
-
 
         #endregion
 

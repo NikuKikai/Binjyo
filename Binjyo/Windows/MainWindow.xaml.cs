@@ -21,7 +21,7 @@ namespace Binjyo
         public void Shot()
         {
             Screenshot ss = new Screenshot { Owner = this };
-            ss.Shot2();
+            ss.Shot();
         }
 
 

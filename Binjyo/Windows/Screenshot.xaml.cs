@@ -33,54 +33,8 @@ namespace Binjyo
             InitializeComponent();
         }
 
-        public void Shot()
-        {
-            WindowState = WindowState.Normal;
-
-            // Scaled screen size
-            // BUG: If the app start with dpi ratio X, and then changed to Y < X, following vars does not change.
-            // var wv = (int)SystemParameters.VirtualScreenWidth;
-            // var hv = (int)SystemParameters.VirtualScreenHeight;
-            // var lv = (int)SystemParameters.VirtualScreenLeft;
-            // var tv = (int)SystemParameters.VirtualScreenTop;
-
-            // Get physical bounds
-            var rect = Geo.GetAllScreenBoundsPhysical();
-            w = rect.Width;
-            h = rect.Height;
-            l = rect.X;
-            t = rect.Y;
-
-            // Get DPI
-            dpiFactor = Geo.GetDpiFactorAt(l + 1, t + 1);
-
-            // Resize window to cover all screen
-            Width = w / dpiFactor;
-            Height = h / dpiFactor;
-            Left = l / dpiFactor;
-            Top = t / dpiFactor;
-            Console.WriteLine("Left " + Left + " Top " + Top + " W " + Width + " H " + Height);
-
-            ReleaseScreenshotResources();
-
-            // Get Screen bitmap
-            this.bitmap = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            using (var g = Graphics.FromImage(this.bitmap))
-            {
-                g.CopyFromScreen(l, t, 0, 0, this.bitmap.Size);
-            }
-
-            screenshotSource = this.bitmap.ToBitmapSource(PixelFormats.Bgr24);
-            screenshotSource.Freeze();
-            this.image.Source = screenshotSource;
-
-            HideSelectionRect();
-
-            ShowThis();
-        }
-
         // Use WriteableBitmap for better performance
-        public void Shot2()
+        public void Shot()
         {
             WindowState = WindowState.Normal;
 
@@ -238,37 +192,7 @@ namespace Binjyo
             popup.IsOpen = false;
         }
 
-
-        // private void CreateMemo()
-        // {
-        //     if (selectedWidth > 20 && selectedHeight > 20)
-        //     {
-        //         // Crop bitmap with rect
-        //         var croppedImage = new Bitmap(selectedWidth, selectedHeight);
-        //         using (var graphics = Graphics.FromImage(croppedImage))
-        //         {
-        //             var srcrect = new Rectangle(
-        //                 selectedLeft + 1, selectedTop + 1,
-        //                 croppedImage.Width, croppedImage.Height);
-        //             graphics.DrawImage(bitmap, 0, 0, srcrect, GraphicsUnit.Pixel);
-        //         }
-
-        //         double left = selectedLeft + 1 + l;
-        //         double top = selectedTop + 1 + t;
-        //         double dpiFactor = Geo.GetDpiFactorAt(
-        //             left + croppedImage.Width / 2,
-        //             top + croppedImage.Height / 2
-        //         );
-
-        //         // Create Memo from cropped bitmap
-        //         var item = Scene.CreateItem(croppedImage, (int)(left / dpiFactor), (int)(top / dpiFactor));
-        //         Memo memo = new Memo(item);
-        //         CanvasWindow.CreateItem(item);
-        //         Scene.Focus(item.Id);
-        //     }
-        // }
-
-        private void CreateMemo2()
+        private void CreateMemo()
         {
             if (selectedWidth < 20 || selectedHeight < 20) return;
 
@@ -319,7 +243,6 @@ namespace Binjyo
 
             // Create Memo from cropped bitmap
             var item = Scene.CreateItem(croppedImage, left / dpiFactor, top / dpiFactor);
-            // Memo memo = new Memo(item);
             MemoD11 memo = new MemoD11(item);
             CanvasWindow.CreateItem(item);
             Scene.Focus(item.Id);
@@ -359,7 +282,7 @@ namespace Binjyo
             HideCross();
 
             Opacity = 0;
-            CreateMemo2();
+            CreateMemo();
 
             CloseThis();
         }

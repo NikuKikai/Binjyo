@@ -54,6 +54,15 @@ namespace Binjyo
             instance.canvasItems.Add(item.Id, c);
         }
 
+        public static void RefreshAllCanvasItemScalingModes()
+        {
+            if (instance == null)
+                return;
+
+            foreach (CanvasItem item in instance.canvasItems.Values)
+                item.RefreshBitmapScalingMode();
+        }
+
         internal void RemoveItem(Guid itemId)
         {
             if (!canvasItems.TryGetValue(itemId, out CanvasItem visual))
