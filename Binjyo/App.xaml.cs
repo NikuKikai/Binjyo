@@ -116,36 +116,8 @@ namespace Binjyo
 
         private void CreateContextMenu()
         {
-            _trayContextMenu = BuildTrayContextMenu();
+            _trayContextMenu = AppContextMenuFactory.CreateTrayContextMenu(this, TrayContextMenu_Closed);
             _notifyIcon.MouseUp += NotifyIcon_MouseUp;
-        }
-
-        private ContextMenu BuildTrayContextMenu()
-        {
-            ContextMenu menu = new ContextMenu
-            {
-                FlowDirection = FlowDirection.LeftToRight
-            };
-            menu.Closed += TrayContextMenu_Closed;
-
-            MenuItem viewModeItem = new MenuItem { Header = "View mode" };
-            MenuItem expandedItem = CreateCheckableMenuItem("Expanded", FormatDisplayModeGestureText(), (s, e) => SetViewMode(EDisplayMode.Expanded));
-            MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => SetViewMode(EDisplayMode.AutoHide));
-            MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => SetViewMode(EDisplayMode.Minimized));
-            viewModeItem.SubmenuOpened += (s, e) => UpdateViewModeMenuChecks(expandedItem, autoHideItem, minimizedItem);
-            viewModeItem.Items.Add(expandedItem);
-            viewModeItem.Items.Add(autoHideItem);
-            viewModeItem.Items.Add(minimizedItem);
-
-            menu.Items.Add(viewModeItem);
-            menu.Items.Add(CreateMenuItem("Canvas Window", null, (s, e) => OpenCanvasWindow()));
-            menu.Items.Add(CreateMenuItem("Close All", null, (s, e) => CloseAll()));
-            menu.Items.Add(CreateMenuItem("History...", null, (s, e) => OpenHistory()));
-            menu.Items.Add(CreateMenuItem("Shortcut Help", null, (s, e) => OpenShortcutHelp()));
-            menu.Items.Add(CreateMenuItem("Settings...", null, (s, e) => OpenSettings()));
-            menu.Items.Add(new Separator());
-            menu.Items.Add(CreateMenuItem("Exit", null, (s, e) => ExitApplication()));
-            return menu;
         }
 
         private void NotifyIcon_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -211,61 +183,9 @@ namespace Binjyo
                 _trayMenuHostWindow.Hide();
         }
 
-        private static MenuItem CreateMenuItem(string header, string inputGestureText, RoutedEventHandler onClick)
-        {
-            MenuItem item = new MenuItem
-            {
-                Header = header,
-                InputGestureText = inputGestureText,
-                FlowDirection = FlowDirection.LeftToRight
-            };
-            item.Click += onClick;
-            return item;
-        }
-
-        private static MenuItem CreateCheckableMenuItem(string header, string inputGestureText, RoutedEventHandler onClick)
-        {
-            MenuItem item = new MenuItem
-            {
-                Header = header,
-                InputGestureText = inputGestureText,
-                IsCheckable = true,
-                StaysOpenOnClick = false,
-                FlowDirection = FlowDirection.LeftToRight
-            };
-            item.Click += onClick;
-            return item;
-        }
-
-        private static string FormatDisplayModeGestureText()
-        {
-            ModifierKeys modifiers = (ModifierKeys)Binjyo.Properties.Settings.Default.ModifierDisplayMode;
-            string result = string.Empty;
-            if ((modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-                result += "Ctrl+";
-            if ((modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
-                result += "Alt+";
-            if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-                result += "Shift+";
-            if ((modifiers & ModifierKeys.Windows) == ModifierKeys.Windows)
-                result += "Win+";
-            return $"{result}X";
-        }
-
         public void SetViewMode(EDisplayMode mode)
         {
             Scene.SetDisplayMode(mode);
-        }
-
-        private void UpdateViewModeMenuChecks(
-            MenuItem expandedItem,
-            MenuItem autoHideItem,
-            MenuItem minimizedItem)
-        {
-            EDisplayMode currentMode = Scene.DisplayMode;
-            expandedItem.IsChecked = currentMode == EDisplayMode.Expanded;
-            autoHideItem.IsChecked = currentMode == EDisplayMode.AutoHide;
-            minimizedItem.IsChecked = currentMode == EDisplayMode.Minimized;
         }
         public void OpenHistory()
         {

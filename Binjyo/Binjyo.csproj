@@ -117,6 +117,7 @@
     </ApplicationDefinition>
     <Compile Include="Graphics\DX11.cs" />
     <Compile Include="Graphics\DX9.cs" />
+    <Compile Include="Menus\AppContextMenuFactory.cs" />
     <Compile Include="Models\Scene.cs" />
     <Compile Include="Models\Scene.Focus.cs" />
     <Compile Include="Models\Scene.Geometry.cs" />
@@ -169,6 +170,9 @@
     <Compile Include="Windows\Memo\Memo.Interaction.cs" />
     <Compile Include="Windows\Memo\Memo.Imaging.cs" />
     <Compile Include="Windows\MemoD11\MemoD11.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.ContextMenu.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.Drawing.cs">

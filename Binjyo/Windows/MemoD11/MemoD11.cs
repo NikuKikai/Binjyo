@@ -138,6 +138,8 @@ namespace Binjyo
         {
             drawPanel?.Close();
             drawPanel = null;
+            memoMenuHostWindow?.Close();
+            memoMenuHostWindow = null;
             timer?.Stop();
             timer?.Dispose();
             timer = null;

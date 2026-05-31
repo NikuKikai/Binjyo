@@ -57,7 +57,10 @@ namespace Binjyo
         private void MemoD11_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
+            {
+                ShowContextMenuAtCursor();
                 return;
+            }
 
             if (isDrawMode)
             {
