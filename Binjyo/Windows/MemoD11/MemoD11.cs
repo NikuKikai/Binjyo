@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Form = System.Windows.Forms.Form;
 
@@ -10,22 +9,7 @@ namespace Binjyo
     {
         #region ======== Types ========
 
-        private const int WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
-        private const int WM_NCHITTEST = 0x0084;
-        private const int HTTRANSPARENT = -1;
-        private const int LWA_ALPHA = 0x00000002;
-        private const uint SWP_NOMOVE = 0x0002;
-        private const uint SWP_NOZORDER = 0x0004;
-        private const uint SWP_FRAMECHANGED = 0x0020;
-
-        private const int WM_SIZE = 0x0005;
-        private const int WM_SIZING = 0x0214;
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        private const int WS_EX_LAYERED = 0x00080000;
 
         #endregion
 
@@ -66,6 +50,7 @@ namespace Binjyo
             DoubleBuffered = false;
             BackColor = System.Drawing.Color.Black;
             TopMost = true;
+            AllowTransparency = false;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque | ControlStyles.UserPaint, true);
 
             MouseDown += MemoD11_MouseDown;
@@ -79,7 +64,9 @@ namespace Binjyo
             // Application.Idle += OnApplicationIdle;
 
             item.RegisterView(this);
+            UpdateRenderHostLayout();
             Show();
+
             NotifiedTransform(false);
             NotifiedDisplayMode();
 
@@ -100,7 +87,7 @@ namespace Binjyo
         }
 
         /// <summary>
-        /// Suppress WinForms background clears because DirectComposition owns the surface.
+        /// Suppress WinForms background clears because the layered bitmap is fully owned by the D3D11 render path.
         /// </summary>
         protected override void OnPaintBackground(PaintEventArgs e)
         {
@@ -114,41 +101,21 @@ namespace Binjyo
         }
 
         /// <summary>
-        /// Return transparent hit-test results for fully transparent pixels so input can pass through irregular image shapes.
-        /// </summary>
-        protected override void WndProc(ref Message m)
-        {
-            if (m.Msg == WM_NCHITTEST)
-            {
-                long lParam = m.LParam.ToInt64();
-                int screenX = unchecked((short)(lParam & 0xFFFF));
-                int screenY = unchecked((short)((lParam >> 16) & 0xFFFF));
-                // if (Item.InCollider(screenX, screenY)) // Optimization to avoid expensive pixel hit test when fully transparent
-                {
-                    m.Result = (IntPtr)HTTRANSPARENT;
-                    return;
-                }
-            }
-
-            base.WndProc(ref m);
-        }
-
-        /// <summary>
-        /// Enable DirectComposition-friendly window styles so transparent regions are not backed by a black redirection surface.
+        /// Use a layered tool window so the system performs hit testing against the final per-pixel alpha content.
         /// </summary>
         protected override CreateParams CreateParams
         {
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_NOREDIRECTIONBITMAP;
-                // cp.ExStyle |= 0x00080000; // WS_EX_LAYERED
+                cp.ExStyle |= WS_EX_LAYERED;
+                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW;
                 return cp;
             }
         }
 
         /// <summary>
-        /// Rebuild the swap chain from the actual native client size after the window resize completes.
+        /// Rebuild the offscreen render targets from the native client size after the window resize completes.
         /// </summary>
         protected override void OnResize(EventArgs e)
         {
@@ -190,7 +157,7 @@ namespace Binjyo
                     var isMouseInside = IsMouseInside();
                     if (isMouseInside != lastMouseInside)
                     {
-                        Opacity = FinalOpacity;
+                        RenderSceneItem();
                         lastMouseInside = isMouseInside;
                     }
                 }
@@ -203,4 +170,5 @@ namespace Binjyo
         #endregion
 
     }
+
 }

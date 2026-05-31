@@ -1,7 +1,6 @@
 using System;
 using System.Windows.Forms;
 using Point = System.Drawing.Point;
-using Rectangle = System.Drawing.Rectangle;
 
 namespace Binjyo
 {
@@ -35,7 +34,8 @@ namespace Binjyo
             var mouse = MousePosition;
             double x = mouse.X;
             double y = mouse.Y;
-            return Left <= x && x <= Left + Width && Top <= y && y <= Top + Height;
+            return currentHostBounds.Left <= x && x <= currentHostBounds.Right
+                && currentHostBounds.Top <= y && y <= currentHostBounds.Bottom;
         }
 
         #endregion

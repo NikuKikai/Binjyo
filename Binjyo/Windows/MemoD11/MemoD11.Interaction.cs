@@ -113,6 +113,7 @@ namespace Binjyo
             if (isRotateDragging)
             {
                 isRotateDragging = false;
+                NotifiedTransform(false);
             }
             else
             {
@@ -276,10 +277,12 @@ namespace Binjyo
                         isRotateDragging = false;
                         if (Capture)
                             Capture = false;
+                        NotifiedTransform(false);
                     }
                     else if (!isEditedDuringKeyR)
                     {
                         var delta = Math.Ceiling(Item.Rotation / 90 + 0.001) * 90 - Item.Rotation;
+                        if (Math.Abs(delta) < 0.001) delta = 90;
                         Animator.Start(
                             Id, "rotate", this, step =>
                             {

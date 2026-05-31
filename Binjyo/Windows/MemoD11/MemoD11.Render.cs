@@ -1,17 +1,14 @@
 using SharpDX;
-using SharpDX.D3DCompiler;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
-using SharpDX.DirectComposition;
 using SharpDX.DXGI;
 using System;
-using System.IO;
+using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Runtime.InteropServices;
 using Buffer = SharpDX.Direct3D11.Buffer;
 using Device = SharpDX.Direct3D11.Device;
-using DCompVisual = SharpDX.DirectComposition.Visual;
 
 namespace Binjyo
 {
@@ -28,24 +25,115 @@ namespace Binjyo
             public System.Numerics.Vector4 InverseRow1;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct PointInt
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct SizeInt
+        {
+            public int Width;
+            public int Height;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BlendFunction
+        {
+            public byte BlendOp;
+            public byte BlendFlags;
+            public byte SourceConstantAlpha;
+            public byte AlphaFormat;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BitmapInfo
+        {
+            public BitmapInfoHeader bmiHeader;
+            public uint bmiColors;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BitmapInfoHeader
+        {
+            public uint biSize;
+            public int biWidth;
+            public int biHeight;
+            public ushort biPlanes;
+            public ushort biBitCount;
+            public uint biCompression;
+            public uint biSizeImage;
+            public int biXPelsPerMeter;
+            public int biYPelsPerMeter;
+            public uint biClrUsed;
+            public uint biClrImportant;
+        }
+
+        private const int AC_SRC_OVER = 0x00;
+        private const int AC_SRC_ALPHA = 0x01;
+        private const int ULW_ALPHA = 0x00000002;
+        private const uint BI_RGB = 0;
+        private const uint DIB_RGB_COLORS = 0;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDc);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateCompatibleDC(IntPtr hDc);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern bool DeleteDC(IntPtr hDc);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr SelectObject(IntPtr hDc, IntPtr hObject);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern bool DeleteObject(IntPtr hObject);
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        private static extern IntPtr CreateDIBSection(
+            IntPtr hDc,
+            ref BitmapInfo pbmi,
+            uint iUsage,
+            out IntPtr ppvBits,
+            IntPtr hSection,
+            uint dwOffset);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UpdateLayeredWindow(
+            IntPtr hWnd,
+            IntPtr hdcDst,
+            ref PointInt pptDst,
+            ref SizeInt psize,
+            IntPtr hdcSrc,
+            ref PointInt pptSrc,
+            int crKey,
+            ref BlendFunction pblend,
+            int dwFlags);
+
         #region ======== Render State ========
 
         private Device d3dDevice;
-        private SharpDX.DXGI.Device dxgiDevice;
-        private Factory2 dxgiFactory;
-        private SwapChain1 swapChain;
         private DeviceContext deviceContext;
         private Texture2D sourceTexture;
         private ShaderResourceView sourceTextureView;
+        private Texture2D renderTargetTexture;
         private RenderTargetView renderTargetView;
+        private Texture2D stagingTexture;
         private VertexShader vertexShader;
         private PixelShader pixelShader;
         private SamplerState samplerState;
         private Buffer constantBuffer;
-        private SharpDX.DirectComposition.Device dcompDevice;
-        private Target dcompTarget;
-        private DCompVisual dcompVisual;
         private ShaderConstants shaderConstants;
+        private byte[] layeredPixelBuffer;
+        private Rectangle currentHostBounds;
+        private double renderContentOffsetX;
+        private double renderContentOffsetY;
         private int renderWidth;
         private int renderHeight;
         private bool isGraphicsReady;
@@ -55,7 +143,22 @@ namespace Binjyo
         #region ======== Graphics ========
 
         /// <summary>
-        /// Build the D3D11, DXGI, and DirectComposition pipeline for this memo window.
+        /// Update the layered host bounds and content offsets from the current scene item bounds.
+        /// </summary>
+        private void UpdateRenderHostLayout()
+        {
+            currentHostBounds = new Rectangle(
+                (int)Math.Round(Item.Left),
+                (int)Math.Round(Item.Top),
+                Math.Max(1, (int)Math.Ceiling(Item.Width)),
+                Math.Max(1, (int)Math.Ceiling(Item.Height)));
+
+            renderContentOffsetX = Item.Left - currentHostBounds.Left;
+            renderContentOffsetY = Item.Top - currentHostBounds.Top;
+        }
+
+        /// <summary>
+        /// Build the D3D11 pipeline used to render the memo into an offscreen surface.
         /// </summary>
         private void InitializeGraphics()
         {
@@ -72,81 +175,68 @@ namespace Binjyo
             }
 
             deviceContext = d3dDevice.ImmediateContext;
-            dxgiDevice = d3dDevice.QueryInterface<SharpDX.DXGI.Device>();
-            dxgiFactory = new Factory2();
-            dcompDevice = new SharpDX.DirectComposition.Device(dxgiDevice);
-
-            CreateSwapChainAndCompositionRoot(Math.Max(1, Width), Math.Max(1, Height));
+            int initialWidth = Math.Max(1, currentHostBounds.Width > 0 ? currentHostBounds.Width : Width);
+            int initialHeight = Math.Max(1, currentHostBounds.Height > 0 ? currentHostBounds.Height : Height);
+            CreateRenderTargets(initialWidth, initialHeight);
             CreateShadersAndState();
             isGraphicsReady = true;
         }
 
         /// <summary>
-        /// Create the composition swap chain and bind it to the top-level window.
-        /// </summary>
-        private void CreateSwapChainAndCompositionRoot(int width, int height)
-        {
-            renderWidth = width;
-            renderHeight = height;
-
-            var description = new SwapChainDescription1
-            {
-                Width = width,
-                Height = height,
-                Format = Format.B8G8R8A8_UNorm,
-                Stereo = false,
-                SampleDescription = new SampleDescription(1, 0),
-                Usage = Usage.RenderTargetOutput,
-                BufferCount = 2,
-                Scaling = Scaling.Stretch,
-                SwapEffect = SwapEffect.FlipSequential,
-                AlphaMode = AlphaMode.Premultiplied,
-                Flags = SwapChainFlags.None
-            };
-
-            swapChain = new SwapChain1(dxgiFactory, d3dDevice, ref description, null);
-            dcompTarget = Target.FromHwnd(dcompDevice, Handle, true);
-            dcompVisual = new DCompVisual(dcompDevice)
-            {
-                Content = swapChain,
-                BitmapInterpolationMode = BitmapInterpolationMode.NearestNeighbor,
-                CompositeMode = CompositeMode.SourceOver,
-            };
-
-            dcompTarget.Root = dcompVisual;
-            RecreateRenderTargetView();
-            dcompDevice.Commit();
-        }
-
-        /// <summary>
-        /// Resize the existing swap chain buffers to match the current client size.
+        /// Resize the offscreen render targets to match the current window size.
         /// </summary>
         private void ResizeSwapChain(int width, int height)
         {
-            if (swapChain == null)
+            if (d3dDevice == null)
                 return;
-
-            renderWidth = width;
-            renderHeight = height;
-
-            deviceContext.OutputMerger.SetRenderTargets((RenderTargetView)null);
-            renderTargetView?.Dispose();
-            renderTargetView = null;
-
-            swapChain.ResizeBuffers(2, width, height, Format.B8G8R8A8_UNorm, SwapChainFlags.None);
-            RecreateRenderTargetView();
+            CreateRenderTargets(width, height);
         }
 
         /// <summary>
-        /// Recreate the render target view from the current swap chain back buffer.
+        /// Create or recreate the offscreen render target and CPU-readable staging texture.
         /// </summary>
-        private void RecreateRenderTargetView()
+        private void CreateRenderTargets(int width, int height)
         {
+            renderWidth = width;
+            renderHeight = height;
+            layeredPixelBuffer = new byte[width * height * 4];
+
             renderTargetView?.Dispose();
-            using (var backBuffer = swapChain.GetBackBuffer<Texture2D>(0))
+            renderTargetView = null;
+            renderTargetTexture?.Dispose();
+            renderTargetTexture = null;
+            stagingTexture?.Dispose();
+            stagingTexture = null;
+
+            renderTargetTexture = new Texture2D(d3dDevice, new Texture2DDescription
             {
-                renderTargetView = new RenderTargetView(d3dDevice, backBuffer);
-            }
+                Width = width,
+                Height = height,
+                ArraySize = 1,
+                MipLevels = 1,
+                Format = Format.B8G8R8A8_UNorm,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Default,
+                BindFlags = BindFlags.RenderTarget,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None
+            });
+
+            renderTargetView = new RenderTargetView(d3dDevice, renderTargetTexture);
+
+            stagingTexture = new Texture2D(d3dDevice, new Texture2DDescription
+            {
+                Width = width,
+                Height = height,
+                ArraySize = 1,
+                MipLevels = 1,
+                Format = Format.B8G8R8A8_UNorm,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Staging,
+                BindFlags = BindFlags.None,
+                CpuAccessFlags = CpuAccessFlags.Read,
+                OptionFlags = ResourceOptionFlags.None
+            });
         }
 
         /// <summary>
@@ -232,13 +322,12 @@ namespace Binjyo
         }
 
         /// <summary>
-        /// Render the current scene item state into the composition swap chain.
+        /// Render the current scene item state, read it back to CPU memory, and push it into the layered window.
         /// </summary>
         private void RenderSceneItem()
         {
-            if (!isGraphicsReady || renderTargetView == null || sourceTextureView == null)
+            if (!isGraphicsReady || renderTargetView == null || stagingTexture == null || sourceTextureView == null)
                 return;
-
             UpdateShaderConstants();
 
             deviceContext.OutputMerger.SetRenderTargets(renderTargetView);
@@ -253,8 +342,102 @@ namespace Binjyo
             deviceContext.PixelShader.SetSampler(0, samplerState);
             deviceContext.PixelShader.SetShaderResource(0, sourceTextureView);
             deviceContext.Draw(4, 0);
-            swapChain.Present(0, PresentFlags.None);
-            dcompDevice.Commit();
+            deviceContext.PixelShader.SetShaderResource(0, null);
+            deviceContext.Flush();
+
+            deviceContext.CopyResource(renderTargetTexture, stagingTexture);
+            PushLayeredFrame();
+        }
+
+        /// <summary>
+        /// Read back the rendered texture and update the native layered window.
+        /// </summary>
+        private void PushLayeredFrame()
+        {
+            DataBox dataBox = deviceContext.MapSubresource(stagingTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+            try
+            {
+                int rowSize = renderWidth * 4;
+
+                for (int y = 0; y < renderHeight; y++)
+                {
+                    IntPtr rowPointer = IntPtr.Add(dataBox.DataPointer, y * dataBox.RowPitch);
+                    int rowOffset = y * rowSize;
+                    Marshal.Copy(rowPointer, layeredPixelBuffer, rowOffset, rowSize);
+                }
+            }
+            finally
+            {
+                deviceContext.UnmapSubresource(stagingTexture, 0);
+            }
+
+            UpdateLayeredBitmap();
+        }
+
+        /// <summary>
+        /// Upload the CPU bitmap to the layered window so Windows uses per-pixel alpha for both presentation and hit testing.
+        /// </summary>
+        private void UpdateLayeredBitmap()
+        {
+            if (!IsHandleCreated)
+                return;
+
+            IntPtr screenDc = GetDC(IntPtr.Zero);
+            IntPtr memoryDc = IntPtr.Zero;
+            IntPtr dib = IntPtr.Zero;
+            IntPtr dibBits = IntPtr.Zero;
+            IntPtr oldBitmap = IntPtr.Zero;
+
+            try
+            {
+                memoryDc = CreateCompatibleDC(screenDc);
+                if (memoryDc == IntPtr.Zero)
+                    return;
+
+                BitmapInfo bitmapInfo = new BitmapInfo
+                {
+                    bmiHeader = new BitmapInfoHeader
+                    {
+                        biSize = (uint)Marshal.SizeOf<BitmapInfoHeader>(),
+                        biWidth = renderWidth,
+                        biHeight = -renderHeight,
+                        biPlanes = 1,
+                        biBitCount = 32,
+                        biCompression = BI_RGB
+                    }
+                };
+
+                dib = CreateDIBSection(screenDc, ref bitmapInfo, DIB_RGB_COLORS, out dibBits, IntPtr.Zero, 0);
+                if (dib == IntPtr.Zero || dibBits == IntPtr.Zero)
+                    return;
+
+                Marshal.Copy(layeredPixelBuffer, 0, dibBits, layeredPixelBuffer.Length);
+                oldBitmap = SelectObject(memoryDc, dib);
+
+                PointInt dstPoint = new PointInt { X = currentHostBounds.Left, Y = currentHostBounds.Top };
+                SizeInt size = new SizeInt { Width = renderWidth, Height = renderHeight };
+                PointInt srcPoint = new PointInt();
+                BlendFunction blend = new BlendFunction
+                {
+                    BlendOp = AC_SRC_OVER,
+                    BlendFlags = 0,
+                    SourceConstantAlpha = 255,
+                    AlphaFormat = AC_SRC_ALPHA
+                };
+
+                UpdateLayeredWindow(Handle, screenDc, ref dstPoint, ref size, memoryDc, ref srcPoint, 0, ref blend, ULW_ALPHA);
+            }
+            finally
+            {
+                if (oldBitmap != IntPtr.Zero)
+                    SelectObject(memoryDc, oldBitmap);
+                if (dib != IntPtr.Zero)
+                    DeleteObject(dib);
+                if (memoryDc != IntPtr.Zero)
+                    DeleteDC(memoryDc);
+                if (screenDc != IntPtr.Zero)
+                    ReleaseDC(IntPtr.Zero, screenDc);
+            }
         }
 
         /// <summary>
@@ -264,8 +447,9 @@ namespace Binjyo
         {
             double baseWidth = Item.GetBaseWidth();
             double baseHeight = Item.GetBaseHeight();
-
             var inverse = Item.TransformInv.Value;
+            double adjustedOffsetX = inverse.OffsetX - renderContentOffsetX * inverse.M11 - renderContentOffsetY * inverse.M21;
+            double adjustedOffsetY = inverse.OffsetY - renderContentOffsetX * inverse.M12 - renderContentOffsetY * inverse.M22;
 
             shaderConstants.Sizes = new System.Numerics.Vector4(
                 (float)baseWidth,
@@ -274,7 +458,7 @@ namespace Binjyo
                 Math.Max(1, renderHeight));
             shaderConstants.RenderAndFlags = new System.Numerics.Vector4(
                 Scene.FocusedId == Id ? 1f : 0f,
-                0f,
+                (float)Math.Max(0.0, Math.Min(1.0, FinalOpacity)),
                 0f,
                 0f);
             shaderConstants.EffectParamsA = new System.Numerics.Vector4(
@@ -285,23 +469,28 @@ namespace Binjyo
             shaderConstants.EffectParamsB = new System.Numerics.Vector4(
                 Item.PEffectQuantize,
                 Item.IsEffectHuemap ? 1f : 0f,
-                0f, // border thickness
+                0f,
                 0f);
-            shaderConstants.InverseRow0 = new System.Numerics.Vector4((float)inverse.M11, (float)inverse.M21, (float)inverse.OffsetX, 0f);
-            shaderConstants.InverseRow1 = new System.Numerics.Vector4((float)inverse.M12, (float)inverse.M22, (float)inverse.OffsetY, 0f);
+            shaderConstants.InverseRow0 = new System.Numerics.Vector4((float)inverse.M11, (float)inverse.M21, (float)adjustedOffsetX, 0f);
+            shaderConstants.InverseRow1 = new System.Numerics.Vector4((float)inverse.M12, (float)inverse.M22, (float)adjustedOffsetY, 0f);
 
             deviceContext.UpdateSubresource(ref shaderConstants, constantBuffer);
         }
 
         /// <summary>
-        /// Dispose all Direct3D and DirectComposition resources owned by this memo.
+        /// Dispose all Direct3D resources owned by this memo.
         /// </summary>
         private void DisposeGraphics()
         {
             isGraphicsReady = false;
+            layeredPixelBuffer = null;
 
             renderTargetView?.Dispose();
             renderTargetView = null;
+            renderTargetTexture?.Dispose();
+            renderTargetTexture = null;
+            stagingTexture?.Dispose();
+            stagingTexture = null;
             sourceTextureView?.Dispose();
             sourceTextureView = null;
             sourceTexture?.Dispose();
@@ -314,18 +503,6 @@ namespace Binjyo
             vertexShader = null;
             pixelShader?.Dispose();
             pixelShader = null;
-            swapChain?.Dispose();
-            swapChain = null;
-            dcompVisual?.Dispose();
-            dcompVisual = null;
-            dcompTarget?.Dispose();
-            dcompTarget = null;
-            dcompDevice?.Dispose();
-            dcompDevice = null;
-            dxgiFactory?.Dispose();
-            dxgiFactory = null;
-            dxgiDevice?.Dispose();
-            dxgiDevice = null;
             deviceContext?.Dispose();
             deviceContext = null;
             d3dDevice?.Dispose();

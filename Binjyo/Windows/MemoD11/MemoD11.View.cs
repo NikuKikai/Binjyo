@@ -68,30 +68,25 @@ namespace Binjyo
 
         public void NotifiedOpacity()
         {
-            Opacity = FinalOpacity;
+            RenderSceneItem();
         }
 
         /// <summary>
-        /// Resize the window to the transformed bounding box and redraw the item.
+        /// Update the layered host layout before rendering so geometry and content stay in sync.
         /// </summary>
         public void NotifiedTransform(bool moveOnly)
         {
-            var bounds = new Rectangle(
-                (int)Math.Round(Item.Left),
-                (int)Math.Round(Item.Top),
-                Math.Max(1, (int)Math.Ceiling(Item.Width)),
-                Math.Max(1, (int)Math.Ceiling(Item.Height)));
+            UpdateRenderHostLayout();
+
             if (moveOnly)
             {
-                if (Bounds != bounds)
-                    Bounds = bounds;
+                RenderSceneItem();
                 return;
             }
-            if (Bounds != bounds)
+            if (renderWidth != currentHostBounds.Width || renderHeight != currentHostBounds.Height)
             {
-                if (isGraphicsReady && (bounds.Width != Bounds.Width || bounds.Height != Bounds.Height))
-                    ResizeSwapChain(Math.Max(1, bounds.Width), Math.Max(1, bounds.Height));
-                Bounds = bounds;
+                if (isGraphicsReady)
+                    ResizeSwapChain(Math.Max(1, currentHostBounds.Width), Math.Max(1, currentHostBounds.Height));
             }
             RenderSceneItem();
         }

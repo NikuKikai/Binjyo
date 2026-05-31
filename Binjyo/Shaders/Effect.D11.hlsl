@@ -4,7 +4,7 @@ SamplerState InputSampler : register(s0);
 cbuffer Constants : register(b0)
 {
     float4 Sizes;  // baseWidth, baseHeight, renderWidth, renderHeight
-    float4 RenderAndFlags;    // borderSize, unused
+    float4 RenderAndFlags;    // focusFlag, finalOpacity, unused, unused
     float4 EffectParamsA;
     float4 EffectParamsB;
     float4 InverseRow0;
@@ -87,5 +87,7 @@ float4 main(float4 position : SV_POSITION) : SV_Target
         return float4(0.0, 1.0, 0.0, 1.0);
     }
 
+    color.a *= saturate(RenderAndFlags.y);
+    color.rgb *= color.a;
     return color;
 }
