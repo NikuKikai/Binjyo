@@ -181,6 +181,9 @@
     <Compile Include="Windows\MemoD11\MemoD11.Drawing.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Evade.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.Helpers.cs">
       <SubType>Form</SubType>
     </Compile>

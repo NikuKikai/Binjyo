@@ -159,14 +159,16 @@ namespace Binjyo
         /// </summary>
         private void UpdateRenderHostLayout()
         {
+            double displayLeft = Item.Left + evadeOffsetX;
+            double displayTop = Item.Top + evadeOffsetY;
             currentHostBounds = new Rectangle(
-                (int)Math.Round(Item.Left),
-                (int)Math.Round(Item.Top),
+                (int)Math.Round(displayLeft),
+                (int)Math.Round(displayTop),
                 Math.Max(1, (int)Math.Ceiling(Item.Width)),
                 Math.Max(1, (int)Math.Ceiling(Item.Height)));
 
-            renderContentOffsetX = Item.Left - currentHostBounds.Left;
-            renderContentOffsetY = Item.Top - currentHostBounds.Top;
+            renderContentOffsetX = displayLeft - currentHostBounds.Left;
+            renderContentOffsetY = displayTop - currentHostBounds.Top;
         }
 
         /// <summary>

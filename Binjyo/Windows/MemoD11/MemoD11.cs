@@ -173,7 +173,19 @@ namespace Binjyo
                 }
                 else
                 {
+                    if (UpdateEvadeState())
+                    {
+                        UpdateRenderHostLayout();
+                        UpdateDrawPanelPlacement();
+                        RenderNowOrQueue();
+                    }
                 }
+            }
+            else if (ResetEvadeOffset())
+            {
+                UpdateRenderHostLayout();
+                UpdateDrawPanelPlacement();
+                RenderNowOrQueue();
             }
 
             if (!isRendering && isRenderRequested)

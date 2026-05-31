@@ -40,11 +40,18 @@ namespace Binjyo
         {
             if (Scene.IsCanvasActive || Scene.DisplayMode == EDisplayMode.Minimized)
             {
+                ResetEvadeOffset();
                 ExitDrawMode();
                 HideHSVWheel();
                 Hide();
                 RefreshStitchVisuals();
                 return;
+            }
+
+            if (Scene.DisplayMode != EDisplayMode.AutoHide ||
+                (EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior != EAutoHideBehavior.EvadeMouse)
+            {
+                ResetEvadeOffset();
             }
 
             if (!Visible)
@@ -58,6 +65,7 @@ namespace Binjyo
         /// </summary>
         public void NotifiedClose()
         {
+            ResetEvadeOffset();
             ExitDrawMode();
             HideHSVWheel();
             StitchSessionService.Remove(Item);
@@ -91,6 +99,8 @@ namespace Binjyo
         /// </summary>
         public void NotifiedTransform(bool moveOnly)
         {
+            if (!moveOnly)
+                ResetEvadeOffset();
             if (!moveOnly)
                 StitchSessionService.Invalidate(Item);
             UpdateRenderHostLayout();
