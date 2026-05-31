@@ -1,4 +1,5 @@
 Texture2D InputTexture : register(t0);
+Texture2D OverlayTexture : register(t1);
 SamplerState InputSampler : register(s0);
 
 cbuffer Constants : register(b0)
@@ -69,6 +70,7 @@ float4 main(float4 position : SV_POSITION) : SV_Target
         return float4(0.0, 0.0, 0.0, 0.0);
 
     float4 color = InputTexture.Sample(InputSampler, uv);
+    float4 overlay = OverlayTexture.Sample(InputSampler, uv);
 
     if (EffectParamsA.x > 0.5)
         color = ApplyGrayscale(color);
@@ -78,6 +80,9 @@ float4 main(float4 position : SV_POSITION) : SV_Target
         color = ApplyQuantize(color, EffectParamsB.x);
     if (EffectParamsB.y > 0.5)
         color = ApplyHuemap(color);
+
+    color.rgb = color.rgb * (1.0 - overlay.a) + overlay.rgb * overlay.a;
+    color.a = overlay.a + color.a * (1.0 - overlay.a);
 
     if (color.a > 0.0 && RenderAndFlags.z > 0.0)
         color.rgb = lerp(color.rgb, float3(0.0, 1.0, 0.0), saturate(RenderAndFlags.z));

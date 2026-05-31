@@ -26,7 +26,6 @@ namespace Binjyo
         private List<char> geometryTransformHistory => Item.GeometryTransformHistory;
 
         private bool isSaving = false;
-        private bool isSuspendingDisplayPosition = false;
         private const double MouseEvadeRange = 200;
         private const double MouseEvadeBaseStrength = 300;
         private const double MouseEvadeSpringStrength = 0.4;
@@ -183,7 +182,6 @@ namespace Binjyo
         public void NotifiedClose()
         {
             SaveToHistory();
-            ExitDrawMode();
 
             this.image.Source = null;
             if (Mouse.Captured == this) Mouse.Capture(null);
@@ -233,7 +231,6 @@ namespace Binjyo
             // Width = rect.Width;
             // Height = rect.Height;
             // ApplyMove(Item.Left, Item.Top);
-            drawPanel?.UpdatePlacement(Left, Top, Width, Item.DpiFactor);
             RefreshAllMemoFeatureOverlays();
 
             DisableAnimations();
@@ -270,10 +267,8 @@ namespace Binjyo
             if (Math.Abs(Left - left) < 0.001 && Math.Abs(Top - top) < 0.001)
                 return;
 
-            isSuspendingDisplayPosition = true;
             Left = left;
             Top = top;
-            isSuspendingDisplayPosition = false;
         }
 
         private void RotateMemo90()
@@ -379,7 +374,7 @@ namespace Binjyo
 
         private void UpdateEvadeDisplayPosition()
         {
-            if (isDragging || isResizing || isDrawMode)
+            if (isDragging || isResizing)
             {
                 ApplyMove(Item.Left, Item.Top);
                 return;
@@ -529,7 +524,6 @@ namespace Binjyo
 
         private void SaveToHistory()
         {
-            // HistoryStore.Save(bitmapsource, Left, Top, Width, Height, drawingDocument.Clone());
         }
 
         protected void UpdateBitmap()
@@ -559,23 +553,15 @@ namespace Binjyo
             if (hwnd == IntPtr.Zero)
                 return;
 
-            isSuspendingDisplayPosition = true;
-            try
-            {
-                SetWindowPos(
-                    hwnd,
-                    IntPtr.Zero,
-                    (int)Math.Round(left),
-                    (int)Math.Round(top),
-                    Math.Max(1, (int)Math.Round(width)),
-                    Math.Max(1, (int)Math.Round(height)),
-                    SWP_NOZORDER);
-                //SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOCOPYBITS
-            }
-            finally
-            {
-                isSuspendingDisplayPosition = false;
-            }
+            SetWindowPos(
+                hwnd,
+                IntPtr.Zero,
+                (int)Math.Round(left),
+                (int)Math.Round(top),
+                Math.Max(1, (int)Math.Round(width)),
+                Math.Max(1, (int)Math.Round(height)),
+                SWP_NOZORDER);
+            //SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOCOPYBITS
         }
         [DllImport("dwmapi.dll")]
         static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);

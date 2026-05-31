@@ -25,6 +25,7 @@ namespace Binjyo
         {
             if (Scene.IsCanvasActive)
             {
+                ExitDrawMode();
                 HideHSVWheel();
                 Hide();
             }
@@ -39,6 +40,7 @@ namespace Binjyo
         {
             if (Scene.IsCanvasActive || Scene.DisplayMode == EDisplayMode.Minimized)
             {
+                ExitDrawMode();
                 HideHSVWheel();
                 Hide();
                 return;
@@ -55,6 +57,7 @@ namespace Binjyo
         /// </summary>
         public void NotifiedClose()
         {
+            ExitDrawMode();
             HideHSVWheel();
             if (Visible)
                 Hide();
@@ -87,6 +90,7 @@ namespace Binjyo
         public void NotifiedTransform(bool moveOnly)
         {
             UpdateRenderHostLayout();
+            UpdateDrawPanelPlacement();
             bool shouldRenderImmediately = isRotateDragging || Scene.IsDragMoving;
 
             if (moveOnly)

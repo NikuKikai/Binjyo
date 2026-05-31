@@ -59,7 +59,6 @@ namespace Binjyo
 
         public List<char> GeometryTransformHistory { get; } = new List<char>();
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
-        public Stack<DrawingDocumentData> DrawingUndoStack { get; } = new Stack<DrawingDocumentData>();
 
         public long FocusOrder { get; internal set; } = 0;
         public WriteableBitmap RenderedWBitmap { get; private set; }
@@ -68,6 +67,7 @@ namespace Binjyo
         public SceneItem(WriteableBitmap bmp, double left, double top)
         {
             Bitmap = bmp;
+            DrawingDocument.ConfigureSourceSize(bmp.PixelWidth, bmp.PixelHeight);
             Left = left;
             Top = top;
             Right = left + GetBaseWidth();

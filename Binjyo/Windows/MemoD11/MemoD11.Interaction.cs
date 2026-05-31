@@ -59,6 +59,14 @@ namespace Binjyo
             if (e.Button == MouseButtons.Right)
                 return;
 
+            if (isDrawMode)
+            {
+                Scene.Focus(Id);
+                if (e.Button == MouseButtons.Left)
+                    BeginDrawingStroke(e);
+                return;
+            }
+
             StopRotateAnimation();
             Scene.Focus(Id);
 
@@ -89,6 +97,13 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_MouseMove(object sender, MouseEventArgs e)
         {
+            if (isDrawMode)
+            {
+                if (isDrawingStroke && e.Button == MouseButtons.Left)
+                    ExtendDrawingStroke(e);
+                return;
+            }
+
             if (!Capture || e.Button != MouseButtons.Left)
             {
                 RefreshHSVWheelVisibility();
@@ -114,6 +129,12 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_MouseUp(object sender, MouseEventArgs e)
         {
+            if (isDrawMode)
+            {
+                EndDrawingStroke();
+                return;
+            }
+
             if (!Capture)
                 return;
 
@@ -178,11 +199,60 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_KeyDown(object sender, KeyEventArgs e)
         {
+            if (isDrawMode)
+            {
+                switch (e.KeyCode)
+                {
+                    case Keys.Escape:
+                        ExitDrawMode();
+                        break;
+                    case Keys.Enter:
+                        ExitDrawMode();
+                        break;
+                    case Keys.E:
+                        drawPanel?.SetTool(DrawTool.Eraser);
+                        break;
+                    case Keys.Q:
+                        drawPanel?.SetTool(DrawTool.Brush);
+                        break;
+                    case Keys.Z:
+                        if ((ModifierKeys & Keys.Shift) == Keys.Shift)
+                            RedoDrawingOperation();
+                        else
+                            UndoDrawingOperation();
+                        break;
+                    case Keys.Oem4:
+                        drawPanel?.SetBrushSize(drawPanel.BrushSize - 1);
+                        break;
+                    case Keys.Oem6:
+                        drawPanel?.SetBrushSize(drawPanel.BrushSize + 1);
+                        break;
+                }
+
+                e.Handled = true;
+                return;
+            }
+
             switch (e.KeyCode)
             {
                 case Keys.Escape:
                     Scene.CloseItem(Id);
                     e.Handled = true;
+                    break;
+                case Keys.E:
+                    EnterDrawMode();
+                    e.Handled = true;
+                    break;
+                case Keys.Q:
+                    if (!isKeyDownQ)
+                        isEditedDuringKeyQ = false;
+                    isKeyDownQ = true;
+                    break;
+                case Keys.Z:
+                    break;
+                case Keys.Oem4:
+                    break;
+                case Keys.Oem6:
                     break;
                 case Keys.Left:
                     Scene.MoveByKey(Id, -1, 0, isKeyDownArrow);
@@ -246,11 +316,6 @@ namespace Binjyo
                         isEditedDuringKeyB = false;
                     isKeyDownB = true;
                     break;
-                case Keys.Q:
-                    if (!isKeyDownQ)
-                        isEditedDuringKeyQ = false;
-                    isKeyDownQ = true;
-                    break;
                 case Keys.O:
                     if (!isKeyDownO)
                         isEditedDuringKeyO = false;
@@ -276,6 +341,12 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_KeyUp(object sender, KeyEventArgs e)
         {
+            if (isDrawMode)
+            {
+                e.Handled = true;
+                return;
+            }
+
             switch (e.KeyCode)
             {
                 case Keys.Left:

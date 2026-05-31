@@ -164,11 +164,13 @@
     </Compile>
     <Compile Include="Windows\Memo\Memo.Resize.cs" />
     <Compile Include="Windows\Memo\Memo.ContextMenu.cs" />
-    <Compile Include="Windows\Memo\Memo.Drawing.cs" />
     <Compile Include="Windows\Memo\Memo.Features.cs" />
     <Compile Include="Windows\Memo\Memo.Interaction.cs" />
     <Compile Include="Windows\Memo\Memo.Imaging.cs" />
     <Compile Include="Windows\MemoD11\MemoD11.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Drawing.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.Helpers.cs">
@@ -259,6 +261,7 @@
     <Resource Include="Resources\Effect.D11.vs" />
     <Resource Include="Resources\Effect.D11.ps" />
     <Resource Include="Resources\Effect.ps" />
+    <Resource Include="Shaders\Effect.D11.hlsl" />
     <Resource Include="Resources\HueWheelShader.ps" />
     <Resource Include="Resources\SVRectShader.ps" />
   </ItemGroup>

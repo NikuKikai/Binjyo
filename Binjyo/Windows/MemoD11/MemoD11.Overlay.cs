@@ -26,6 +26,7 @@ namespace Binjyo
             if (isHSVWheelEnabled
                 && Visible
                 && Scene.DisplayMode == EDisplayMode.Expanded
+                && !isDrawMode
                 && !Scene.IsDragMoving
                 && !isRotateDragging
                 && IsMouseInside())

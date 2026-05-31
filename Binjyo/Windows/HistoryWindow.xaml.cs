@@ -96,7 +96,7 @@ namespace Binjyo
         {
             var wbitmap = HistoryStore.LoadWriteableBitmap(viewModel.Entry);
             var item = Scene.CreateItem(wbitmap, 0, 0);
-            var memo = new Memo(item);
+            var memo = new MemoD11(item);
             CanvasWindow.CreateItem(item);
 
             GetAdjustedBounds(

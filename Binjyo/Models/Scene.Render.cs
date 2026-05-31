@@ -20,11 +20,25 @@ namespace Binjyo
             if (item == null) throw new ArgumentNullException(nameof(item));
             if (item.Bitmap == null) throw new ArgumentNullException(nameof(item.Bitmap));
 
-            var wbmp = RenderTransform(item, item.Bitmap);
+            WriteableBitmap transformedSource = RenderTransform(item, item.Bitmap);
+            transformedSource = RenderEffectsDX9(item, transformedSource) ?? RenderEffectsOnCpu(item, transformedSource);
 
-            wbmp = RenderEffectsDX9(item, wbmp) ?? RenderEffectsOnCpu(item);
+            WriteableBitmap transformedOverlay = RenderDrawingOverlay(item);
+            WriteableBitmap composited = transformedOverlay == null
+                ? transformedSource
+                : DrawingData.Composite(transformedSource, transformedOverlay);
 
-            return RenderOpacity(item, wbmp);
+            return RenderOpacity(item, composited);
+        }
+
+        private static WriteableBitmap RenderDrawingOverlay(SceneItem item)
+        {
+            if (item?.DrawingDocument == null || !item.DrawingDocument.HasVisibleObjects())
+                return null;
+
+            item.DrawingDocument.ConfigureSourceSize(item.Bitmap.PixelWidth, item.Bitmap.PixelHeight);
+            WriteableBitmap overlay = DrawingData.RenderOverlay(item.DrawingDocument, item.Bitmap.PixelWidth, item.Bitmap.PixelHeight);
+            return RenderTransform(item, overlay);
         }
 
         private static WriteableBitmap RenderEffectsDX9(SceneItem item, WriteableBitmap source = null)
@@ -63,9 +77,10 @@ namespace Binjyo
         }
 
 
-        private static WriteableBitmap RenderEffectsOnCpu(SceneItem item)
+        private static WriteableBitmap RenderEffectsOnCpu(SceneItem item, WriteableBitmap source = null)
         {
-            Bitmap gdiBitmap = Effects.ConvertWBitmapToGdi(item.Bitmap);
+            source = source ?? item.Bitmap;
+            Bitmap gdiBitmap = Effects.ConvertWBitmapToGdi(source);
             try
             {
                 if (item.IsEffectGray)

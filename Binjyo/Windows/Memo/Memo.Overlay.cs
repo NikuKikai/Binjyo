@@ -160,7 +160,7 @@ namespace Binjyo
 
         private void RefreshHSVWheelVisibility()
         {
-            if (isHSVWheel && !isDrawMode && !isDragging && !isResizing && Scene.DisplayMode == EDisplayMode.Expanded)
+            if (isHSVWheel && !isDragging && !isResizing && Scene.DisplayMode == EDisplayMode.Expanded)
                 UpdateHSVWheel();
             else
                 HideHSVWheel();

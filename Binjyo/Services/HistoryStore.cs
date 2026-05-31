@@ -56,7 +56,7 @@ namespace Binjyo
                 height.ToString(CultureInfo.InvariantCulture),
             });
 
-            if (drawingData != null && drawingData.Strokes.Count > 0)
+            if (drawingData != null && drawingData.HasVisibleObjects())
             {
                 string drawingPath = Path.Combine(entryDirectory, DrawingFileName);
                 DrawingDataSerializer.Save(drawingPath, drawingData);

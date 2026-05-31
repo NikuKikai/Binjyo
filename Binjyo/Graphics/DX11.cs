@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -35,6 +36,28 @@ namespace Binjyo
             {
                 stream.CopyTo(memoryStream);
                 return new ShaderBytecode(memoryStream.ToArray());
+            }
+        }
+
+        public static ShaderBytecode CompileHlslResource(string path, string entryPoint, string profile)
+        {
+            StreamResourceInfo resourceInfo = Application.GetResourceStream(new Uri(path, UriKind.Relative));
+            if (resourceInfo == null)
+                throw new FileNotFoundException($"{path} was not found.");
+
+            using (Stream stream = resourceInfo.Stream)
+            using (StreamReader reader = new StreamReader(stream, Encoding.UTF8, true))
+            {
+                string source = reader.ReadToEnd();
+                using (CompilationResult result = ShaderBytecode.Compile(
+                    source,
+                    entryPoint,
+                    profile,
+                    ShaderFlags.OptimizationLevel3,
+                    EffectFlags.None))
+                {
+                    return result;
+                }
             }
         }
     }

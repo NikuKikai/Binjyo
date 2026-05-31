@@ -14,7 +14,6 @@ namespace Binjyo
 
         private ContextMenu memoContextMenu = null;
         private MenuItem resizeModeMenuItem = null;
-        private MenuItem editModeMenuItem = null;
         private MenuItem featurePointsMenuItem = null;
         private MenuItem combineMenuItem = null;
         private MenuItem grayscaleMenuItem = null;
@@ -62,8 +61,6 @@ namespace Binjyo
 
             resizeModeMenuItem = CreateCheckableMenuItem("Resize Mode", "T", (s, e) => SetResizeMode(!isResizeMode));
             memoContextMenu.Items.Add(resizeModeMenuItem);
-            editModeMenuItem = CreateMenuItem("Edit Mode", "E", (s, e) => EnterDrawMode());
-            memoContextMenu.Items.Add(editModeMenuItem);
             featurePointsMenuItem = CreateCheckableMenuItem("Feature Points", "P", (s, e) => ToggleFeaturePoints());
             memoContextMenu.Items.Add(featurePointsMenuItem);
             combineMenuItem = CreateMenuItem("Combine", null, (s, e) => CombineMemosAtPos(contextMenuX, contextMenuY));
@@ -216,14 +213,12 @@ namespace Binjyo
             if (memoContextMenu == null)
                 return;
 
-            bool isInteractive = !isDrawMode;
+            bool isInteractive = true;
             if (resizeModeMenuItem != null)
             {
                 resizeModeMenuItem.IsChecked = isResizeMode;
                 resizeModeMenuItem.IsEnabled = isInteractive;
             }
-            if (editModeMenuItem != null)
-                editModeMenuItem.IsEnabled = isInteractive && Scene.DisplayMode != EDisplayMode.Minimized;
             if (featurePointsMenuItem != null)
             {
                 featurePointsMenuItem.IsChecked = isFeaturePointModeEnabled;

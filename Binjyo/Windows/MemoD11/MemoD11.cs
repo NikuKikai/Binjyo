@@ -136,6 +136,8 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_FormClosed(object sender, FormClosedEventArgs e)
         {
+            drawPanel?.Close();
+            drawPanel = null;
             timer?.Stop();
             timer?.Dispose();
             timer = null;

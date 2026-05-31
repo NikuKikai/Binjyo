@@ -123,6 +123,8 @@ namespace Binjyo
         private DeviceContext deviceContext;
         private Texture2D sourceTexture;
         private ShaderResourceView sourceTextureView;
+        private Texture2D overlayTexture;
+        private ShaderResourceView overlayTextureView;
         private Texture2D renderTargetTexture;
         private RenderTargetView renderTargetView;
         private Texture2D stagingTexture;
@@ -146,6 +148,7 @@ namespace Binjyo
         private bool isGraphicsReady;
         private bool isRendering;
         private bool isRenderRequested;
+        private bool isDrawingOverlayDirty = true;
 
         #endregion
 
@@ -191,6 +194,7 @@ namespace Binjyo
             isGraphicsReady = true;
 
             UploadSourceBitmap();
+            UploadDrawingOverlayBitmap();
         }
 
         /// <summary>
@@ -248,7 +252,7 @@ namespace Binjyo
         private void CreateShadersAndState()
         {
             using (var vertexShaderBytecode = DX11.LoadPS("/Resources/Effect.D11.vs"))
-            using (var pixelShaderBytecode = DX11.LoadPS("/Resources/Effect.D11.ps"))
+            using (var pixelShaderBytecode = DX11.CompileHlslResource("/Shaders/Effect.D11.hlsl", "main", "ps_4_0"))
             {
                 vertexShader = new VertexShader(d3dDevice, vertexShaderBytecode);
                 pixelShader = new PixelShader(d3dDevice, pixelShaderBytecode);
@@ -325,12 +329,81 @@ namespace Binjyo
         }
 
         /// <summary>
+        /// Rasterize the current drawing document into a texture sampled alongside the source bitmap.
+        /// </summary>
+        private void UploadDrawingOverlayBitmap()
+        {
+            overlayTextureView?.Dispose();
+            overlayTextureView = null;
+            overlayTexture?.Dispose();
+            overlayTexture = null;
+
+            if (d3dDevice == null || Item.Bitmap == null)
+                return;
+
+            Item.DrawingDocument.ConfigureSourceSize(Item.Bitmap.PixelWidth, Item.Bitmap.PixelHeight);
+            WriteableBitmap overlayBitmap = DrawingData.RenderOverlay(
+                Item.DrawingDocument,
+                Item.Bitmap.PixelWidth,
+                Item.Bitmap.PixelHeight);
+
+            BitmapSource uploadBitmap = overlayBitmap;
+            if (uploadBitmap.Format != PixelFormats.Bgra32)
+            {
+                uploadBitmap = new FormatConvertedBitmap(uploadBitmap, PixelFormats.Bgra32, null, 0);
+                uploadBitmap.Freeze();
+            }
+
+            int width = uploadBitmap.PixelWidth;
+            int height = uploadBitmap.PixelHeight;
+            int stride = width * 4;
+            byte[] pixels = Effects.CopyPixels(uploadBitmap);
+
+            var textureDescription = new Texture2DDescription
+            {
+                Width = width,
+                Height = height,
+                ArraySize = 1,
+                MipLevels = 1,
+                Format = Format.B8G8R8A8_UNorm,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Immutable,
+                BindFlags = BindFlags.ShaderResource,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None
+            };
+
+            using (var stream = new DataStream(pixels.Length, true, true))
+            {
+                stream.WriteRange(pixels);
+                stream.Position = 0;
+                overlayTexture = new Texture2D(
+                    d3dDevice,
+                    textureDescription,
+                    new[] { new DataRectangle(stream.DataPointer, stride) });
+            }
+
+            overlayTextureView = new ShaderResourceView(d3dDevice, overlayTexture);
+            isDrawingOverlayDirty = false;
+        }
+
+        /// <summary>
+        /// Mark the drawing overlay texture dirty after any document change.
+        /// </summary>
+        private void InvalidateDrawingOverlay()
+        {
+            isDrawingOverlayDirty = true;
+        }
+
+        /// <summary>
         /// Render the current scene item state, read it back to CPU memory, and push it into the layered window.
         /// </summary>
         private void RenderSceneItem()
         {
             if (!isGraphicsReady || renderTargetView == null || stagingTexture == null || sourceTextureView == null)
                 return;
+            if (isDrawingOverlayDirty)
+                UploadDrawingOverlayBitmap();
             UpdateShaderConstants();
 
             deviceContext.OutputMerger.SetRenderTargets(renderTargetView);
@@ -344,8 +417,10 @@ namespace Binjyo
             deviceContext.PixelShader.SetConstantBuffer(0, constantBuffer);
             deviceContext.PixelShader.SetSampler(0, samplerState);
             deviceContext.PixelShader.SetShaderResource(0, sourceTextureView);
+            deviceContext.PixelShader.SetShaderResource(1, overlayTextureView);
             deviceContext.Draw(4, 0);
             deviceContext.PixelShader.SetShaderResource(0, null);
+            deviceContext.PixelShader.SetShaderResource(1, null);
             deviceContext.Flush();
 
             deviceContext.CopyResource(renderTargetTexture, stagingTexture);
@@ -498,6 +573,10 @@ namespace Binjyo
             sourceTextureView = null;
             sourceTexture?.Dispose();
             sourceTexture = null;
+            overlayTextureView?.Dispose();
+            overlayTextureView = null;
+            overlayTexture?.Dispose();
+            overlayTexture = null;
             samplerState?.Dispose();
             samplerState = null;
             constantBuffer?.Dispose();
