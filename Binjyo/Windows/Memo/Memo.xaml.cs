@@ -23,7 +23,7 @@ namespace Binjyo
         public SceneItem Item { get; private set; }
 
 
-        private List<char> geometryTransformHistory => Item.GeometryTransformHistory;
+        private List<char> geometryTransformHistory = new List<char>();
 
         private bool isSaving = false;
         private const double MouseEvadeRange = 200;

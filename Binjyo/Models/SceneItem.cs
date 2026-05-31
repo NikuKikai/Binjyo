@@ -57,11 +57,9 @@ namespace Binjyo
 
         public Clipper2Lib.Paths64 Collider { get; internal set; }
 
-        public List<char> GeometryTransformHistory { get; } = new List<char>();
         public DrawingDocumentData DrawingDocument { get; internal set; } = new DrawingDocumentData();
 
         public long FocusOrder { get; internal set; } = 0;
-        public WriteableBitmap RenderedWBitmap { get; private set; }
 
 
         public SceneItem(WriteableBitmap bmp, double left, double top)
@@ -115,7 +113,7 @@ namespace Binjyo
                 if (hit != Clipper2Lib.PointInPolygonResult.IsOutside)
                 {
                     var positive = Clipper2Lib.Clipper.IsPositive(path);
-                    containCnt += positive? 1: -1;
+                    containCnt += positive ? 1 : -1;
                 }
             }
             return containCnt > 0;
@@ -134,7 +132,6 @@ namespace Binjyo
             foreach (ISceneItemView view in viewsToNotify) view.NotifiedClose();
 
             Bitmap = null;
-            RenderedWBitmap = null;
         }
 
         public void RegisterView(ISceneItemView view)
