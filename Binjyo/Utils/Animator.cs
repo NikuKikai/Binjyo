@@ -9,20 +9,29 @@ namespace Binjyo
     internal class Animator
     {
         private static readonly Dictionary<Guid, Dictionary<string, Animator>> Animators = new Dictionary<Guid, Dictionary<string, Animator>>();
-        public static void Start(
-            Guid id, string name, Control host, Action<double> stepAction, double speed, double targetDelta = 0)
+        public static Animator Start(
+            Guid id,
+            string name,
+            Control host,
+            Action<double> stepAction,
+            double speed,
+            double targetDelta = 0,
+            double minInterval = 0.05,
+            Action stopAction = null)
         {
             if (!Animators.ContainsKey(id))
                 Animators[id] = new Dictionary<string, Animator>();
 
-            if (Animators[id].ContainsKey(name))
-            {
-                Animators[id][name].targetDelta = targetDelta;
-                Animators[id][name].speed = speed;
-                Animators[id][name].StartThis();
-            }
-            else
-                Animators[id][name] = new Animator(host, stepAction, speed, targetDelta);
+            var anim = Animators[id].ContainsKey(name) ? Animators[id][name] : new Animator(host, stepAction, speed, targetDelta, minInterval, stopAction);
+            Animators[id][name] = anim;
+
+            anim.targetDelta = targetDelta;
+            anim.speed = speed;
+            anim.minInterval = minInterval;
+            anim.stepAction = stepAction;
+            anim.stopAction = stopAction;
+            anim.StartThis();
+            return anim;
         }
         public static void Clear(Guid id)
         {
@@ -33,21 +42,37 @@ namespace Binjyo
             Animators[id].Clear();
         }
 
+        public static void Stop(Guid id, string name)
+        {
+            if (!Animators.ContainsKey(id)) return;
+            if (!Animators[id].ContainsKey(name)) return;
+            Animators[id][name].StopThis();
+        }
+
         private readonly Stopwatch sw = new Stopwatch();
         public bool IsAnimating { get; private set; } = false;
         private long lastTicks;
         private readonly Control host;
         public double targetDelta;
         public double speed;
-        private readonly Action<double> stepAction;
+        public double minInterval = 0.1;
+        private Action<double> stepAction;
+        private Action stopAction;
 
-        public Animator(Control host, Action<double> stepAction, double speed, double targetDelta = 0)
+        private Animator(
+            Control host,
+            Action<double> stepAction,
+            double speed,
+            double targetDelta = 0,
+            double minInterval = 0.1,
+            Action stopAction = null)
         {
             this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.stepAction = stepAction;
             this.speed = speed;
             this.targetDelta = targetDelta;
-            StartThis();
+            this.minInterval = minInterval;
+            this.stopAction = stopAction;
         }
         /// <summary>
         /// Start animation on the UI queue without relying on WM_TIMER.
@@ -74,6 +99,7 @@ namespace Binjyo
             IsAnimating = false;
             lastTicks = 0;
             sw.Reset();
+            stopAction?.Invoke();
         }
 
         /// <summary>
@@ -93,12 +119,18 @@ namespace Binjyo
 
             var currentTicks = sw.ElapsedTicks;
             double elapsedSeconds = (currentTicks - lastTicks) / (double)Stopwatch.Frequency;
+            if (elapsedSeconds < minInterval)
+            {
+                host.BeginInvoke((Action)Run);
+                return;
+            }
             lastTicks = currentTicks;
 
             // Linear
             double step = Math.Sign(targetDelta) * Math.Min(Math.Abs(targetDelta), elapsedSeconds * speed);
 
             targetDelta -= step;
+            Console.WriteLine("anim run target " + minInterval + " , " + elapsedSeconds);
 
             // Callback
             if (IsAnimating && !host.IsDisposed && !host.Disposing)

@@ -13,8 +13,9 @@ namespace Binjyo
         public static void Focus(Guid id)
         {
             var formerId = FocusedId;
-
+            if (id == formerId) return;
             if (!Items.ContainsKey(id)) return;
+
             Items[id].FocusOrder = ++focusOrderAll;
             FocusedId = id;
             Items[id].views.ForEach(view => view.NotifiedFocus());

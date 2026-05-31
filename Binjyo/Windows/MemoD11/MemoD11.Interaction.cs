@@ -31,6 +31,8 @@ namespace Binjyo
         private double rotateStartItemRotation;
         private double rotateCenterScreenX;
         private double rotateCenterScreenY;
+        private bool isRotateAnimating;
+        private double rotateAnimationRemainingDelta;
         // Save
         private bool isKeyDownS;
 
@@ -57,8 +59,8 @@ namespace Binjyo
             if (e.Button == MouseButtons.Right)
                 return;
 
+            StopRotateAnimation();
             Scene.Focus(Id);
-            Activate();
 
             if (e.Button != MouseButtons.Left || Scene.DisplayMode != EDisplayMode.Expanded)
                 return;
@@ -282,13 +284,9 @@ namespace Binjyo
                     else if (!isEditedDuringKeyR)
                     {
                         var delta = Math.Ceiling(Item.Rotation / 90 + 0.001) * 90 - Item.Rotation;
-                        if (Math.Abs(delta) < 0.001) delta = 90;
-                        Animator.Start(
-                            Id, "rotate", this, step =>
-                            {
-                                Item.SetRotationCentered(Item.Rotation + step);
-                            }, speed: 720, targetDelta: delta
-                        );
+                        if (Math.Abs(delta) < 0.001)
+                            delta = 90;
+                        StartRotateAnimation(delta);
                     }
                     break;
                 case Keys.B:
@@ -319,6 +317,54 @@ namespace Binjyo
         private static bool IsKeyDown(Keys key)
         {
             return (GetKeyState((int)key) & 0x8000) != 0;
+        }
+
+        /// <summary>
+        /// Start the discrete key rotation animation managed by the shared frame loop.
+        /// </summary>
+        private void StartRotateAnimation(double deltaDegrees)
+        {
+            if (Math.Abs(deltaDegrees) < 0.001)
+                return;
+
+            rotateAnimationRemainingDelta = deltaDegrees;
+            isRotateAnimating = true;
+            RenderRequest();
+        }
+
+        /// <summary>
+        /// Stop the discrete key rotation animation immediately.
+        /// </summary>
+        private void StopRotateAnimation()
+        {
+            isRotateAnimating = false;
+            rotateAnimationRemainingDelta = 0;
+        }
+
+        /// <summary>
+        /// Advance the discrete key rotation animation and apply the transform in small steps.
+        /// </summary>
+        private void UpdateRotateAnimation(double deltaSeconds)
+        {
+            if (!isRotateAnimating || deltaSeconds <= 0)
+                return;
+
+            const double rotateSpeedDegreesPerSecond = 720.0;
+            double maxStep = rotateSpeedDegreesPerSecond * deltaSeconds;
+            double step = Math.Sign(rotateAnimationRemainingDelta)
+                * Math.Min(Math.Abs(rotateAnimationRemainingDelta), maxStep);
+
+            if (Math.Abs(step) < 0.001)
+            {
+                StopRotateAnimation();
+                return;
+            }
+
+            rotateAnimationRemainingDelta -= step;
+            Item.SetRotationCentered(Item.Rotation + step);
+
+            if (Math.Abs(rotateAnimationRemainingDelta) < 0.001)
+                StopRotateAnimation();
         }
     }
 }

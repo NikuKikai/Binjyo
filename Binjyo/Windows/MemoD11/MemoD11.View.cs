@@ -56,19 +56,20 @@ namespace Binjyo
         }
 
         /// <summary>
-        /// Refresh the focus border and activate the window when it becomes focused.
+        /// Activate the form when needed and flash the focus highlight on the focused memo.
         /// </summary>
         public void NotifiedFocus()
         {
-            if (Scene.FocusedId == Id && !Focused)
+            if (Scene.FocusedId == Id && !ContainsFocus)
+            {
                 Activate();
-
-            RenderSceneItem();
+                FlashHighlight();
+            }
         }
 
         public void NotifiedOpacity()
         {
-            RenderSceneItem();
+            RenderRequest();
         }
 
         /// <summary>
@@ -77,18 +78,18 @@ namespace Binjyo
         public void NotifiedTransform(bool moveOnly)
         {
             UpdateRenderHostLayout();
+            bool shouldRenderImmediately = isRotateDragging || Scene.IsDragMoving;
 
             if (moveOnly)
             {
-                RenderSceneItem();
+                RenderRequest(shouldRenderImmediately);
                 return;
             }
             if (renderWidth != currentHostBounds.Width || renderHeight != currentHostBounds.Height)
             {
-                if (isGraphicsReady)
-                    ResizeSwapChain(Math.Max(1, currentHostBounds.Width), Math.Max(1, currentHostBounds.Height));
+                ResetRenderTargets(Math.Max(1, currentHostBounds.Width), Math.Max(1, currentHostBounds.Height));
             }
-            RenderSceneItem();
+            RenderRequest(shouldRenderImmediately);
         }
 
         /// <summary>
@@ -96,7 +97,7 @@ namespace Binjyo
         /// </summary>
         public void NotifiedEffect()
         {
-            RenderSceneItem();
+            RenderRequest();
         }
 
         #endregion

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows.Forms;
 using Form = System.Windows.Forms.Form;
 
@@ -7,11 +8,6 @@ namespace Binjyo
 {
     public partial class MemoD11 : Form, ISceneItemView
     {
-        #region ======== Types ========
-
-        private const int WS_EX_LAYERED = 0x00080000;
-
-        #endregion
 
         #region ======== State ========
 
@@ -19,7 +15,8 @@ namespace Binjyo
         private readonly bool IsRendererField = false;
         private bool lastMouseInside = false;
         private Timer timer = new Timer();
-
+        private readonly Stopwatch frameClock = new Stopwatch();
+        private long lastFrameTicks = 0;
         private double FinalOpacity
         {
             get
@@ -70,6 +67,8 @@ namespace Binjyo
             NotifiedTransform(false);
             NotifiedDisplayMode();
 
+            frameClock.Start();
+            lastFrameTicks = frameClock.ElapsedTicks;
             timer.Interval = 16;
             timer.Tick += (s, e) => PerFrameUpdate();
             timer.Start();
@@ -82,7 +81,6 @@ namespace Binjyo
         {
             base.OnHandleCreated(e);
             InitializeGraphics();
-            UploadSourceBitmap();
             RenderSceneItem();
         }
 
@@ -108,7 +106,7 @@ namespace Binjyo
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED;
+                cp.ExStyle |= WS_EX_LAYERED; // WS_EX_LAYERED;
                 cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW;
                 return cp;
             }
@@ -129,8 +127,8 @@ namespace Binjyo
             if (width == renderWidth && height == renderHeight)
                 return;
 
-            ResizeSwapChain(width, height);
-            RenderSceneItem();
+            ResetRenderTargets(width, height);
+            RenderRequest();
         }
 
         /// <summary>
@@ -138,7 +136,6 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Animator.Clear(Id);
             timer?.Stop();
             timer?.Dispose();
             timer = null;
@@ -149,6 +146,13 @@ namespace Binjyo
 
         private void PerFrameUpdate()
         {
+            long currentTicks = frameClock.ElapsedTicks;
+            double deltaSeconds = (currentTicks - lastFrameTicks) / (double)Stopwatch.Frequency;
+            lastFrameTicks = currentTicks;
+
+            if (deltaSeconds > 0)
+                UpdateFrameAnimations(deltaSeconds);
+
             // DisplayMode: AutoHide
             if (Scene.DisplayMode == EDisplayMode.AutoHide)
             {
@@ -157,7 +161,7 @@ namespace Binjyo
                     var isMouseInside = IsMouseInside();
                     if (isMouseInside != lastMouseInside)
                     {
-                        RenderSceneItem();
+                        RenderRequest();
                         lastMouseInside = isMouseInside;
                     }
                 }
@@ -165,6 +169,23 @@ namespace Binjyo
                 {
                 }
             }
+
+            if (!isRendering && isRenderRequested)
+            {
+                isRendering = true;
+                isRenderRequested = false;
+                RenderSceneItem();
+                isRendering = false;
+            }
+        }
+
+        /// <summary>
+        /// Advance all memo-local animations from the shared frame timer.
+        /// </summary>
+        private void UpdateFrameAnimations(double deltaSeconds)
+        {
+            UpdateRotateAnimation(deltaSeconds);
+            UpdateHighlightAnimation(deltaSeconds);
         }
 
         #endregion

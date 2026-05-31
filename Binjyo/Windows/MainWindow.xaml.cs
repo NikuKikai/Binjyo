@@ -9,7 +9,6 @@ namespace Binjyo
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Screenshot ss;
         public MainWindow()
         {
             InitializeComponent();
@@ -21,12 +20,7 @@ namespace Binjyo
 
         public void Shot()
         {
-            if (ss == null)
-            {
-                ss = new Screenshot { Owner = this };
-                ss.Closed += (sender, e) => ss = null;
-            }
-
+            Screenshot ss = new Screenshot { Owner = this };
             ss.Shot2();
         }
 

@@ -5,6 +5,7 @@ using SharpDX.DXGI;
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Buffer = SharpDX.Direct3D11.Buffer;
@@ -134,9 +135,16 @@ namespace Binjyo
         private Rectangle currentHostBounds;
         private double renderContentOffsetX;
         private double renderContentOffsetY;
+        private double focusHighlightOpacity;
+        private double persistentHighlightOpacity;
+        private double flashHighlightOpacity;
+        private bool isFlashHighlightAnimating;
+        private double flashHighlightElapsedSeconds;
         private int renderWidth;
         private int renderHeight;
         private bool isGraphicsReady;
+        private bool isRendering;
+        private bool isRenderRequested;
 
         #endregion
 
@@ -177,25 +185,17 @@ namespace Binjyo
             deviceContext = d3dDevice.ImmediateContext;
             int initialWidth = Math.Max(1, currentHostBounds.Width > 0 ? currentHostBounds.Width : Width);
             int initialHeight = Math.Max(1, currentHostBounds.Height > 0 ? currentHostBounds.Height : Height);
-            CreateRenderTargets(initialWidth, initialHeight);
+            ResetRenderTargets(initialWidth, initialHeight);
             CreateShadersAndState();
             isGraphicsReady = true;
-        }
 
-        /// <summary>
-        /// Resize the offscreen render targets to match the current window size.
-        /// </summary>
-        private void ResizeSwapChain(int width, int height)
-        {
-            if (d3dDevice == null)
-                return;
-            CreateRenderTargets(width, height);
+            UploadSourceBitmap();
         }
 
         /// <summary>
         /// Create or recreate the offscreen render target and CPU-readable staging texture.
         /// </summary>
-        private void CreateRenderTargets(int width, int height)
+        private void ResetRenderTargets(int width, int height)
         {
             renderWidth = width;
             renderHeight = height;
@@ -207,6 +207,8 @@ namespace Binjyo
             renderTargetTexture = null;
             stagingTexture?.Dispose();
             stagingTexture = null;
+
+            if (d3dDevice == null) return;
 
             renderTargetTexture = new Texture2D(d3dDevice, new Texture2DDescription
             {
@@ -459,7 +461,7 @@ namespace Binjyo
             shaderConstants.RenderAndFlags = new System.Numerics.Vector4(
                 Scene.FocusedId == Id ? 1f : 0f,
                 (float)Math.Max(0.0, Math.Min(1.0, FinalOpacity)),
-                0f,
+                (float)Math.Max(0.0, Math.Min(1.0, focusHighlightOpacity)),
                 0f);
             shaderConstants.EffectParamsA = new System.Numerics.Vector4(
                 Item.IsEffectGray ? 1f : 0f,
@@ -509,6 +511,135 @@ namespace Binjyo
             d3dDevice = null;
         }
 
+        #endregion
+
+
+        #region ======== Highlight ========
+
+        private const double PersistentHighlightTargetOpacity = 0.35;
+        private const double FlashHighlightPeakOpacity = 0.5;
+        private const double FlashHighlightFadeInSeconds = 0.08;
+        private const double FlashHighlightFadeOutSeconds = 0.18;
+
+        /// <summary>
+        /// Keep an explicit on/off entry point for future menu hover highlighting.
+        /// </summary>
+        private void SetHighlight(bool on)
+        {
+            double nextPersistentOpacity = on ? PersistentHighlightTargetOpacity : 0.0;
+            if (Math.Abs(nextPersistentOpacity - persistentHighlightOpacity) < 0.0001)
+                return;
+
+            persistentHighlightOpacity = nextPersistentOpacity;
+            UpdateComposedHighlightOpacity();
+        }
+
+        /// <summary>
+        /// Flash the focus highlight with a short fade-in followed by a longer fade-out.
+        /// </summary>
+        private void FlashHighlight()
+        {
+            isFlashHighlightAnimating = true;
+            flashHighlightElapsedSeconds = 0.0;
+            flashHighlightOpacity = 0.0;
+            UpdateComposedHighlightOpacity();
+        }
+
+        /// <summary>
+        /// Advance the local highlight animation inside the shared frame loop.
+        /// </summary>
+        private void UpdateHighlightAnimation(double deltaSeconds)
+        {
+            if (!isFlashHighlightAnimating || deltaSeconds <= 0)
+                return;
+
+            flashHighlightElapsedSeconds += deltaSeconds;
+            double nextFlashOpacity;
+
+            if (flashHighlightElapsedSeconds <= FlashHighlightFadeInSeconds)
+            {
+                nextFlashOpacity = FlashHighlightPeakOpacity
+                    * (flashHighlightElapsedSeconds / FlashHighlightFadeInSeconds);
+            }
+            else
+            {
+                double fadeOutElapsed = flashHighlightElapsedSeconds - FlashHighlightFadeInSeconds;
+                if (fadeOutElapsed >= FlashHighlightFadeOutSeconds)
+                {
+                    nextFlashOpacity = 0.0;
+                    isFlashHighlightAnimating = false;
+                }
+                else
+                {
+                    nextFlashOpacity = FlashHighlightPeakOpacity
+                        * (1.0 - fadeOutElapsed / FlashHighlightFadeOutSeconds);
+                }
+            }
+
+            if (Math.Abs(nextFlashOpacity - flashHighlightOpacity) < 0.0001)
+                return;
+
+            flashHighlightOpacity = nextFlashOpacity;
+            UpdateComposedHighlightOpacity();
+        }
+
+        /// <summary>
+        /// Merge persistent and transient highlight contributions and request a redraw only when the visible value changes.
+        /// </summary>
+        private void UpdateComposedHighlightOpacity()
+        {
+            double nextOpacity = Math.Max(persistentHighlightOpacity, flashHighlightOpacity);
+            if (Math.Abs(nextOpacity - focusHighlightOpacity) < 0.0001)
+                return;
+
+            focusHighlightOpacity = nextOpacity;
+            RenderRequest();
+        }
+
+        #endregion
+
+
+        #region ======== Render Request ========
+        /// <summary>
+        /// Mark the memo as dirty so the shared frame loop can submit one new layered frame.
+        /// </summary>
+        private void RenderRequest(bool immediate = false)
+        {
+            if (immediate)
+            {
+                RenderNowOrQueue();
+                return;
+            }
+
+            isRenderRequested = true;
+        }
+
+        /// <summary>
+        /// Render immediately when possible and collapse overlapping requests into one trailing frame.
+        /// </summary>
+        private void RenderNowOrQueue()
+        {
+            if (isRendering)
+            {
+                isRenderRequested = true;
+                return;
+            }
+
+            isRendering = true;
+            try
+            {
+                do
+                {
+                    isRenderRequested = false;
+                    RenderSceneItem();
+                }
+                while (isRenderRequested);
+            }
+            finally
+            {
+                isRendering = false;
+            }
+        }
         #endregion
     }
 }

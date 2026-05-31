@@ -4,7 +4,7 @@ SamplerState InputSampler : register(s0);
 cbuffer Constants : register(b0)
 {
     float4 Sizes;  // baseWidth, baseHeight, renderWidth, renderHeight
-    float4 RenderAndFlags;    // focusFlag, finalOpacity, unused, unused
+    float4 RenderAndFlags;    // focusFlag, finalOpacity, highlightOpacity, reserved
     float4 EffectParamsA;
     float4 EffectParamsB;
     float4 InverseRow0;
@@ -78,6 +78,9 @@ float4 main(float4 position : SV_POSITION) : SV_Target
         color = ApplyQuantize(color, EffectParamsB.x);
     if (EffectParamsB.y > 0.5)
         color = ApplyHuemap(color);
+
+    if (color.a > 0.0 && RenderAndFlags.z > 0.0)
+        color.rgb = lerp(color.rgb, float3(0.0, 1.0, 0.0), saturate(RenderAndFlags.z));
 
     float border = EffectParamsB.z;
     if (RenderAndFlags.x > 0.5 &&
