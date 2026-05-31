@@ -181,8 +181,6 @@ namespace Binjyo
 
         public void NotifiedClose()
         {
-            SaveToHistory();
-
             this.image.Source = null;
             if (Mouse.Captured == this) Mouse.Capture(null);
             Close();
@@ -520,10 +518,6 @@ namespace Binjyo
             var wbmp = edited ? Scene.RenderOffscreen(Item) : Item.Bitmap;
             wbmp.Freeze();
             Clipboard.SetImage(wbmp);
-        }
-
-        private void SaveToHistory()
-        {
         }
 
         protected void UpdateBitmap()

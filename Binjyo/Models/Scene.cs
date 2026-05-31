@@ -38,6 +38,7 @@ namespace Binjyo
 
             if (Items.ContainsKey(id))
             {
+                HistoryStore.SaveSceneItemSnapshot(Items[id]);
                 Items[id].Close();
                 Items.Remove(id);
             }
@@ -45,9 +46,8 @@ namespace Binjyo
 
         public static void ClearItems()
         {
-            foreach (var item in Items.Values)
-                item.Close();
-            Items.Clear();
+            foreach (Guid id in Items.Keys.ToList())
+                CloseItem(id);
         }
         #endregion
 

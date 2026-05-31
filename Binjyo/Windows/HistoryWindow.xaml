@@ -86,10 +86,13 @@
                                                            Text="{Binding CreatedAtText}"/>
                                                 <TextBlock Margin="0,4,0,0"
                                                            Foreground="#FFD6D6D6"
-                                                           Text="{Binding SizeText}"/>
+                                                           Text="{Binding TransformText}"/>
                                                 <TextBlock Margin="0,2,0,0"
                                                            Foreground="#FFD6D6D6"
                                                            Text="{Binding PositionText}"/>
+                                                <TextBlock Margin="0,2,0,0"
+                                                           Foreground="#FFD6D6D6"
+                                                           Text="{Binding DrawingText}"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

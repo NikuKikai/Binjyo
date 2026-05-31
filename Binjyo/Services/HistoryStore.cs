@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Drawing;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Windows.Media.Imaging;
 
 namespace Binjyo
@@ -16,26 +17,108 @@ namespace Binjyo
         public DateTime CreatedAt { get; set; }
         public double Left { get; set; }
         public double Top { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
+        public double Scale { get; set; }
+        public double Rotation { get; set; }
+        public bool IsFlipX { get; set; }
+        public bool IsFlipY { get; set; }
+        public bool HasDrawingData { get; set; }
+    }
+
+    [DataContract]
+    internal sealed class SceneItemHistorySnapshot
+    {
+        [DataMember(Order = 1)]
+        public double Left { get; set; }
+
+        [DataMember(Order = 2)]
+        public double Top { get; set; }
+
+        [DataMember(Order = 3)]
+        public double Scale { get; set; }
+
+        [DataMember(Order = 4)]
+        public double Rotation { get; set; }
+
+        [DataMember(Order = 5)]
+        public bool IsFlipX { get; set; }
+
+        [DataMember(Order = 6)]
+        public bool IsFlipY { get; set; }
+
+        [DataMember(Order = 7)]
+        public bool HasDrawingData { get; set; }
+    }
+
+    [DataContract]
+    internal sealed class DrawingDocumentSnapshot
+    {
+        [DataMember(Order = 1)]
+        public double SourcePixelWidth { get; set; }
+
+        [DataMember(Order = 2)]
+        public double SourcePixelHeight { get; set; }
+
+        [DataMember(Order = 3)]
+        public List<DrawingStrokeSnapshot> Strokes { get; set; } = new List<DrawingStrokeSnapshot>();
+    }
+
+    [DataContract]
+    internal sealed class DrawingStrokeSnapshot
+    {
+        [DataMember(Order = 1)]
+        public Guid Id { get; set; }
+
+        [DataMember(Order = 2)]
+        public double SizePx { get; set; }
+
+        [DataMember(Order = 3)]
+        public DrawingColorSnapshot Color { get; set; }
+
+        [DataMember(Order = 4)]
+        public List<DrawingPointSnapshot> Points { get; set; } = new List<DrawingPointSnapshot>();
+    }
+
+    [DataContract]
+    internal sealed class DrawingColorSnapshot
+    {
+        [DataMember(Order = 1)]
+        public byte A { get; set; }
+
+        [DataMember(Order = 2)]
+        public byte R { get; set; }
+
+        [DataMember(Order = 3)]
+        public byte G { get; set; }
+
+        [DataMember(Order = 4)]
+        public byte B { get; set; }
+    }
+
+    [DataContract]
+    internal sealed class DrawingPointSnapshot
+    {
+        [DataMember(Order = 1)]
+        public double X { get; set; }
+
+        [DataMember(Order = 2)]
+        public double Y { get; set; }
     }
 
     public static class HistoryStore
     {
         private const string HistoryFolderName = "BinjyoHistory";
         private const string ImageFileName = "image.png";
-        private const string MetaFileName = "meta.txt";
-        private const string DrawingFileName = "drawing.xml";
+        private const string MetaFileName = "meta.json";
+        private const string DrawingFileName = "drawing.json";
 
         public static string GetHistoryRoot()
         {
             return Path.Combine(Path.GetTempPath(), HistoryFolderName);
         }
 
-
-        public static void Save(BitmapSource source, double left, double top, double width, double height, DrawingDocumentData drawingData)
+        public static void SaveSceneItemSnapshot(SceneItem item)
         {
-            if (source == null)
+            if (item?.Bitmap == null)
                 return;
 
             string root = GetHistoryRoot();
@@ -46,21 +129,25 @@ namespace Binjyo
 
             string imagePath = Path.Combine(entryDirectory, ImageFileName);
             string metaPath = Path.Combine(entryDirectory, MetaFileName);
+            string drawingPath = Path.Combine(entryDirectory, DrawingFileName);
 
-            SaveBitmapSourceToPng(source, imagePath);
-            File.WriteAllLines(metaPath, new[]
+            SaveBitmapSourceToPng(item.Bitmap, imagePath);
+
+            DrawingDocumentSnapshot drawingSnapshot = CreateDrawingSnapshot(item);
+            bool hasDrawingData = drawingSnapshot != null && drawingSnapshot.Strokes.Count > 0;
+            if (hasDrawingData)
+                WriteJson(drawingPath, drawingSnapshot);
+
+            WriteJson(metaPath, new SceneItemHistorySnapshot
             {
-                left.ToString(CultureInfo.InvariantCulture),
-                top.ToString(CultureInfo.InvariantCulture),
-                width.ToString(CultureInfo.InvariantCulture),
-                height.ToString(CultureInfo.InvariantCulture),
+                Left = item.Left,
+                Top = item.Top,
+                Scale = item.Scale,
+                Rotation = item.Rotation,
+                IsFlipX = item.IsFlipX,
+                IsFlipY = item.IsFlipY,
+                HasDrawingData = hasDrawingData
             });
-
-            if (drawingData != null && drawingData.HasVisibleObjects())
-            {
-                string drawingPath = Path.Combine(entryDirectory, DrawingFileName);
-                DrawingDataSerializer.Save(drawingPath, drawingData);
-            }
 
             EnforceEntryLimit();
         }
@@ -79,7 +166,8 @@ namespace Binjyo
                 if (!File.Exists(imagePath) || !File.Exists(metaPath))
                     continue;
 
-                if (!TryReadMetadata(metaPath, out double left, out double top, out double width, out double height))
+                SceneItemHistorySnapshot snapshot = ReadJson<SceneItemHistorySnapshot>(metaPath);
+                if (snapshot == null)
                     continue;
 
                 DateTime createdAt = File.GetCreationTime(imagePath);
@@ -89,10 +177,13 @@ namespace Binjyo
                     ImagePath = imagePath,
                     CreatedAt = createdAt,
                     GroupLabel = createdAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                    Left = left,
-                    Top = top,
-                    Width = width,
-                    Height = height
+                    Left = snapshot.Left,
+                    Top = snapshot.Top,
+                    Scale = snapshot.Scale,
+                    Rotation = snapshot.Rotation,
+                    IsFlipX = snapshot.IsFlipX,
+                    IsFlipY = snapshot.IsFlipY,
+                    HasDrawingData = snapshot.HasDrawingData
                 });
             }
 
@@ -101,43 +192,49 @@ namespace Binjyo
                 .ToList();
         }
 
-        public static Bitmap LoadBitmap(HistoryEntry entry)
+        public static SceneItem RestoreSceneItem(HistoryEntry entry)
         {
-            using (var stream = new FileStream(entry.ImagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (var bitmap = new Bitmap(stream))
-            {
-                return new Bitmap(bitmap);
-            }
+            if (entry == null)
+                return null;
+
+            WriteableBitmap bitmap = LoadWriteableBitmap(entry);
+            SceneItem item = Scene.CreateItem(bitmap, 0, 0);
+            item.SetScale(entry.Scale);
+            item.SetFlip(entry.IsFlipX, entry.IsFlipY);
+            item.SetRotationCentered(entry.Rotation);
+            item.SetPos(entry.Left, entry.Top);
+            item.DrawingDocument = LoadDrawingData(entry);
+            item.DrawingDocument.ConfigureSourceSize(bitmap.PixelWidth, bitmap.PixelHeight);
+            return item;
         }
+
         public static WriteableBitmap LoadWriteableBitmap(HistoryEntry entry)
         {
-            // 1. ファイルストリームを開く（読み込み完了後に即破棄されるように using を使用）
             using (var stream = new FileStream(entry.ImagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                // 2. デコーダーを使い、ストリームから画像をデコード（メモリ上に直接展開）
-                // BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile で高速化
                 var decoder = BitmapDecoder.Create(
                     stream,
                     BitmapCreateOptions.PreservePixelFormat,
                     BitmapCacheOption.OnLoad);
 
                 BitmapFrame frame = decoder.Frames[0];
-
-                // Formatting
                 FormatConvertedBitmap convertedBitmap = new FormatConvertedBitmap();
                 convertedBitmap.BeginInit();
                 convertedBitmap.Source = frame;
                 convertedBitmap.DestinationFormat = System.Windows.Media.PixelFormats.Bgra32;
                 convertedBitmap.EndInit();
-
-                // 4. Create WriteableBitmap
-                WriteableBitmap wbitmap = new WriteableBitmap(convertedBitmap);
-
-                // （オプション）もしこの関数を「表示専用（編集しない）」として使うなら、
-                // ここで wbitmap.Freeze(); を呼ぶとさらにパフォーマンスが向上します。
-
-                return wbitmap;
+                return new WriteableBitmap(convertedBitmap);
             }
+        }
+
+        public static DrawingDocumentData LoadDrawingData(HistoryEntry entry)
+        {
+            if (entry == null || string.IsNullOrWhiteSpace(entry.DirectoryPath))
+                return new DrawingDocumentData();
+
+            string drawingPath = Path.Combine(entry.DirectoryPath, DrawingFileName);
+            DrawingDocumentSnapshot snapshot = ReadJson<DrawingDocumentSnapshot>(drawingPath);
+            return snapshot == null ? new DrawingDocumentData() : CreateDrawingDocument(snapshot);
         }
 
         public static void DeleteEntry(HistoryEntry entry)
@@ -159,36 +256,107 @@ namespace Binjyo
         public static void ClearOlderThan(DateTime cutoff)
         {
             foreach (HistoryEntry entry in LoadEntries().Where(item => item.CreatedAt < cutoff).ToList())
-            {
                 DeleteEntry(entry);
+        }
+
+        private static DrawingDocumentSnapshot CreateDrawingSnapshot(SceneItem item)
+        {
+            DrawingDocumentData document = item.DrawingDocument;
+            if (document == null)
+                return null;
+
+            document.ConfigureSourceSize(item.Bitmap.PixelWidth, item.Bitmap.PixelHeight);
+            List<DrawingStrokeSnapshot> strokes = document.GetVisibleStrokes()
+                .Select(stroke => new DrawingStrokeSnapshot
+                {
+                    Id = stroke.Id,
+                    SizePx = stroke.SizePx,
+                    Color = stroke.Color == null ? null : new DrawingColorSnapshot
+                    {
+                        A = stroke.Color.A,
+                        R = stroke.Color.R,
+                        G = stroke.Color.G,
+                        B = stroke.Color.B
+                    },
+                    Points = stroke.Points.Select(point => new DrawingPointSnapshot
+                    {
+                        X = point.X,
+                        Y = point.Y
+                    }).ToList()
+                })
+                .ToList();
+
+            if (strokes.Count == 0)
+                return null;
+
+            return new DrawingDocumentSnapshot
+            {
+                SourcePixelWidth = document.SourcePixelWidth,
+                SourcePixelHeight = document.SourcePixelHeight,
+                Strokes = strokes
+            };
+        }
+
+        private static DrawingDocumentData CreateDrawingDocument(DrawingDocumentSnapshot snapshot)
+        {
+            var document = new DrawingDocumentData
+            {
+                SourcePixelWidth = Math.Max(1, snapshot.SourcePixelWidth),
+                SourcePixelHeight = Math.Max(1, snapshot.SourcePixelHeight),
+                AppliedOperationCount = 0
+            };
+
+            document.Objects = snapshot.Strokes
+                .Select(stroke => (DrawingObjectData)new DrawingStrokeData
+                {
+                    Id = stroke.Id,
+                    IsDeleted = false,
+                    SizePx = stroke.SizePx,
+                    Color = stroke.Color == null ? new DrawingColorData() : new DrawingColorData
+                    {
+                        A = stroke.Color.A,
+                        R = stroke.Color.R,
+                        G = stroke.Color.G,
+                        B = stroke.Color.B
+                    },
+                    Points = stroke.Points.Select(point => new DrawingPointData
+                    {
+                        X = point.X,
+                        Y = point.Y
+                    }).ToList()
+                })
+                .ToList();
+
+            document.Operations = new List<DrawingOperationData>();
+            return document;
+        }
+
+        private static void WriteJson<T>(string path, T value)
+        {
+            var serializer = new DataContractJsonSerializer(typeof(T));
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                serializer.WriteObject(stream, value);
             }
         }
 
-        public static DrawingDocumentData LoadDrawingData(HistoryEntry entry)
+        private static T ReadJson<T>(string path) where T : class
         {
-            if (entry == null || string.IsNullOrWhiteSpace(entry.DirectoryPath))
-                return new DrawingDocumentData();
+            if (!File.Exists(path))
+                return null;
 
-            string drawingPath = Path.Combine(entry.DirectoryPath, DrawingFileName);
-            return DrawingDataSerializer.Load(drawingPath);
-        }
-
-        private static bool TryReadMetadata(string metaPath, out double left, out double top, out double width, out double height)
-        {
-            left = 0;
-            top = 0;
-            width = 0;
-            height = 0;
-
-            string[] lines = File.ReadAllLines(metaPath);
-            if (lines.Length < 4)
-                return false;
-
-            return
-                double.TryParse(lines[0], NumberStyles.Float, CultureInfo.InvariantCulture, out left) &&
-                double.TryParse(lines[1], NumberStyles.Float, CultureInfo.InvariantCulture, out top) &&
-                double.TryParse(lines[2], NumberStyles.Float, CultureInfo.InvariantCulture, out width) &&
-                double.TryParse(lines[3], NumberStyles.Float, CultureInfo.InvariantCulture, out height);
+            try
+            {
+                var serializer = new DataContractJsonSerializer(typeof(T));
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    return serializer.ReadObject(stream) as T;
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static void SaveBitmapSourceToPng(BitmapSource source, string path)

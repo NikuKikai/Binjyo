@@ -17,8 +17,9 @@ namespace Binjyo
         public HistoryEntry Entry { get; set; }
         public BitmapImage Thumbnail { get; set; }
         public string CreatedAtText { get; set; }
-        public string SizeText { get; set; }
         public string PositionText { get; set; }
+        public string TransformText { get; set; }
+        public string DrawingText { get; set; }
     }
 
     public sealed class HistoryGroupViewModel
@@ -57,8 +58,9 @@ namespace Binjyo
                         Entry = entry,
                         Thumbnail = CreateThumbnail(entry.ImagePath),
                         CreatedAtText = entry.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                        SizeText = $"Size: {Math.Round(entry.Width):0} x {Math.Round(entry.Height):0}",
-                        PositionText = $"Position: ({Math.Round(entry.Left):0}, {Math.Round(entry.Top):0})"
+                        PositionText = $"Position: ({Math.Round(entry.Left):0}, {Math.Round(entry.Top):0})",
+                        TransformText = $"Scale: {entry.Scale:0.###}, Rotation: {entry.Rotation:0.#}°, Flip: {FormatFlip(entry)}",
+                        DrawingText = entry.HasDrawingData ? "Drawing: Yes" : "Drawing: No"
                     }));
 
                 groups.Add(new HistoryGroupViewModel
@@ -94,26 +96,32 @@ namespace Binjyo
 
         private void RestoreEntry(HistoryEntryViewModel viewModel)
         {
-            var wbitmap = HistoryStore.LoadWriteableBitmap(viewModel.Entry);
-            var item = Scene.CreateItem(wbitmap, 0, 0);
-            var memo = new MemoD11(item);
-            CanvasWindow.CreateItem(item);
-
+            var item = HistoryStore.RestoreSceneItem(viewModel.Entry);
             GetAdjustedBounds(
-                viewModel.Entry.Left,
-                viewModel.Entry.Top,
-                viewModel.Entry.Width,
-                viewModel.Entry.Height,
+                item.Left,
+                item.Top,
+                item.Width,
+                item.Height,
                 out double restoredLeft,
                 out double restoredTop);
 
             item.SetPos(restoredLeft, restoredTop);
-            item.SetScale(viewModel.Entry.Width / item.GetBaseWidth());
-            // TODO
-            memo.RestoreDrawingData(HistoryStore.LoadDrawingData(viewModel.Entry));
+            var memo = new MemoD11(item);
+            CanvasWindow.CreateItem(item);
 
             HistoryStore.DeleteEntry(viewModel.Entry);
             ReloadEntries();
+        }
+
+        private static string FormatFlip(HistoryEntry entry)
+        {
+            if (entry.IsFlipX && entry.IsFlipY)
+                return "XY";
+            if (entry.IsFlipX)
+                return "X";
+            if (entry.IsFlipY)
+                return "Y";
+            return "None";
         }
 
         private static void GetAdjustedBounds(double left, double top, double width, double height, out double adjustedLeft, out double adjustedTop)
