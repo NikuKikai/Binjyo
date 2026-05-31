@@ -131,11 +131,6 @@ namespace Binjyo
                     if (!e.IsRepeat)
                         ToggleHueMap();
                     break;
-                case Key.P:
-                    if (!e.IsRepeat)
-                        ToggleFeaturePoints();
-                    e.Handled = true;
-                    break;
                 case Key.CapsLock:
                     if (!e.IsRepeat)
                     {
@@ -276,9 +271,6 @@ namespace Binjyo
             }
 
             Scene.DragMoveStart(Id);
-
-            if (isFeaturePointModeEnabled)
-                image.Opacity = 0.5;
             Mouse.Capture(this);
         }
 
@@ -356,9 +348,6 @@ namespace Binjyo
 
             Scene.DragMoveEnd();
 
-            if (isFeaturePointModeEnabled)
-                image.Opacity = 1;
-
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
         }
@@ -418,8 +407,6 @@ namespace Binjyo
             Scene.DragMoveEnd();
 
             dragStartPositions.Clear();
-            if (isFeaturePointModeEnabled)
-                image.Opacity = 1;
             StopResize();
             if (Mouse.Captured == this)
                 Mouse.Capture(null);
@@ -428,7 +415,6 @@ namespace Binjyo
 
         private void Window_Activated(object sender, EventArgs e)
         {
-            RefreshAllMemoFeatureOverlays();
             if (flashOnNextActivation)
             {
                 flashOnNextActivation = false;

@@ -14,8 +14,6 @@ namespace Binjyo
 
         private ContextMenu memoContextMenu = null;
         private MenuItem resizeModeMenuItem = null;
-        private MenuItem featurePointsMenuItem = null;
-        private MenuItem combineMenuItem = null;
         private MenuItem grayscaleMenuItem = null;
         private MenuItem hueMapMenuItem = null;
         private MenuItem binarizeOffMenuItem = null;
@@ -25,7 +23,6 @@ namespace Binjyo
         private MenuItem transparencyOffMenuItem = null;
         private Dictionary<int, MenuItem> transparencyMenuItems = null;
         private bool? originalMenuDropAlignment = null;
-        private bool isCombinePreviewOn = false;
         private double contextMenuX = 0;
         private double contextMenuY = 0;
         private readonly int[] binarizePercentOptions = new[] { 10, 20, 30, 40, 50, 60, 70, 80, 90 };
@@ -61,12 +58,6 @@ namespace Binjyo
 
             resizeModeMenuItem = CreateCheckableMenuItem("Resize Mode", "T", (s, e) => SetResizeMode(!isResizeMode));
             memoContextMenu.Items.Add(resizeModeMenuItem);
-            featurePointsMenuItem = CreateCheckableMenuItem("Feature Points", "P", (s, e) => ToggleFeaturePoints());
-            memoContextMenu.Items.Add(featurePointsMenuItem);
-            combineMenuItem = CreateMenuItem("Combine", null, (s, e) => CombineMemosAtPos(contextMenuX, contextMenuY));
-            combineMenuItem.MouseEnter += CombineMenuItem_MouseEnter;
-            combineMenuItem.MouseLeave += CombineMenuItem_MouseLeave;
-            memoContextMenu.Items.Add(combineMenuItem);
             memoContextMenu.Items.Add(new Separator());
 
             MenuItem transformMenu = new MenuItem { Header = "Transform" };
@@ -219,15 +210,6 @@ namespace Binjyo
                 resizeModeMenuItem.IsChecked = isResizeMode;
                 resizeModeMenuItem.IsEnabled = isInteractive;
             }
-            if (featurePointsMenuItem != null)
-            {
-                featurePointsMenuItem.IsChecked = isFeaturePointModeEnabled;
-                featurePointsMenuItem.IsEnabled = Scene.DisplayMode != EDisplayMode.Minimized;
-            }
-            if (combineMenuItem != null)
-            {
-                combineMenuItem.IsEnabled = GetMemosAtContextMenuPoint().Count >= 2;
-            }
             if (grayscaleMenuItem != null)
             {
                 grayscaleMenuItem.IsChecked = Item.IsEffectGray;
@@ -279,8 +261,6 @@ namespace Binjyo
 
         private void MemoContextMenu_Closed(object sender, RoutedEventArgs e)
         {
-            CombinePreview(); // clear
-
             // Restore Menu Drop Alignment
             if (menuDropAlignmentField == null || !originalMenuDropAlignment.HasValue)
                 return;
@@ -288,38 +268,6 @@ namespace Binjyo
             menuDropAlignmentField.SetValue(null, originalMenuDropAlignment.Value);
             originalMenuDropAlignment = null;
         }
-
-
-        private void CombineMenuItem_MouseEnter(object sender, MouseEventArgs e)
-        {
-            CombinePreview(GetMemosAtContextMenuPoint());
-        }
-
-        private void CombineMenuItem_MouseLeave(object sender, MouseEventArgs e)
-        {
-            CombinePreview(); // clear
-        }
-
-        private List<Memo> GetMemosAtContextMenuPoint()
-        {
-            return GetVisibleMemos()
-                .Where(memo => memo.ContainsScreenPoint(contextMenuX, contextMenuY))
-                .OrderBy(memo => memo.Item.FocusOrder)
-                .ToList();
-        }
-
-        private void CombinePreview(IEnumerable<Memo> memos = null)
-        {
-            HashSet<Memo> targetSet = new HashSet<Memo>(memos ?? Enumerable.Empty<Memo>());
-            foreach (Memo memo in GetVisibleMemos())
-            {
-                var isTarget = targetSet.Contains(memo);
-                if (memo.isCombinePreviewOn != isTarget)
-                    memo.SetHighlight(isTarget);
-                memo.isCombinePreviewOn = isTarget;
-            }
-        }
-
         private static string FormatModifiers(ModifierKeys modifiers)
         {
             string result = string.Empty;

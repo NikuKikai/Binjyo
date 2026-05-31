@@ -19,6 +19,9 @@ namespace Binjyo
         private ContextMenu memoContextMenu;
         private Window memoMenuHostWindow;
         private bool? originalMenuDropAlignment;
+        private double contextMenuX;
+        private double contextMenuY;
+        private bool isCombinePreviewOn;
 
         private void ShowContextMenuAtCursor()
         {
@@ -31,11 +34,14 @@ namespace Binjyo
             Scene.Focus(Id);
             EnsureMemoMenuHostWindow();
 
+            System.Drawing.Point mousePosition = Forms.Control.MousePosition;
+            contextMenuX = mousePosition.X;
+            contextMenuY = mousePosition.Y;
+
             memoContextMenu = BuildContextMenu();
             memoContextMenu.Opened += MemoContextMenu_Opened;
             memoContextMenu.Closed += MemoContextMenu_Closed;
 
-            System.Drawing.Point mousePosition = Forms.Control.MousePosition;
             memoMenuHostWindow.Left = mousePosition.X;
             memoMenuHostWindow.Top = mousePosition.Y;
             if (!memoMenuHostWindow.IsVisible)
@@ -95,10 +101,15 @@ namespace Binjyo
             menu.Items.Add(new Separator());
             menu.Items.Add(AppContextMenuFactory.CreateMenuItem("Reset Size", "`", (s, e) => Item.SetScale(1)));
 
-            MenuItem featurePointsMenuItem = AppContextMenuFactory.CreateCheckableMenuItem("Feature Points", "P", null);
-            featurePointsMenuItem.IsEnabled = false;
-            featurePointsMenuItem.IsChecked = false;
+            MenuItem featurePointsMenuItem = AppContextMenuFactory.CreateCheckableMenuItem("Feature Points", "P", (s, e) => ToggleFeaturePoints());
+            featurePointsMenuItem.IsEnabled = Scene.DisplayMode != EDisplayMode.Minimized;
+            featurePointsMenuItem.IsChecked = Scene.IsStitchMode;
             menu.Items.Add(featurePointsMenuItem);
+            MenuItem combineMenuItem = AppContextMenuFactory.CreateMenuItem("Combine", null, (s, e) => CombineMemosAtPos(contextMenuX, contextMenuY));
+            combineMenuItem.IsEnabled = Scene.GetIdsAtPos(contextMenuX, contextMenuY).Count >= 2;
+            combineMenuItem.MouseEnter += CombineMenuItem_MouseEnter;
+            combineMenuItem.MouseLeave += CombineMenuItem_MouseLeave;
+            menu.Items.Add(combineMenuItem);
             menu.Items.Add(new Separator());
 
             MenuItem transformMenu = new MenuItem { Header = "Transform", FlowDirection = FlowDirection.LeftToRight };
@@ -241,6 +252,8 @@ namespace Binjyo
 
         private void MemoContextMenu_Closed(object sender, RoutedEventArgs e)
         {
+            CombinePreview();
+
             if (memoMenuHostWindow != null && memoMenuHostWindow.IsVisible)
                 memoMenuHostWindow.Hide();
 
@@ -256,6 +269,45 @@ namespace Binjyo
                 MenuDropAlignmentField.SetValue(null, originalMenuDropAlignment.Value);
                 originalMenuDropAlignment = null;
             }
+        }
+
+        private void CombineMenuItem_MouseEnter(object sender, MouseEventArgs e)
+        {
+            CombinePreview(GetMemosAtContextMenuPoint());
+        }
+
+        private void CombineMenuItem_MouseLeave(object sender, MouseEventArgs e)
+        {
+            CombinePreview();
+        }
+
+        private List<MemoD11> GetMemosAtContextMenuPoint()
+        {
+            return Forms.Application.OpenForms
+                .OfType<MemoD11>()
+                .Where(memo => memo.Visible && memo.ContainsScreenPoint(contextMenuX, contextMenuY))
+                .OrderBy(memo => memo.Item.FocusOrder)
+                .ToList();
+        }
+
+        private void CombinePreview(IEnumerable<MemoD11> memos = null)
+        {
+            HashSet<MemoD11> targetSet = new HashSet<MemoD11>(memos ?? Enumerable.Empty<MemoD11>());
+            foreach (MemoD11 memo in Forms.Application.OpenForms.OfType<MemoD11>())
+            {
+                bool isTarget = targetSet.Contains(memo);
+                if (memo.isCombinePreviewOn != isTarget)
+                    memo.SetHighlight(isTarget);
+                memo.isCombinePreviewOn = isTarget;
+            }
+        }
+
+        private bool ContainsScreenPoint(double screenX, double screenY)
+        {
+            return currentHostBounds.Left <= screenX &&
+                screenX < currentHostBounds.Right &&
+                currentHostBounds.Top <= screenY &&
+                screenY < currentHostBounds.Bottom;
         }
 
         private static int ThresholdToPercent(int threshold)

@@ -13,6 +13,7 @@ namespace Binjyo
         private static double moveSpeed = 1; // for key repeat acceleration
         public static bool IsDragMoving { get; private set; } = false;
         private static bool isDragMovingGroup = false;
+        private static Guid dragPrimaryId = Guid.Empty;
         private static double dragStartMouseX, dragStartMouseY;
         private static Dictionary<Guid, Point> dragMoveStartPts = new Dictionary<Guid, Point>();
 
@@ -85,11 +86,15 @@ namespace Binjyo
                 var position = targetPositions[item];
                 item.SetPos(position.X, position.Y);
             }
+
+            if (IsStitchMode)
+                StitchSessionService.RefreshVisuals();
         }
 
         public static void DragMoveStart(Guid id)
         {
             IsDragMoving = true;
+            dragPrimaryId = id;
             isDragMovingGroup = Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt);
             List<Guid> targetIds = isDragMovingGroup ? GetConnectedIds(id) : new List<Guid> { id };
 
@@ -125,22 +130,27 @@ namespace Binjyo
             // Snap
             if (Keyboard.IsKeyDown(Key.Space) != Properties.Settings.Default.SnapMemo)
             {
-                SnapTargetPts(movingIds, targetPts, bounds);
+                SnapTargetPts(dragPrimaryId, movingIds, targetPts, bounds);
             }
 
             // Move items to target positions
             foreach (var kv in targetPts)
                 Items[kv.Key].SetPos(kv.Value.X, kv.Value.Y);
+
+            if (IsStitchMode)
+                StitchSessionService.RefreshVisuals();
         }
 
         public static void DragMoveEnd()
         {
             IsDragMoving = false;
             isDragMovingGroup = false;
+            dragPrimaryId = Guid.Empty;
             dragMoveStartPts.Clear();
         }
 
         private static void SnapTargetPts(
+            Guid primaryId,
             ICollection<Guid> ids,
             IDictionary<Guid, Point> targetPts,
             Rect bounds
@@ -181,15 +191,18 @@ namespace Binjyo
                 );
             }
 
-            var offsetX = snappedLeft - bounds.Left;
-            var offsetY = snappedTop - bounds.Top;
-
-            // if (targetPts != null &&
-            //     TryGetFeatureAlignmentSnapOffset(targetPts, movingIdSet, out double alignmentOffsetX, out double alignmentOffsetY))
-            // {
-            //     offsetX = alignmentOffsetX;
-            //     offsetY = alignmentOffsetY;
-            // }
+            double offsetX;
+            double offsetY;
+            if (IsStitchMode && StitchSessionService.TryGetSnapOffset(primaryId, ids, targetPts, out double stitchOffsetX, out double stitchOffsetY))
+            {
+                offsetX = stitchOffsetX;
+                offsetY = stitchOffsetY;
+            }
+            else
+            {
+                offsetX = snappedLeft - bounds.Left;
+                offsetY = snappedTop - bounds.Top;
+            }
 
             foreach (var id in ids)
                 targetPts[id] = new Point(targetPts[id].X + offsetX, targetPts[id].Y + offsetY);

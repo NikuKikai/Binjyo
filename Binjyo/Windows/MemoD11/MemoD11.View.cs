@@ -43,6 +43,7 @@ namespace Binjyo
                 ExitDrawMode();
                 HideHSVWheel();
                 Hide();
+                RefreshStitchVisuals();
                 return;
             }
 
@@ -59,6 +60,7 @@ namespace Binjyo
         {
             ExitDrawMode();
             HideHSVWheel();
+            StitchSessionService.Remove(Item);
             if (Visible)
                 Hide();
             Close();
@@ -89,6 +91,8 @@ namespace Binjyo
         /// </summary>
         public void NotifiedTransform(bool moveOnly)
         {
+            if (!moveOnly)
+                StitchSessionService.Invalidate(Item);
             UpdateRenderHostLayout();
             UpdateDrawPanelPlacement();
             bool shouldRenderImmediately = isRotateDragging || Scene.IsDragMoving;

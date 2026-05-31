@@ -124,6 +124,8 @@
     <Compile Include="Models\Scene.Move.cs" />
     <Compile Include="Models\Scene.Render.cs" />
     <Compile Include="Services\Effects.cs" />
+    <Compile Include="Services\StitchFeatureExtractor.cs" />
+    <Compile Include="Services\StitchSessionService.cs" />
     <Compile Include="Utils\Animator.cs" />
     <Compile Include="Utils\BitmapExt.cs" />
     <Compile Include="Utils\CaptureScreen.cs" />
@@ -143,7 +145,6 @@
     <Compile Include="Windows\DrawPanel.xaml.cs">
       <DependentUpon>DrawPanel.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Windows\FeatureMatchOverlayWindow.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.xaml.cs">
       <DependentUpon>CanvasWindow.xaml</DependentUpon>
     </Compile>
@@ -166,13 +167,15 @@
     </Compile>
     <Compile Include="Windows\Memo\Memo.Resize.cs" />
     <Compile Include="Windows\Memo\Memo.ContextMenu.cs" />
-    <Compile Include="Windows\Memo\Memo.Features.cs" />
     <Compile Include="Windows\Memo\Memo.Interaction.cs" />
     <Compile Include="Windows\Memo\Memo.Imaging.cs" />
     <Compile Include="Windows\MemoD11\MemoD11.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.ContextMenu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Combine.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.Drawing.cs">
@@ -185,6 +188,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.Render.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Windows\MemoD11\MemoD11.Stitch.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Windows\MemoD11\MemoD11.View.cs">

@@ -38,6 +38,7 @@ namespace Binjyo
 
             if (Items.ContainsKey(id))
             {
+                StitchSessionService.Remove(Items[id]);
                 HistoryStore.SaveSceneItemSnapshot(Items[id]);
                 Items[id].Close();
                 Items.Remove(id);

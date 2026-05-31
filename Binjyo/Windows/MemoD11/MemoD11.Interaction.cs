@@ -298,6 +298,10 @@ namespace Binjyo
                     Item.SetEffectHuemap(!Item.IsEffectHuemap);
                     e.Handled = true;
                     break;
+                case Keys.P:
+                    ToggleFeaturePoints();
+                    e.Handled = true;
+                    break;
                 case Keys.Oemtilde:
                     Item.ResetTransform();
                     e.Handled = true;

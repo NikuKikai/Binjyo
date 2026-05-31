@@ -342,10 +342,26 @@ namespace Binjyo
                 return;
 
             Item.DrawingDocument.ConfigureSourceSize(Item.Bitmap.PixelWidth, Item.Bitmap.PixelHeight);
-            WriteableBitmap overlayBitmap = DrawingData.RenderOverlay(
-                Item.DrawingDocument,
-                Item.Bitmap.PixelWidth,
-                Item.Bitmap.PixelHeight);
+            WriteableBitmap overlayBitmap = null;
+            if (Item.DrawingDocument.HasVisibleObjects())
+            {
+                overlayBitmap = DrawingData.RenderOverlay(
+                    Item.DrawingDocument,
+                    Item.Bitmap.PixelWidth,
+                    Item.Bitmap.PixelHeight);
+            }
+
+            WriteableBitmap featureOverlayBitmap = RenderFeatureOverlayBitmap(Item.Bitmap.PixelWidth, Item.Bitmap.PixelHeight);
+            if (overlayBitmap == null)
+                overlayBitmap = featureOverlayBitmap;
+            else if (featureOverlayBitmap != null)
+                overlayBitmap = DrawingData.Composite(overlayBitmap, featureOverlayBitmap);
+
+            if (overlayBitmap == null)
+            {
+                isDrawingOverlayDirty = false;
+                return;
+            }
 
             BitmapSource uploadBitmap = overlayBitmap;
             if (uploadBitmap.Format != PixelFormats.Bgra32)

@@ -51,9 +51,6 @@ namespace Binjyo
             InitializeContextMenu();
             UpdateResizeVisuals();
 
-            if (showFeaturePoints)
-                RefreshAllMemoFeatureOverlays();
-
             // Register
             item.RegisterView(this);
 
@@ -82,7 +79,7 @@ namespace Binjyo
 
         private double GetCurrentImageOpacity()
         {
-            return isFeaturePointModeEnabled && isDragging ? 0.5 : 1.0;
+            return 1.0;
         }
 
         private static double GetRectSignedDistance(System.Windows.Rect rect, double x, double y, out double normalX, out double normalY)
@@ -229,8 +226,6 @@ namespace Binjyo
             // Width = rect.Width;
             // Height = rect.Height;
             // ApplyMove(Item.Left, Item.Top);
-            RefreshAllMemoFeatureOverlays();
-
             DisableAnimations();
 
             // ApplyWindowRect(Item.Left, Item.Top, rect.Width, rect.Height);
@@ -408,66 +403,6 @@ namespace Binjyo
 
 
         #region ======== IO Ops ========
-
-        // physical coordinates
-        private void CombineMemosAtPos(double x, double y)
-        {
-            var ids = Scene.GetIdsAtPos(x, y);
-            if (ids.Count < 2) return;
-
-            var sceneItems = ids.Select(id => Scene.Items[id]).Where(item => item != null).ToList();
-
-            CombinePreview(); // clear preview highlights
-
-            var renderedItems = sceneItems
-                .Select(item => new
-                {
-                    // Memo = memo,
-                    Bitmap = Scene.RenderOffscreen(item),
-                    Left = (int)Math.Round(item.Left * item.DpiFactor),
-                    Top = (int)Math.Round(item.Top * item.DpiFactor),
-                    Right = (int)Math.Round((item.Left + item.Width) * item.DpiFactor),
-                    Bottom = (int)Math.Round((item.Top + item.Height) * item.DpiFactor)
-                })
-                .ToList();
-
-            // Calculate union bounds
-            int unionLeft = renderedItems.Min(item => item.Left);
-            int unionTop = renderedItems.Min(item => item.Top);
-            int unionRight = renderedItems.Max(item => item.Right);
-            int unionBottom = renderedItems.Max(item => item.Bottom);
-            int unionWidth = Math.Max(1, unionRight - unionLeft);
-            int unionHeight = Math.Max(1, unionBottom - unionTop);
-
-            // Render combined bitmap
-            var visual = new DrawingVisual();
-            using (var dc = visual.RenderOpen())
-            {
-                foreach (var item in renderedItems)
-                {
-                    dc.DrawImage(item.Bitmap, new System.Windows.Rect(
-                        item.Left - unionLeft,
-                        item.Top - unionTop,
-                        item.Right - item.Left,
-                        item.Bottom - item.Top
-                    ));
-                }
-            }
-            var rtb = new RenderTargetBitmap(unionWidth, unionHeight, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(visual);
-            var wb = new WriteableBitmap(rtb);
-
-            // Create new SceneItem and Memo
-            var sceneItem = Scene.CreateItem(wb, unionLeft, unionTop);
-            Memo combinedMemo = new Memo(sceneItem);
-            CanvasWindow.CreateItem(sceneItem);
-            Scene.Focus(sceneItem.Id);
-
-            // Close original memos
-            foreach (var id in ids)
-                Scene.CloseItem(id);
-
-        }
 
         public void Save(bool edited = true, bool dialog = true)
         {

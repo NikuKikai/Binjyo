@@ -303,7 +303,7 @@ namespace Binjyo
 
             Properties.Settings.Default.ShowFeatureMatchLines = CheckShowFeatureMatchLines.IsChecked.Value;
             Properties.Settings.Default.Save();
-            Memo.RefreshAllFeatureVisuals();
+            MemoD11.RefreshAllStitchVisuals();
         }
     }
 }

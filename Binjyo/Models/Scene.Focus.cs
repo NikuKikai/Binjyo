@@ -20,8 +20,11 @@ namespace Binjyo
             FocusedId = id;
             Items[id].views.ForEach(view => view.NotifiedFocus());
 
-            if (!Items.ContainsKey(formerId)) return;
-            Items[formerId].views.ForEach(view => view.NotifiedFocus());
+            if (Items.ContainsKey(formerId))
+                Items[formerId].views.ForEach(view => view.NotifiedFocus());
+
+            if (IsStitchMode)
+                StitchSessionService.RefreshVisuals();
         }
 
         private static Guid GetTopFocusId(List<Guid> ids)
