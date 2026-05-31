@@ -140,6 +140,7 @@ namespace Binjyo
         private double flashHighlightOpacity;
         private bool isFlashHighlightAnimating;
         private double flashHighlightElapsedSeconds;
+        private HSVWheelWindow hsvWheelWindow;
         private int renderWidth;
         private int renderHeight;
         private bool isGraphicsReady;

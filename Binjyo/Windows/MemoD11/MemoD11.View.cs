@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Forms;
 using Rectangle = System.Drawing.Rectangle;
 
 namespace Binjyo
@@ -23,7 +24,10 @@ namespace Binjyo
         public void NotifiedCanvasActive()
         {
             if (Scene.IsCanvasActive)
+            {
+                HideHSVWheel();
                 Hide();
+            }
             else
                 NotifiedDisplayMode();
         }
@@ -35,6 +39,7 @@ namespace Binjyo
         {
             if (Scene.IsCanvasActive || Scene.DisplayMode == EDisplayMode.Minimized)
             {
+                HideHSVWheel();
                 Hide();
                 return;
             }
@@ -50,6 +55,7 @@ namespace Binjyo
         /// </summary>
         public void NotifiedClose()
         {
+            HideHSVWheel();
             if (Visible)
                 Hide();
             Close();
@@ -65,11 +71,14 @@ namespace Binjyo
                 Activate();
                 FlashHighlight();
             }
+
+            RefreshHSVWheelVisibility();
         }
 
         public void NotifiedOpacity()
         {
             RenderRequest();
+            RefreshHSVWheelVisibility();
         }
 
         /// <summary>
@@ -83,6 +92,7 @@ namespace Binjyo
             if (moveOnly)
             {
                 RenderRequest(shouldRenderImmediately);
+                RefreshHSVWheelVisibility();
                 return;
             }
             if (renderWidth != currentHostBounds.Width || renderHeight != currentHostBounds.Height)
@@ -90,6 +100,7 @@ namespace Binjyo
                 ResetRenderTargets(Math.Max(1, currentHostBounds.Width), Math.Max(1, currentHostBounds.Height));
             }
             RenderRequest(shouldRenderImmediately);
+            RefreshHSVWheelVisibility();
         }
 
         /// <summary>
@@ -98,6 +109,7 @@ namespace Binjyo
         public void NotifiedEffect()
         {
             RenderRequest();
+            RefreshHSVWheelVisibility();
         }
 
         #endregion

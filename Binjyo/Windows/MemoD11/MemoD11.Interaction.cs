@@ -90,7 +90,10 @@ namespace Binjyo
         private void MemoD11_MouseMove(object sender, MouseEventArgs e)
         {
             if (!Capture || e.Button != MouseButtons.Left)
+            {
+                RefreshHSVWheelVisibility();
                 return;
+            }
 
             if (isRotateDragging)
             {
@@ -98,10 +101,12 @@ namespace Binjyo
                 double deltaFromStart = NormalizeAngleDelta(currentAngle - rotateStartPointerAngle);
                 double targetRotation = rotateStartItemRotation + deltaFromStart;
                 Item.SetRotationCentered(targetRotation);
+                RefreshHSVWheelVisibility();
                 return;
             }
 
             Scene.DragMoveUpdate();
+            RefreshHSVWheelVisibility();
         }
 
         /// <summary>
@@ -123,6 +128,7 @@ namespace Binjyo
             }
 
             Capture = false;
+            RefreshHSVWheelVisibility();
         }
 
         /// <summary>
@@ -136,6 +142,7 @@ namespace Binjyo
             if ((ModifierKeys & Keys.Control) == Keys.Control)
             {
                 Item.SetScale(Item.Scale * (e.Delta > 0 ? 1.1 : 0.9));
+                RefreshHSVWheelVisibility();
                 return;
             }
 
@@ -144,6 +151,7 @@ namespace Binjyo
                 isEditedDuringKeyB = true;
                 Item.SetEffectQuantize(false);
                 Item.SetEffectBinarize(true, Item.PEffectBinarize + 14 * Math.Sign(e.Delta));
+                RefreshHSVWheelVisibility();
                 return;
             }
 
@@ -152,6 +160,7 @@ namespace Binjyo
                 isEditedDuringKeyQ = true;
                 Item.SetEffectBinarize(false);
                 Item.SetEffectQuantize(true, Item.PEffectQuantize + Math.Sign(e.Delta));
+                RefreshHSVWheelVisibility();
                 return;
             }
 
@@ -159,6 +168,7 @@ namespace Binjyo
             {
                 isEditedDuringKeyO = true;
                 Item.SetOpacity(true, Item.Opacity + 0.1 * Math.Sign(e.Delta));
+                RefreshHSVWheelVisibility();
                 return;
             }
         }
@@ -221,6 +231,14 @@ namespace Binjyo
                     break;
                 case Keys.Tab:
                     Scene.FocusNext();
+                    e.Handled = true;
+                    break;
+                case Keys.CapsLock:
+                    if (!e.SuppressKeyPress)
+                    {
+                        isHSVWheelEnabled = !isHSVWheelEnabled;
+                        RefreshAllMemoD11HSVWheelVisibility();
+                    }
                     e.Handled = true;
                     break;
                 case Keys.B:
@@ -366,5 +384,6 @@ namespace Binjyo
             if (Math.Abs(rotateAnimationRemainingDelta) < 0.001)
                 StopRotateAnimation();
         }
+
     }
 }

@@ -129,6 +129,9 @@
     <Compile Include="Windows\CanvasWindow\CanvasItem.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.Interaction.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.Render.cs" />
+    <Compile Include="Windows\MemoD11\MemoD11.Overlay.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Windows\Memo\Memo.Overlay.cs" />
     <Compile Include="Windows\Screenshot.xaml.cs">
       <DependentUpon>Screenshot.xaml</DependentUpon>
@@ -180,6 +183,9 @@
     <Compile Include="Windows\MemoD11\MemoD11.View.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Windows\MemoD11\HSVWheelWindow.xaml.cs">
+      <DependentUpon>HSVWheelWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="Windows\CanvasWindow\CanvasWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -206,6 +212,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Windows\Memo\Memo.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\MemoD11\HSVWheelWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

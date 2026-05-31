@@ -1,0 +1,75 @@
+<Window x:Class="Binjyo.HSVWheelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Binjyo"
+        Title="HSVWheelWindow"
+        Width="186"
+        Height="252"
+        AllowsTransparency="False"
+        WindowStyle="None"
+        Background="Black"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        ShowActivated="False">
+    <Grid Width="186" Height="252" Background="Black" Margin="8">
+        <Grid x:Name="HSVpicker" Background="Black" Width="170" Height="170" VerticalAlignment="Top" HorizontalAlignment="Left">
+            <Ellipse x:Name="HSVWheel"
+                     Fill="Transparent"
+                     Stroke="Black"
+                     StrokeThickness="10"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     Width="170"
+                     Height="170">
+                <Ellipse.Effect>
+                    <local:HueWheelEffect x:Name="HSV_H" />
+                </Ellipse.Effect>
+            </Ellipse>
+            <Rectangle x:Name="HSVRect"
+                       Fill="Black"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Width="100"
+                       Height="100">
+                <Rectangle.Effect>
+                    <local:SaturationValueEffect x:Name="HSV_SV" />
+                </Rectangle.Effect>
+            </Rectangle>
+            <Ellipse x:Name="HueMark"
+                     Fill="Transparent"
+                     Stroke="Black"
+                     StrokeThickness="1"
+                     Width="8"
+                     Height="8"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Top" />
+            <Ellipse x:Name="SVMark"
+                     Fill="Transparent"
+                     Stroke="Black"
+                     StrokeThickness="1"
+                     Width="8"
+                     Height="8"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Top" />
+        </Grid>
+        <Grid Margin="0,178,0,0" Height="18" VerticalAlignment="Top">
+            <TextBlock x:Name="HSVText"
+                       Background="Black"
+                       Foreground="White"
+                       TextAlignment="Center" />
+        </Grid>
+        <Grid Margin="0,198,0,0" Height="18" VerticalAlignment="Top">
+            <TextBlock x:Name="RGBText"
+                       Background="Black"
+                       Foreground="White"
+                       TextAlignment="Center" />
+        </Grid>
+        <Grid Margin="0,218,0,0" Height="18" VerticalAlignment="Top">
+            <TextBlock x:Name="CoordText"
+                       Background="Black"
+                       Foreground="White"
+                       TextAlignment="Center" />
+        </Grid>
+    </Grid>
+</Window>

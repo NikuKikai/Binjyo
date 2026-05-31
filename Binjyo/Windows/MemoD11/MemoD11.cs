@@ -106,7 +106,7 @@ namespace Binjyo
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED; // WS_EX_LAYERED;
+                cp.ExStyle |= 0x00080000; // WS_EX_LAYERED;
                 cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW;
                 return cp;
             }
@@ -139,6 +139,8 @@ namespace Binjyo
             timer?.Stop();
             timer?.Dispose();
             timer = null;
+            hsvWheelWindow?.Close();
+            hsvWheelWindow = null;
             DisposeGraphics();
             if (Item.views.Contains(this))
                 Item.UnregisterView(this);
