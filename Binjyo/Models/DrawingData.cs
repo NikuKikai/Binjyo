@@ -17,7 +17,7 @@ namespace Binjyo
 
     public enum DrawingOperationKind
     {
-        AddObjects = 0,
+        AddObject = 0,
         RemoveObjects = 1,
         UpdateObject = 2,
     }
@@ -112,7 +112,7 @@ namespace Binjyo
     }
 
     [Serializable]
-    [XmlInclude(typeof(AddDrawingObjectsOperationData))]
+    [XmlInclude(typeof(AddDrawingObjectOperationData))]
     [XmlInclude(typeof(RemoveDrawingObjectsOperationData))]
     [XmlInclude(typeof(UpdateDrawingObjectOperationData))]
     public abstract class DrawingOperationData
@@ -122,20 +122,20 @@ namespace Binjyo
     }
 
     [Serializable]
-    public sealed class AddDrawingObjectsOperationData : DrawingOperationData
+    public sealed class AddDrawingObjectOperationData : DrawingOperationData
     {
-        public AddDrawingObjectsOperationData()
+        public AddDrawingObjectOperationData()
         {
-            Kind = DrawingOperationKind.AddObjects;
+            Kind = DrawingOperationKind.AddObject;
         }
 
-        public List<Guid> ObjectIds { get; set; } = new List<Guid>();
+        public Guid ObjectId { get; set; }
 
         public override DrawingOperationData Clone()
         {
-            return new AddDrawingObjectsOperationData
+            return new AddDrawingObjectOperationData
             {
-                ObjectIds = new List<Guid>(ObjectIds)
+                ObjectId = ObjectId
             };
         }
     }
@@ -191,7 +191,7 @@ namespace Binjyo
         [XmlArrayItem(typeof(DrawingStrokeData))]
         public List<DrawingObjectData> Objects { get; set; } = new List<DrawingObjectData>();
 
-        [XmlArrayItem(typeof(AddDrawingObjectsOperationData))]
+        [XmlArrayItem(typeof(AddDrawingObjectOperationData))]
         [XmlArrayItem(typeof(RemoveDrawingObjectsOperationData))]
         [XmlArrayItem(typeof(UpdateDrawingObjectOperationData))]
         public List<DrawingOperationData> Operations { get; set; } = new List<DrawingOperationData>();
@@ -274,9 +274,9 @@ namespace Binjyo
             storedObject.IsDeleted = false;
             ReplaceObject(storedObject);
 
-            ApplyNewOperation(new AddDrawingObjectsOperationData
+            ApplyNewOperation(new AddDrawingObjectOperationData
             {
-                ObjectIds = new List<Guid> { storedObject.Id }
+                ObjectId = storedObject.Id
             });
         }
 
@@ -350,13 +350,10 @@ namespace Binjyo
         {
             switch (operation)
             {
-                case AddDrawingObjectsOperationData addOperation:
-                    foreach (Guid objectId in addOperation.ObjectIds)
-                    {
-                        DrawingObjectData drawingObject = FindObject(objectId);
-                        if (drawingObject != null)
-                            drawingObject.IsDeleted = false;
-                    }
+                case AddDrawingObjectOperationData addOperation:
+                    DrawingObjectData addedObject = FindObject(addOperation.ObjectId);
+                    if (addedObject != null)
+                        addedObject.IsDeleted = false;
                     break;
 
                 case RemoveDrawingObjectsOperationData removeOperation:
@@ -379,13 +376,10 @@ namespace Binjyo
         {
             switch (operation)
             {
-                case AddDrawingObjectsOperationData addOperation:
-                    foreach (Guid objectId in addOperation.ObjectIds)
-                    {
-                        DrawingObjectData drawingObject = FindObject(objectId);
-                        if (drawingObject != null)
-                            drawingObject.IsDeleted = true;
-                    }
+                case AddDrawingObjectOperationData addOperation:
+                    DrawingObjectData addedObject = FindObject(addOperation.ObjectId);
+                    if (addedObject != null)
+                        addedObject.IsDeleted = true;
                     break;
 
                 case RemoveDrawingObjectsOperationData removeOperation:
@@ -438,6 +432,29 @@ namespace Binjyo
             {
                 if (document != null)
                     DrawVisibleObjects(dc, document);
+            }
+
+            RenderTargetBitmap renderTarget = new RenderTargetBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Pbgra32);
+            renderTarget.Render(visual);
+            return new WriteableBitmap(renderTarget);
+        }
+
+        public static WriteableBitmap RenderOverlay(
+            DrawingDocumentData document,
+            int pixelWidth,
+            int pixelHeight,
+            DrawingObjectData previewObject)
+        {
+            pixelWidth = Math.Max(1, pixelWidth);
+            pixelHeight = Math.Max(1, pixelHeight);
+
+            DrawingVisual visual = new DrawingVisual();
+            using (DrawingContext dc = visual.RenderOpen())
+            {
+                if (document != null)
+                    DrawVisibleObjects(dc, document);
+                if (previewObject != null)
+                    DrawPreviewObject(dc, document, pixelWidth, pixelHeight, previewObject);
             }
 
             RenderTargetBitmap renderTarget = new RenderTargetBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Pbgra32);
@@ -538,6 +555,18 @@ namespace Binjyo
                         DrawStroke(dc, document, stroke);
                         break;
                 }
+            }
+        }
+
+        private static void DrawPreviewObject(DrawingContext dc, DrawingDocumentData document, int pixelWidth, int pixelHeight, DrawingObjectData drawingObject)
+        {
+            switch (drawingObject)
+            {
+                case DrawingStrokeData stroke:
+                    DrawingDocumentData previewDocument = document?.Clone() ?? new DrawingDocumentData();
+                    previewDocument.ConfigureSourceSize(pixelWidth, pixelHeight);
+                    DrawStroke(dc, previewDocument, stroke);
+                    break;
             }
         }
 

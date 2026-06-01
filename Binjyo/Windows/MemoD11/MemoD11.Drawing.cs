@@ -14,6 +14,11 @@ namespace Binjyo
         private DrawingStrokeData activeDrawingStroke;
         private DrawPanel drawPanel;
 
+        private bool HasPendingDrawingStroke()
+        {
+            return isDrawingStroke && activeDrawingStroke != null;
+        }
+
         /// <summary>
         /// Restore a drawing document loaded from history and refresh the overlay texture.
         /// </summary>
@@ -126,7 +131,6 @@ namespace Binjyo
                     SizePx = drawPanel.BrushSize
                 };
                 activeDrawingStroke.Points.Add(Item.DrawingDocument.CreateNormalizedPoint(bitmapPixelPoint.X, bitmapPixelPoint.Y));
-                Item.DrawingDocument.AddObject(activeDrawingStroke);
                 InvalidateDrawingOverlay();
                 RenderRequest(true);
             }
@@ -162,9 +166,7 @@ namespace Binjyo
                     return;
             }
 
-            DrawingStrokeData before = (DrawingStrokeData)activeDrawingStroke.Clone();
             activeDrawingStroke.Points.Add(Item.DrawingDocument.CreateNormalizedPoint(bitmapPixelPoint.X, bitmapPixelPoint.Y));
-            Item.DrawingDocument.UpdateObject(before, activeDrawingStroke);
             InvalidateDrawingOverlay();
             RenderRequest(true);
         }
@@ -174,8 +176,16 @@ namespace Binjyo
         /// </summary>
         private void EndDrawingStroke()
         {
+            if (activeDrawingStroke != null && activeDrawingStroke.Points.Count > 0)
+            {
+                Item.DrawingDocument.AddObject(activeDrawingStroke);
+                InvalidateDrawingOverlay();
+                RenderRequest(true);
+            }
+
             isDrawingStroke = false;
             activeDrawingStroke = null;
+            InvalidateDrawingOverlay();
 
             if (Capture)
                 Capture = false;
@@ -201,6 +211,9 @@ namespace Binjyo
         /// </summary>
         private void UndoDrawingOperation()
         {
+            if (HasPendingDrawingStroke())
+                return;
+
             if (Item.DrawingDocument.Undo())
             {
                 InvalidateDrawingOverlay();
@@ -213,6 +226,9 @@ namespace Binjyo
         /// </summary>
         private void RedoDrawingOperation()
         {
+            if (HasPendingDrawingStroke())
+                return;
+
             if (Item.DrawingDocument.Redo())
             {
                 InvalidateDrawingOverlay();

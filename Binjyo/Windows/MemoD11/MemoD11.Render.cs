@@ -349,12 +349,13 @@ namespace Binjyo
 
             Item.DrawingDocument.ConfigureSourceSize(Item.Bitmap.PixelWidth, Item.Bitmap.PixelHeight);
             WriteableBitmap overlayBitmap = null;
-            if (Item.DrawingDocument.HasVisibleObjects())
+            if (Item.DrawingDocument.HasVisibleObjects() || activeDrawingStroke != null)
             {
                 overlayBitmap = DrawingData.RenderOverlay(
                     Item.DrawingDocument,
                     Item.Bitmap.PixelWidth,
-                    Item.Bitmap.PixelHeight);
+                    Item.Bitmap.PixelHeight,
+                    activeDrawingStroke);
             }
 
             WriteableBitmap featureOverlayBitmap = RenderFeatureOverlayBitmap(Item.Bitmap.PixelWidth, Item.Bitmap.PixelHeight);
