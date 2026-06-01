@@ -28,6 +28,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock VerticalAlignment="Center"
                        FontSize="20"
@@ -37,9 +38,14 @@
             <Button Grid.Column="1"
                     Margin="0,0,8,0"
                     Padding="12,6"
+                    Click="OpenFolderButton_Click"
+                    Content="Open Folder"/>
+            <Button Grid.Column="2"
+                    Margin="0,0,8,0"
+                    Padding="12,6"
                     Click="ClearOldButton_Click"
                     Content="Clear Older Than 1 Week"/>
-            <Button Grid.Column="2"
+            <Button Grid.Column="3"
                     Padding="12,6"
                     Click="ClearButton_Click"
                     Content="Clear All"/>
@@ -75,6 +81,18 @@
                                                         Background="#FF202020"
                                                         BorderBrush="#FF3C3C3C"
                                                         BorderThickness="1">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderBrush" Value="#FF3C3C3C"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCaptureSource}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="#FFFFD54A"/>
+                                                                    <Setter Property="BorderThickness" Value="3"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="Uniform"
                                                            Width="164"
@@ -84,15 +102,6 @@
                                                            FontWeight="SemiBold"
                                                            Foreground="#FFF3F3F3"
                                                            Text="{Binding CreatedAtText}"/>
-                                                <TextBlock Margin="0,4,0,0"
-                                                           Foreground="#FFD6D6D6"
-                                                           Text="{Binding TransformText}"/>
-                                                <TextBlock Margin="0,2,0,0"
-                                                           Foreground="#FFD6D6D6"
-                                                           Text="{Binding PositionText}"/>
-                                                <TextBlock Margin="0,2,0,0"
-                                                           Foreground="#FFD6D6D6"
-                                                           Text="{Binding DrawingText}"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

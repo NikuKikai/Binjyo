@@ -62,6 +62,7 @@ namespace Binjyo
 
             item.RegisterView(this);
             UpdateRenderHostLayout();
+            Bounds = currentHostBounds;
             Show();
 
             NotifiedTransform(false);

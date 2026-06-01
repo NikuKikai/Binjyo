@@ -30,6 +30,13 @@ namespace Binjyo
             return item;
         }
 
+        public static SceneItem CreateItem(WriteableBitmap bmp, double left, double top, ISceneTextureSource textureSource)
+        {
+            var item = new SceneItem(bmp, left, top, textureSource);
+            Items.Add(item.Id, item);
+            return item;
+        }
+
         public static void CloseItem(Guid id)
         {
             if (FocusedId == id)

@@ -24,6 +24,12 @@ namespace Binjyo
             ss.Shot();
         }
 
+        public void CaptureWindowRegion()
+        {
+            Screenshot ss = new Screenshot { Owner = this };
+            ss.Shot(ScreenshotMode.WindowCapture);
+        }
+
 
         /*private void OnSourceInitialized(object sender, EventArgs e)
         {

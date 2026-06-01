@@ -88,6 +88,11 @@ namespace Binjyo
             RefreshHSVWheelVisibility();
         }
 
+        public void NotifiedSourceChanged()
+        {
+            RenderRequest();
+        }
+
         public void NotifiedOpacity()
         {
             RenderRequest();

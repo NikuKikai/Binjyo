@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,9 +19,7 @@ namespace Binjyo
         public HistoryEntry Entry { get; set; }
         public BitmapImage Thumbnail { get; set; }
         public string CreatedAtText { get; set; }
-        public string PositionText { get; set; }
-        public string TransformText { get; set; }
-        public string DrawingText { get; set; }
+        public bool IsCaptureSource { get; set; }
     }
 
     public sealed class HistoryGroupViewModel
@@ -58,9 +58,7 @@ namespace Binjyo
                         Entry = entry,
                         Thumbnail = CreateThumbnail(entry.ImagePath),
                         CreatedAtText = entry.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                        PositionText = $"Position: ({Math.Round(entry.Left):0}, {Math.Round(entry.Top):0})",
-                        TransformText = $"Scale: {entry.Scale:0.###}, Rotation: {entry.Rotation:0.#}°, Flip: {FormatFlip(entry)}",
-                        DrawingText = entry.HasDrawingData ? "Drawing: Yes" : "Drawing: No"
+                        IsCaptureSource = entry.IsCaptureSource
                     }));
 
                 groups.Add(new HistoryGroupViewModel
@@ -108,20 +106,15 @@ namespace Binjyo
             item.SetPos(restoredLeft, restoredTop);
             var memo = new MemoD11(item);
             CanvasWindow.CreateItem(item);
+            Scene.Focus(item.Id);
 
             HistoryStore.DeleteEntry(viewModel.Entry);
             ReloadEntries();
-        }
 
-        private static string FormatFlip(HistoryEntry entry)
-        {
-            if (entry.IsFlipX && entry.IsFlipY)
-                return "XY";
-            if (entry.IsFlipX)
-                return "X";
-            if (entry.IsFlipY)
-                return "Y";
-            return "None";
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                memo.Activate();
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
         private static void GetAdjustedBounds(double left, double top, double width, double height, out double adjustedLeft, out double adjustedTop)
@@ -192,6 +185,19 @@ namespace Binjyo
         {
             HistoryStore.ClearOlderThan(DateTime.Now.AddDays(-7));
             ReloadEntries();
+        }
+
+        private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            string historyRoot = HistoryStore.GetHistoryRoot();
+            Directory.CreateDirectory(historyRoot);
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = historyRoot,
+                UseShellExecute = true
+            });
         }
     }
 }

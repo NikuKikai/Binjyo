@@ -280,6 +280,15 @@ namespace Binjyo
         /// </summary>
         private void UploadSourceBitmap()
         {
+            if (Item.HasDynamicTextureSource)
+            {
+                sourceTextureView?.Dispose();
+                sourceTextureView = null;
+                sourceTexture?.Dispose();
+                sourceTexture = null;
+                return;
+            }
+
             sourceTextureView?.Dispose();
             sourceTexture?.Dispose();
 
@@ -309,17 +318,20 @@ namespace Binjyo
                 OptionFlags = ResourceOptionFlags.None
             };
 
-            using (var stream = new DataStream(pixels.Length, true, true))
+            lock (DX11.SharedDeviceSyncRoot)
             {
-                stream.WriteRange(pixels);
-                stream.Position = 0;
-                sourceTexture = new Texture2D(
-                    d3dDevice,
-                    textureDescription,
-                    new[] { new DataRectangle(stream.DataPointer, stride) });
-            }
+                using (var stream = new DataStream(pixels.Length, true, true))
+                {
+                    stream.WriteRange(pixels);
+                    stream.Position = 0;
+                    sourceTexture = new Texture2D(
+                        d3dDevice,
+                        textureDescription,
+                        new[] { new DataRectangle(stream.DataPointer, stride) });
+                }
 
-            sourceTextureView = new ShaderResourceView(d3dDevice, sourceTexture);
+                sourceTextureView = new ShaderResourceView(d3dDevice, sourceTexture);
+            }
         }
 
         /// <summary>
@@ -383,17 +395,20 @@ namespace Binjyo
                 OptionFlags = ResourceOptionFlags.None
             };
 
-            using (var stream = new DataStream(pixels.Length, true, true))
+            lock (DX11.SharedDeviceSyncRoot)
             {
-                stream.WriteRange(pixels);
-                stream.Position = 0;
-                overlayTexture = new Texture2D(
-                    d3dDevice,
-                    textureDescription,
-                    new[] { new DataRectangle(stream.DataPointer, stride) });
-            }
+                using (var stream = new DataStream(pixels.Length, true, true))
+                {
+                    stream.WriteRange(pixels);
+                    stream.Position = 0;
+                    overlayTexture = new Texture2D(
+                        d3dDevice,
+                        textureDescription,
+                        new[] { new DataRectangle(stream.DataPointer, stride) });
+                }
 
-            overlayTextureView = new ShaderResourceView(d3dDevice, overlayTexture);
+                overlayTextureView = new ShaderResourceView(d3dDevice, overlayTexture);
+            }
             isDrawingOverlayDirty = false;
         }
 
@@ -410,31 +425,48 @@ namespace Binjyo
         /// </summary>
         private void RenderSceneItem()
         {
-            if (!isGraphicsReady || renderTargetView == null || stagingTexture == null || sourceTextureView == null)
+            if (!isGraphicsReady || renderTargetView == null || stagingTexture == null)
                 return;
             if (isDrawingOverlayDirty)
                 UploadDrawingOverlayBitmap();
-            UpdateShaderConstants();
+            ShaderResourceView currentSourceView = GetCurrentSourceTextureView();
+            if (currentSourceView == null)
+                return;
 
-            deviceContext.OutputMerger.SetRenderTargets(renderTargetView);
-            deviceContext.Rasterizer.SetViewport(0, 0, Math.Max(1, renderWidth), Math.Max(1, renderHeight));
-            deviceContext.ClearRenderTargetView(renderTargetView, new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 0));
-            deviceContext.InputAssembler.InputLayout = null;
-            deviceContext.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
-            deviceContext.VertexShader.Set(vertexShader);
-            deviceContext.PixelShader.Set(pixelShader);
-            deviceContext.VertexShader.SetConstantBuffer(0, constantBuffer);
-            deviceContext.PixelShader.SetConstantBuffer(0, constantBuffer);
-            deviceContext.PixelShader.SetSampler(0, samplerState);
-            deviceContext.PixelShader.SetShaderResource(0, sourceTextureView);
-            deviceContext.PixelShader.SetShaderResource(1, overlayTextureView);
-            deviceContext.Draw(4, 0);
-            deviceContext.PixelShader.SetShaderResource(0, null);
-            deviceContext.PixelShader.SetShaderResource(1, null);
-            deviceContext.Flush();
+            lock (DX11.SharedDeviceSyncRoot)
+            {
+                UpdateShaderConstants();
 
-            deviceContext.CopyResource(renderTargetTexture, stagingTexture);
+                deviceContext.OutputMerger.SetRenderTargets(renderTargetView);
+                deviceContext.Rasterizer.SetViewport(0, 0, Math.Max(1, renderWidth), Math.Max(1, renderHeight));
+                deviceContext.ClearRenderTargetView(renderTargetView, new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 0));
+                deviceContext.InputAssembler.InputLayout = null;
+                deviceContext.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+                deviceContext.VertexShader.Set(vertexShader);
+                deviceContext.PixelShader.Set(pixelShader);
+                deviceContext.VertexShader.SetConstantBuffer(0, constantBuffer);
+                deviceContext.PixelShader.SetConstantBuffer(0, constantBuffer);
+                deviceContext.PixelShader.SetSampler(0, samplerState);
+                deviceContext.PixelShader.SetShaderResource(0, currentSourceView);
+                deviceContext.PixelShader.SetShaderResource(1, overlayTextureView);
+                deviceContext.Draw(4, 0);
+                deviceContext.PixelShader.SetShaderResource(0, null);
+                deviceContext.PixelShader.SetShaderResource(1, null);
+                deviceContext.Flush();
+
+                deviceContext.CopyResource(renderTargetTexture, stagingTexture);
+            }
             PushLayeredFrame();
+        }
+
+        private ShaderResourceView GetCurrentSourceTextureView()
+        {
+            if (Item.TextureSource == null)
+                return sourceTextureView;
+
+            return Item.TextureSource.TryAcquireShaderResourceView(out ShaderResourceView dynamicSourceView)
+                ? dynamicSourceView
+                : null;
         }
 
         /// <summary>
@@ -442,21 +474,24 @@ namespace Binjyo
         /// </summary>
         private void PushLayeredFrame()
         {
-            DataBox dataBox = deviceContext.MapSubresource(stagingTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
-            try
+            lock (DX11.SharedDeviceSyncRoot)
             {
-                int rowSize = renderWidth * 4;
-
-                for (int y = 0; y < renderHeight; y++)
+                DataBox dataBox = deviceContext.MapSubresource(stagingTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+                try
                 {
-                    IntPtr rowPointer = IntPtr.Add(dataBox.DataPointer, y * dataBox.RowPitch);
-                    int rowOffset = y * rowSize;
-                    Marshal.Copy(rowPointer, layeredPixelBuffer, rowOffset, rowSize);
+                    int rowSize = renderWidth * 4;
+
+                    for (int y = 0; y < renderHeight; y++)
+                    {
+                        IntPtr rowPointer = IntPtr.Add(dataBox.DataPointer, y * dataBox.RowPitch);
+                        int rowOffset = y * rowSize;
+                        Marshal.Copy(rowPointer, layeredPixelBuffer, rowOffset, rowSize);
+                    }
                 }
-            }
-            finally
-            {
-                deviceContext.UnmapSubresource(stagingTexture, 0);
+                finally
+                {
+                    deviceContext.UnmapSubresource(stagingTexture, 0);
+                }
             }
 
             UpdateLayeredBitmap();

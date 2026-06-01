@@ -35,6 +35,9 @@ namespace Binjyo
         private double rotateAnimationRemainingDelta;
         // Save
         private bool isKeyDownS;
+        private int lastLeftClickTimestamp;
+        private int lastLeftClickScreenX;
+        private int lastLeftClickScreenY;
 
         #endregion
 
@@ -46,9 +49,15 @@ namespace Binjyo
         private void MemoD11_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             if (Scene.IsDragMoving) return;
-            var isShiftDown = (ModifierKeys & Keys.Control) == Keys.Control;
-            Item.CopyToClipboard(!isShiftDown);
+            IActivatableSceneTextureSource activatableSource = Item.TextureSource as IActivatableSceneTextureSource;
+
+            if (Item.HasDynamicTextureSource)
+                Item.CopyToClipboard(false);
+            else
+                Item.CopyToClipboard((ModifierKeys & Keys.Shift) != Keys.Shift);
+
             Scene.CloseItem(Id);
+            activatableSource?.TryActivateSourceWindow();
         }
 
         /// <summary>
@@ -61,6 +70,9 @@ namespace Binjyo
                 ShowContextMenuAtCursor();
                 return;
             }
+
+            if (TryHandleManualDoubleClick(e))
+                return;
 
             if (isDrawMode)
             {
@@ -93,6 +105,33 @@ namespace Binjyo
             }
 
             Capture = true;
+        }
+
+        private bool TryHandleManualDoubleClick(MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || isDrawMode)
+                return false;
+
+            int now = Environment.TickCount;
+            int deltaTime = unchecked(now - lastLeftClickTimestamp);
+            int deltaX = Math.Abs(Control.MousePosition.X - lastLeftClickScreenX);
+            int deltaY = Math.Abs(Control.MousePosition.Y - lastLeftClickScreenY);
+            bool isDoubleClick =
+                lastLeftClickTimestamp > 0 &&
+                deltaTime >= 0 &&
+                deltaTime <= SystemInformation.DoubleClickTime &&
+                deltaX <= SystemInformation.DoubleClickSize.Width &&
+                deltaY <= SystemInformation.DoubleClickSize.Height;
+
+            lastLeftClickTimestamp = now;
+            lastLeftClickScreenX = Control.MousePosition.X;
+            lastLeftClickScreenY = Control.MousePosition.Y;
+
+            if (!isDoubleClick)
+                return false;
+
+            MemoD11_MouseDoubleClick(this, e);
+            return true;
         }
 
         /// <summary>

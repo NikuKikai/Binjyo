@@ -20,7 +20,11 @@ namespace Binjyo
             if (item == null) throw new ArgumentNullException(nameof(item));
             if (item.Bitmap == null) throw new ArgumentNullException(nameof(item.Bitmap));
 
-            WriteableBitmap transformedSource = RenderTransform(item, item.Bitmap);
+            WriteableBitmap sourceBitmap = item.GetBitmapSnapshot();
+            if (sourceBitmap == null)
+                throw new InvalidOperationException("Unable to create a bitmap snapshot for the scene item.");
+
+            WriteableBitmap transformedSource = RenderTransform(item, sourceBitmap);
             transformedSource = RenderEffectsDX9(item, transformedSource) ?? RenderEffectsOnCpu(item, transformedSource);
 
             WriteableBitmap transformedOverlay = RenderDrawingOverlay(item);
@@ -43,7 +47,7 @@ namespace Binjyo
 
         private static WriteableBitmap RenderEffectsDX9(SceneItem item, WriteableBitmap source = null)
         {
-            source = source ?? item.Bitmap;
+            source = source ?? item.GetBitmapSnapshot();
 
             try
             {
@@ -79,7 +83,7 @@ namespace Binjyo
 
         private static WriteableBitmap RenderEffectsOnCpu(SceneItem item, WriteableBitmap source = null)
         {
-            source = source ?? item.Bitmap;
+            source = source ?? item.GetBitmapSnapshot();
             Bitmap gdiBitmap = Effects.ConvertWBitmapToGdi(source);
             try
             {

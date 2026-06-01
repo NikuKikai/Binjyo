@@ -88,6 +88,10 @@ namespace Binjyo
             owner.UpdateStatusText();
         }
 
+        public void NotifiedSourceChanged()
+        {
+        }
+
         public void NotifiedOpacity()
         {
             Image.Opacity = Item.IsOpacity ? Item.Opacity : 1;

@@ -22,6 +22,8 @@ namespace Binjyo
         public bool IsFlipX { get; set; }
         public bool IsFlipY { get; set; }
         public bool HasDrawingData { get; set; }
+        public SceneSourceHistoryDescriptor Source { get; set; }
+        public bool IsCaptureSource => Source?.Kind == HistorySourceKind.WindowCapture;
     }
 
     [DataContract]
@@ -47,6 +49,9 @@ namespace Binjyo
 
         [DataMember(Order = 7)]
         public bool HasDrawingData { get; set; }
+
+        [DataMember(Order = 8)]
+        public SceneSourceHistoryDescriptor Source { get; set; }
     }
 
     [DataContract]
@@ -118,7 +123,11 @@ namespace Binjyo
 
         public static void SaveSceneItemSnapshot(SceneItem item)
         {
-            if (item?.Bitmap == null)
+            if (item == null)
+                return;
+
+            WriteableBitmap snapshotBitmap = item.GetBitmapSnapshot();
+            if (snapshotBitmap == null)
                 return;
 
             string root = GetHistoryRoot();
@@ -131,7 +140,7 @@ namespace Binjyo
             string metaPath = Path.Combine(entryDirectory, MetaFileName);
             string drawingPath = Path.Combine(entryDirectory, DrawingFileName);
 
-            SaveBitmapSourceToPng(item.Bitmap, imagePath);
+            SaveBitmapSourceToPng(snapshotBitmap, imagePath);
 
             DrawingDocumentSnapshot drawingSnapshot = CreateDrawingSnapshot(item);
             bool hasDrawingData = drawingSnapshot != null && drawingSnapshot.Strokes.Count > 0;
@@ -146,7 +155,8 @@ namespace Binjyo
                 Rotation = item.Rotation,
                 IsFlipX = item.IsFlipX,
                 IsFlipY = item.IsFlipY,
-                HasDrawingData = hasDrawingData
+                HasDrawingData = hasDrawingData,
+                Source = CreateSourceDescriptor(item)
             });
 
             EnforceEntryLimit();
@@ -183,7 +193,8 @@ namespace Binjyo
                     Rotation = snapshot.Rotation,
                     IsFlipX = snapshot.IsFlipX,
                     IsFlipY = snapshot.IsFlipY,
-                    HasDrawingData = snapshot.HasDrawingData
+                    HasDrawingData = snapshot.HasDrawingData,
+                    Source = snapshot.Source ?? new SceneSourceHistoryDescriptor()
                 });
             }
 
@@ -198,7 +209,8 @@ namespace Binjyo
                 return null;
 
             WriteableBitmap bitmap = LoadWriteableBitmap(entry);
-            SceneItem item = Scene.CreateItem(bitmap, 0, 0);
+            ISceneTextureSource textureSource = CreateTextureSource(entry);
+            SceneItem item = Scene.CreateItem(bitmap, 0, 0, textureSource);
             item.SetScale(entry.Scale);
             item.SetFlip(entry.IsFlipX, entry.IsFlipY);
             item.SetRotationCentered(entry.Rotation);
@@ -295,6 +307,43 @@ namespace Binjyo
                 SourcePixelHeight = document.SourcePixelHeight,
                 Strokes = strokes
             };
+        }
+
+        private static SceneSourceHistoryDescriptor CreateSourceDescriptor(SceneItem item)
+        {
+            if (item?.TextureSource is IHistorySceneTextureSource sourceWithHistory)
+                return sourceWithHistory.CreateHistoryDescriptor();
+
+            return new SceneSourceHistoryDescriptor
+            {
+                Kind = HistorySourceKind.StaticImage
+            };
+        }
+
+        private static ISceneTextureSource CreateTextureSource(HistoryEntry entry)
+        {
+            if (entry?.Source == null || entry.Source.Kind != HistorySourceKind.WindowCapture)
+                return null;
+
+            IntPtr hwnd = new IntPtr(entry.Source.WindowHandleValue);
+            if (!WinService.IsValidWindow(hwnd))
+                return null;
+
+            try
+            {
+                return new WindowCaptureTextureSource(new WindowCaptureSelection
+                {
+                    WindowHandle = hwnd,
+                    OffsetX = entry.Source.OffsetX,
+                    OffsetY = entry.Source.OffsetY,
+                    PixelWidth = Math.Max(1, entry.Source.PixelWidth),
+                    PixelHeight = Math.Max(1, entry.Source.PixelHeight)
+                });
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static DrawingDocumentData CreateDrawingDocument(DrawingDocumentSnapshot snapshot)

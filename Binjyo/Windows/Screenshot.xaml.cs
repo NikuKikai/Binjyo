@@ -10,6 +10,12 @@ using System.Diagnostics;
 
 namespace Binjyo
 {
+    public enum ScreenshotMode
+    {
+        StaticCapture = 0,
+        WindowCapture = 1,
+    }
+
     /// <summary>
     /// Interaction logic for Screenshot.xaml
     /// </summary>
@@ -19,14 +25,15 @@ namespace Binjyo
 
         private bool isshot = false;
         private bool isdrag = false;
+        private bool suppressDeactivateClose = false;
 
         private int w, h, l, t;  // Screen bounds in Physical Pixel
         private int startx, starty;  // Mouse start position in Physical Pixel
         private int selectedLeft, selectedTop, selectedWidth, selectedHeight;  // Physical Pixel
 
         private Bitmap bitmap;
-        private BitmapSource screenshotSource;
         private ImageBrush screenshotBrush;
+        private ScreenshotMode mode = ScreenshotMode.StaticCapture;
 
         public Screenshot()
         {
@@ -34,8 +41,9 @@ namespace Binjyo
         }
 
         // Use WriteableBitmap for better performance
-        public void Shot()
+        public void Shot(ScreenshotMode mode = ScreenshotMode.StaticCapture)
         {
+            this.mode = mode;
             WindowState = WindowState.Normal;
 
             // Scaled screen size
@@ -63,9 +71,15 @@ namespace Binjyo
 
             ReleaseScreenshotResources();
 
-            var wb = CaptureScreen.Run();
-
-            this.image.Source = wb;
+            if (mode == ScreenshotMode.StaticCapture)
+            {
+                var wb = CaptureScreen.Run();
+                image.Source = wb;
+            }
+            else
+            {
+                image.Source = null;
+            }
 
             HideSelectionRect();
 
@@ -119,7 +133,6 @@ namespace Binjyo
                 screenshotBrush = null;
             }
 
-            screenshotSource = null;
             this.bitmap?.Dispose();
             this.bitmap = null;
         }
@@ -196,6 +209,17 @@ namespace Binjyo
         {
             if (selectedWidth < 20 || selectedHeight < 20) return;
 
+            if (mode == ScreenshotMode.WindowCapture)
+            {
+                CreateWindowCaptureMemo();
+                return;
+            }
+
+            CreateStaticMemo();
+        }
+
+        private void CreateStaticMemo()
+        {
             var source = (WriteableBitmap)this.image.Source;
 
             // Crop bitmap with rect
@@ -248,6 +272,62 @@ namespace Binjyo
             Scene.Focus(item.Id);
         }
 
+        private void CreateWindowCaptureMemo()
+        {
+            Int32Rect selectionBounds = new Int32Rect(
+                selectedLeft + l,
+                selectedTop + t,
+                selectedWidth,
+                selectedHeight);
+
+            try
+            {
+                if (!WindowCaptureInterop.TryResolveWindowCaptureSelection(selectionBounds, out WindowCaptureSelection captureSelection))
+                {
+                    MessageBox.Show(
+                        "No capturable window was found under the selected region.",
+                        "Capture",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                WriteableBitmap placeholderBitmap = new WriteableBitmap(
+                    Math.Max(1, captureSelection.PixelWidth),
+                    Math.Max(1, captureSelection.PixelHeight),
+                    96,
+                    96,
+                    PixelFormats.Bgra32,
+                    null);
+
+                double dpiFactor = Geo.GetDpiFactorAt(
+                    captureSelection.SelectionBounds.X + captureSelection.SelectionBounds.Width / 2.0,
+                    captureSelection.SelectionBounds.Y + captureSelection.SelectionBounds.Height / 2.0);
+
+                double logicalLeft = captureSelection.SelectionBounds.X / dpiFactor;
+                double logicalTop = captureSelection.SelectionBounds.Y / dpiFactor;
+
+                var textureSource = new WindowCaptureTextureSource(captureSelection);
+                SceneItem item = Scene.CreateItem(
+                    placeholderBitmap,
+                    logicalLeft,
+                    logicalTop,
+                    textureSource);
+
+                _ = new MemoD11(item);
+                CanvasWindow.CreateItem(item);
+                Scene.Focus(item.Id);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Capture creation failed.{Environment.NewLine}{Environment.NewLine}{ex}",
+                    "Capture Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
 
         #region ======== Event Callbacks ========
 
@@ -256,6 +336,7 @@ namespace Binjyo
             isdrag = true;
             startx = System.Windows.Forms.Control.MousePosition.X - l;
             starty = System.Windows.Forms.Control.MousePosition.Y - t;
+            CaptureMouse();
         }
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
@@ -277,18 +358,44 @@ namespace Binjyo
 
         private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            if (!isdrag)
+                return;
+
+            isdrag = false;
+            if (IsMouseCaptured)
+                ReleaseMouseCapture();
+
             HideSelectionRect();
             HideSelectionPopup();
             HideCross();
 
-            Opacity = 0;
-            CreateMemo();
+            if (mode == ScreenshotMode.WindowCapture)
+            {
+                suppressDeactivateClose = true;
+                try
+                {
+                    Hide();
+                    CreateMemo();
+                }
+                finally
+                {
+                    suppressDeactivateClose = false;
+                }
+            }
+            else
+            {
+                Opacity = 0;
+                CreateMemo();
+            }
 
             CloseThis();
         }
 
         private void Window_Deactivated(object sender, EventArgs e)
         {
+            if (suppressDeactivateClose)
+                return;
+
             CloseThis();
         }
 
@@ -307,6 +414,8 @@ namespace Binjyo
             if (e.Key == Key.Escape || e.Key == Key.System || e.Key == Key.LeftAlt ||
                 e.Key == Key.RightAlt || e.Key == Key.LWin || e.Key == Key.RWin)
             {
+                if (IsMouseCaptured)
+                    ReleaseMouseCapture();
                 CloseThis();
                 e.Handled = true;
             }
@@ -314,6 +423,8 @@ namespace Binjyo
 
         private void Window_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (IsMouseCaptured)
+                ReleaseMouseCapture();
             CloseThis();
             e.Handled = true;
         }

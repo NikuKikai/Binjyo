@@ -231,6 +231,16 @@ namespace Binjyo
             Scene.ClearItems();
         }
 
+        public void CreateScreenshotMemo()
+        {
+            mainWindow.Shot();
+        }
+
+        public void CreateWindowCaptureMemo()
+        {
+            mainWindow.CaptureWindowRegion();
+        }
+
         public void ExitApplication()
         {
             _isExit = true;

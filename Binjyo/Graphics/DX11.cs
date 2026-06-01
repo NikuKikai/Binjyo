@@ -26,6 +26,7 @@ namespace Binjyo
         private static readonly object SharedDeviceLock = new object();
         private static Device sharedDevice;
         private static DeviceContext sharedImmediateContext;
+        public static object SharedDeviceSyncRoot { get; } = new object();
 
         public static Device SharedDevice
         {

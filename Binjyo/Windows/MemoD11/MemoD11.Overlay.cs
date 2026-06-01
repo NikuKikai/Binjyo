@@ -52,6 +52,12 @@ namespace Binjyo
         /// </summary>
         private void UpdateHSVWheel()
         {
+            if (Item.HasDynamicTextureSource)
+            {
+                HideHSVWheel();
+                return;
+            }
+
             var bitmap = Item.Bitmap;
             if (bitmap == null)
             {

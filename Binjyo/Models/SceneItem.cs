@@ -15,6 +15,7 @@ namespace Binjyo
         bool IsRenderer { get; }
         void NotifiedClose();
         void NotifiedFocus();
+        void NotifiedSourceChanged();
         void NotifiedTransform(bool moveOnly);
         void NotifiedEffect();
         void NotifiedOpacity();
@@ -30,6 +31,7 @@ namespace Binjyo
 
         public Guid Id { get; } = Guid.NewGuid();
         public WriteableBitmap Bitmap { get; internal set; }
+        public ISceneTextureSource TextureSource { get; }
 
         // TODO remove
         public double DpiFactor { get; internal set; } = 1;
@@ -62,8 +64,16 @@ namespace Binjyo
 
 
         public SceneItem(WriteableBitmap bmp, double left, double top)
+            : this(bmp, left, top, null)
+        {
+        }
+
+        public SceneItem(WriteableBitmap bmp, double left, double top, ISceneTextureSource textureSource)
         {
             Bitmap = bmp;
+            TextureSource = textureSource;
+            if (TextureSource != null)
+                TextureSource.SourceUpdated += TextureSource_SourceUpdated;
             DrawingDocument.ConfigureSourceSize(bmp.PixelWidth, bmp.PixelHeight);
             Left = left;
             Top = top;
@@ -74,6 +84,7 @@ namespace Binjyo
         #region ======== Informations =======
         public double GetBaseWidth() => Bitmap.Width / DpiFactor;  // logical
         public double GetBaseHeight() => Bitmap.Height / DpiFactor;
+        public bool HasDynamicTextureSource => TextureSource != null;
         public Point GetCenter() => new Point(Left + Width / 2, Top + Height / 2);
         public Rect GetBounds() => new Rect(Left, Top, Width, Height);
 
@@ -106,6 +117,9 @@ namespace Binjyo
 
             foreach (ISceneItemView view in viewsToNotify) view.NotifiedClose();
 
+            if (TextureSource != null)
+                TextureSource.SourceUpdated -= TextureSource_SourceUpdated;
+            TextureSource?.Dispose();
             Bitmap = null;
         }
 
@@ -123,6 +137,19 @@ namespace Binjyo
 
         #endregion
 
+        private void TextureSource_SourceUpdated(object sender, EventArgs e)
+        {
+            Action notifyViews = () =>
+            {
+                foreach (ISceneItemView view in views.ToList())
+                    view.NotifiedSourceChanged();
+            };
+
+            if (System.Windows.Application.Current?.Dispatcher != null && !System.Windows.Application.Current.Dispatcher.CheckAccess())
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(notifyViews);
+            else
+                notifyViews();
+        }
 
         #region ======== Transform =======
         private Rect UpdateTransform()
@@ -252,7 +279,7 @@ namespace Binjyo
 
         private void RenderSaveTo(Stream stream, bool applyEdit = true)
         {
-            var wbmp = applyEdit ? Scene.RenderOffscreen(this) : Bitmap;
+            var wbmp = applyEdit ? Scene.RenderOffscreen(this) : GetBitmapSnapshot();
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(wbmp));
             using (var s = stream)
@@ -281,9 +308,17 @@ namespace Binjyo
         }
         internal void CopyToClipboard(bool applyEdit)
         {
-            var wbmp = applyEdit ? Scene.RenderOffscreen(this) : Bitmap;
+            var wbmp = applyEdit ? Scene.RenderOffscreen(this) : GetBitmapSnapshot();
             wbmp.Freeze();
             Clipboard.SetImage(wbmp);
+        }
+
+        public WriteableBitmap GetBitmapSnapshot()
+        {
+            if (TextureSource == null)
+                return Bitmap;
+
+            return TextureSource.CreateBitmapSnapshot() ?? Bitmap;
         }
     }
 }

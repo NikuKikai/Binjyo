@@ -32,6 +32,14 @@ namespace Binjyo
                 FlowDirection = FlowDirection.LeftToRight
             };
 
+            MenuItem createItem = new MenuItem
+            {
+                Header = "Create",
+                FlowDirection = FlowDirection.LeftToRight
+            };
+            createItem.Items.Add(CreateMenuItem("Screenshot", null, (s, e) => app.CreateScreenshotMemo()));
+            createItem.Items.Add(CreateMenuItem("Capture", null, (s, e) => app.CreateWindowCaptureMemo()));
+
             MenuItem viewModeItem = new MenuItem
             {
                 Header = "View mode",
@@ -53,6 +61,7 @@ namespace Binjyo
             viewModeItem.Items.Add(autoHideItem);
             viewModeItem.Items.Add(minimizedItem);
 
+            root.Items.Add(createItem);
             root.Items.Add(viewModeItem);
             if (includeCanvasWindow)
                 root.Items.Add(CreateMenuItem("Canvas Window", null, (s, e) => app.OpenCanvasWindow()));
