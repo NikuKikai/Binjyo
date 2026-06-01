@@ -17,6 +17,7 @@ namespace Binjyo
             var sceneItems = ids
                 .Select(id => Scene.Items[id])
                 .Where(item => item != null)
+                .OrderBy(item => item.FocusOrder)
                 .ToList();
             if (sceneItems.Count < 2)
                 return;

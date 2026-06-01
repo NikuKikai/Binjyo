@@ -79,10 +79,11 @@ namespace Binjyo
         /// </summary>
         public void NotifiedFocus()
         {
-            if (Scene.FocusedId == Id && !ContainsFocus)
+            if (Scene.FocusedId == Id)
             {
-                Activate();
                 FlashHighlight();
+                if (!ContainsFocus)
+                    Activate();
             }
 
             RefreshHSVWheelVisibility();

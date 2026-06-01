@@ -135,6 +135,12 @@ namespace Binjyo
             RenderRequest();
         }
 
+        protected override void OnActivated(EventArgs e)
+        {
+            Scene.Focus(Item.Id);
+            base.OnActivated(e);
+        }
+
         /// <summary>
         /// Tear down interaction and graphics resources when the form closes.
         /// </summary>
