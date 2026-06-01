@@ -134,6 +134,51 @@ namespace Binjyo
             return true;
         }
 
+        private void MemoD11_DragEnter(object sender, DragEventArgs e)
+        {
+            if (TryGetSingleDroppedImagePath(e, out _))
+                e.Effect = DragDropEffects.Copy;
+            else
+                e.Effect = DragDropEffects.None;
+        }
+
+        private void MemoD11_DragDrop(object sender, DragEventArgs e)
+        {
+            if (!TryGetSingleDroppedImagePath(e, out string filePath))
+                return;
+
+            if (!(System.Windows.Application.Current is App app))
+                return;
+
+            var dropPoint = new System.Windows.Point(e.X, e.Y);
+            if (!app.TryCreateDockedMemoFromImageFile(filePath, Item, dropPoint, out _, out string errorMessage))
+            {
+                System.Windows.MessageBox.Show(
+                    $"Failed to create a memo from the dropped image.{Environment.NewLine}{Environment.NewLine}{errorMessage}",
+                    "Open Image",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private static bool TryGetSingleDroppedImagePath(DragEventArgs e, out string filePath)
+        {
+            filePath = null;
+
+            if (e?.Data == null || !e.Data.GetDataPresent(DataFormats.FileDrop))
+                return false;
+
+            string[] filePaths = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (filePaths == null || filePaths.Length != 1)
+                return false;
+
+            if (!ImageFileLoader.IsSupportedPath(filePaths[0]))
+                return false;
+
+            filePath = filePaths[0];
+            return true;
+        }
+
         /// <summary>
         /// Continue scene drag-move updates or drag-rotation updates while the left button is held.
         /// </summary>

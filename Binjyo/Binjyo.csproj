@@ -134,6 +134,7 @@
     <Compile Include="Utils\BitmapExt.cs" />
     <Compile Include="Utils\CaptureScreen.cs" />
     <Compile Include="Utils\Geometry.cs" />
+    <Compile Include="Utils\ImageFileLoader.cs" />
     <Compile Include="Utils\WindowCaptureInterop.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasItem.cs" />
     <Compile Include="Windows\CanvasWindow\CanvasWindow.Interaction.cs" />

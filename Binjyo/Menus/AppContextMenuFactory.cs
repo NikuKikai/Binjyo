@@ -39,6 +39,7 @@ namespace Binjyo
             };
             createItem.Items.Add(CreateMenuItem("Screenshot", null, (s, e) => app.CreateScreenshotMemo()));
             createItem.Items.Add(CreateMenuItem("Capture", null, (s, e) => app.CreateWindowCaptureMemo()));
+            createItem.Items.Add(CreateMenuItem("File", null, (s, e) => app.CreateFileMemo()));
 
             MenuItem viewModeItem = new MenuItem
             {

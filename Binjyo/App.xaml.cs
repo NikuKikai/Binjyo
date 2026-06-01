@@ -7,6 +7,8 @@ using System.Windows.Input;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Threading;
+using System.Windows.Media.Imaging;
+using Microsoft.Win32;
 
 
 namespace Binjyo
@@ -239,6 +241,89 @@ namespace Binjyo
         public void CreateWindowCaptureMemo()
         {
             mainWindow.CaptureWindowRegion();
+        }
+
+        public void CreateFileMemo()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = ImageFileLoader.OpenFileDialogFilter,
+                Multiselect = false,
+                CheckFileExists = true,
+                Title = "Open Image"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            if (!TryCreateMemoFromImageFile(dialog.FileName, out _, out string errorMessage))
+            {
+                MessageBox.Show(
+                    $"Failed to open the selected image.{Environment.NewLine}{Environment.NewLine}{errorMessage}",
+                    "Open Image",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        public bool TryCreateMemoFromImageFile(string filePath, out MemoD11 memo, out string errorMessage)
+        {
+            memo = null;
+            errorMessage = null;
+
+            if (!ImageFileLoader.TryLoadWriteableBitmap(filePath, out WriteableBitmap bitmap, out errorMessage))
+                return false;
+
+            memo = CreateMemoFromBitmap(bitmap, null, activateWindow: true);
+            return memo != null;
+        }
+
+        public bool TryCreateDockedMemoFromImageFile(string filePath, SceneItem targetItem, System.Windows.Point dropPoint, out MemoD11 memo, out string errorMessage)
+        {
+            memo = null;
+            errorMessage = null;
+
+            if (targetItem == null)
+            {
+                errorMessage = "No target memo is available.";
+                return false;
+            }
+
+            if (!ImageFileLoader.TryLoadWriteableBitmap(filePath, out WriteableBitmap bitmap, out errorMessage))
+                return false;
+
+            Rect targetRect = targetItem.GetBounds();
+            Size newMemoSize = new Size(bitmap.PixelWidth, bitmap.PixelHeight);
+            Geo.DockSide dockSide = Geo.GetDockSide(targetRect, dropPoint);
+            System.Windows.Point dockedPosition = Geo.GetDockedPositionConstrainedToTargetScreen(targetRect, newMemoSize, dockSide);
+
+            memo = CreateMemoFromBitmap(bitmap, dockedPosition, activateWindow: true);
+            return memo != null;
+        }
+
+        private MemoD11 CreateMemoFromBitmap(WriteableBitmap bitmap, System.Windows.Point? preferredPosition, bool activateWindow)
+        {
+            if (bitmap == null)
+                return null;
+
+            System.Windows.Point position = preferredPosition ?? GetCenteredMemoPosition(bitmap);
+            SceneItem item = Scene.CreateItem(bitmap, position.X, position.Y);
+            MemoD11 memo = new MemoD11(item);
+            CanvasWindow.CreateItem(item);
+            Scene.Focus(item.Id);
+            if (activateWindow)
+                memo.Activate();
+            return memo;
+        }
+
+        private static System.Windows.Point GetCenteredMemoPosition(WriteableBitmap bitmap)
+        {
+            var cursorPosition = System.Windows.Forms.Control.MousePosition;
+            var targetScreen = System.Windows.Forms.Screen.FromPoint(cursorPosition);
+            var screenBounds = targetScreen.Bounds;
+            return new System.Windows.Point(
+                screenBounds.Left + (screenBounds.Width - bitmap.PixelWidth) / 2.0,
+                screenBounds.Top + (screenBounds.Height - bitmap.PixelHeight) / 2.0);
         }
 
         public void ExitApplication()

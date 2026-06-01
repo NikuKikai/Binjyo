@@ -48,6 +48,7 @@ namespace Binjyo
             BackColor = System.Drawing.Color.Black;
             TopMost = true;
             AllowTransparency = false;
+            AllowDrop = true;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque | ControlStyles.UserPaint, true);
 
             MouseDown += MemoD11_MouseDown;
@@ -58,6 +59,8 @@ namespace Binjyo
             KeyUp += MemoD11_KeyUp;
             FormClosed += MemoD11_FormClosed;
             MouseDoubleClick += MemoD11_MouseDoubleClick;
+            DragEnter += MemoD11_DragEnter;
+            DragDrop += MemoD11_DragDrop;
             // Application.Idle += OnApplicationIdle;
 
             item.RegisterView(this);
