@@ -1,15 +1,14 @@
-using System;
 using System.Windows;
 using System.Windows.Input;
 
 namespace Binjyo
 {
     /// <summary>
-    /// Interaction logic for ShortcutHelp.xaml
+    /// Interaction logic for Help.xaml
     /// </summary>
-    public partial class ShortcutHelp : Window
+    public partial class Help : Window
     {
-        public ShortcutHelp()
+        public Help()
         {
             InitializeComponent();
             UpdateGlobalShortcut(

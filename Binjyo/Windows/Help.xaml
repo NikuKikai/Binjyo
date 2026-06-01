@@ -1,0 +1,260 @@
+<Window x:Class="Binjyo.Help"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Help"
+        Width="820"
+        Height="760"
+        MinWidth="560"
+        MinHeight="460"
+        Background="#111111"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="0,0,0,12">
+            <TextBlock FontSize="22"
+                       FontWeight="SemiBold"
+                       Foreground="#FFF3F3F3"
+                       Text="Help"/>
+            <TextBlock Margin="0,6,0,0"
+                       Foreground="#FFD6D6D6"
+                       TextWrapping="Wrap"
+                       Text="Binjyo creates free-floating memo windows from screenshots, live window capture, and image files. This page lists the current entry points and the shortcuts that still matter during normal use."/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Padding="12"
+                        Margin="0,0,0,12"
+                        Background="#FF1E1E1E"
+                        BorderBrush="#FF3C3C3C"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFF3F3F3"
+                                   Text="Create"/>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FFD6D6D6"/>
+                                    <Setter Property="TextWrapping" Value="Wrap"/>
+                                </Style>
+                            </Grid.Resources>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Source"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Entry"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Behavior"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,6,0,0" Text="Screenshot"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,6,0,0">
+                                <Run Text="Global hotkey: "/>
+                                <Run x:Name="GlobalShortcutText" Foreground="#FFFFFFFF" FontFamily="Consolas"/>
+                            </TextBlock>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,6,0,0" Text="Opens the screenshot overlay and creates a memo from the selected screen region."/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,6,0,0" Text="Window capture"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Text="Tray menu → Create → Capture"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Margin="0,6,0,0" Text="Draw a region over an existing window. Binjyo resolves the target window and keeps a live capture of that cropped area."/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,6,0,0" Text="Image file"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,6,0,0" Text="Tray menu → Create → File"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Margin="0,6,0,0" Text="Opens a file dialog and creates a memo from a supported still image on the screen under the mouse."/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="12"
+                        Margin="0,0,0,12"
+                        Background="#FF1E1E1E"
+                        BorderBrush="#FF3C3C3C"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFF3F3F3"
+                                   Text="Focused memo"/>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FFD6D6D6"/>
+                                    <Setter Property="TextWrapping" Value="Wrap"/>
+                                </Style>
+                            </Grid.Resources>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210"/>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Action"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Shortcut"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Notes"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,6,0,0" Text="Copy"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="C / Ctrl+C"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,6,0,0" Text="Copies the current memo. Hold Shift for the source image without drawing."/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,6,0,0" Text="Copy and close"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="X / Ctrl+X / double-click"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Margin="0,6,0,0" Text="Copies to the clipboard and closes the memo. Capture memos copy the current snapshot and reactivate the captured window."/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,6,0,0" Text="Save PNG"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="S / Shift+S"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Margin="0,6,0,0" Text="S saves the current result. Shift+S saves the source image without drawing."/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,6,0,0" Text="Close"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Esc"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,6,0,0" Text="Scale"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Ctrl + wheel"/>
+                            <TextBlock Grid.Row="5" Grid.Column="2" Margin="0,6,0,0" Text="Scales the memo around its current anchor."/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,6,0,0" Text="Reset transform"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="`"/>
+
+                            <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,6,0,0" Text="Rotate / flip"/>
+                            <TextBlock Grid.Row="7" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="R / F / Shift+F"/>
+                            <TextBlock Grid.Row="7" Grid.Column="2" Margin="0,6,0,0" Text="Tap R for a 90° step. Hold R and drag to rotate freely. F flips horizontally and Shift+F flips vertically."/>
+
+                            <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,6,0,0" Text="Effects"/>
+                            <TextBlock Grid.Row="8" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="G / B / Q / O / H / P"/>
+                            <TextBlock Grid.Row="8" Grid.Column="2" Margin="0,6,0,0" Text="Gray, binarize, quantize, opacity, hue map, and FAST feature points. Hold B, Q, or O and use the mouse wheel to tune the active value."/>
+
+                            <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,6,0,0" Text="Move"/>
+                            <TextBlock Grid.Row="9" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Arrow keys"/>
+                            <TextBlock Grid.Row="9" Grid.Column="2" Margin="0,6,0,0" Text="Moves by 1 pixel. Hold Shift to move faster."/>
+
+                            <TextBlock Grid.Row="10" Grid.Column="0" Margin="0,6,0,0" Text="Focus next memo"/>
+                            <TextBlock Grid.Row="10" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Tab"/>
+                            <TextBlock Grid.Row="10" Grid.Column="2" Margin="0,6,0,0" Text="Cycles focus between memos."/>
+
+                            <TextBlock Grid.Row="11" Grid.Column="0" Margin="0,6,0,0" Text="Color wheel"/>
+                            <TextBlock Grid.Row="11" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="CapsLock"/>
+                            <TextBlock Grid.Row="11" Grid.Column="2" Margin="0,6,0,0" Text="Toggles the HSV wheel display state while the pointer is over the memo."/>
+
+                            <TextBlock Grid.Row="12" Grid.Column="0" Margin="0,6,0,0" Text="Display mode"/>
+                            <TextBlock Grid.Row="12" Grid.Column="1" Margin="0,6,0,0">
+                                <Run Foreground="#FFFFFFFF" FontFamily="Consolas" x:Name="GlobalDisplayModeShortcutText"/>
+                            </TextBlock>
+                            <TextBlock Grid.Row="12" Grid.Column="2" Margin="0,6,0,0" Text="Cycles all memos through expanded, auto-hide, and minimized modes."/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="12"
+                        Margin="0,0,0,12"
+                        Background="#FF1E1E1E"
+                        BorderBrush="#FF3C3C3C"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFF3F3F3"
+                                   Text="Drawing mode"/>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FFD6D6D6"/>
+                                    <Setter Property="TextWrapping" Value="Wrap"/>
+                                </Style>
+                            </Grid.Resources>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210"/>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Action"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Shortcut"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" FontWeight="SemiBold" Foreground="#FFF3F3F3" Text="Notes"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,6,0,0" Text="Enter drawing mode"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="E"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,6,0,0" Text="Opens the draw panel on the focused memo."/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,6,0,0" Text="Exit drawing mode"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Esc / Enter"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,6,0,0" Text="Brush / eraser"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Q / E"/>
+                            <TextBlock Grid.Row="3" Grid.Column="2" Margin="0,6,0,0" Text="Brush draws new strokes. Eraser removes entire strokes it touches."/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,6,0,0" Text="Undo / redo"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="Z / Shift+Z"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,6,0,0" Text="Brush size"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,6,0,0" Foreground="#FFFFFFFF" FontFamily="Consolas" Text="[ / ]"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="12"
+                        Background="#FF1E1E1E"
+                        BorderBrush="#FF3C3C3C"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFF3F3F3"
+                                   Text="History and drag &amp; drop"/>
+
+                        <TextBlock Margin="0,10,0,0"
+                                   Foreground="#FFD6D6D6"
+                                   TextWrapping="Wrap"
+                                   Text="History is available from the tray menu. Double-click a history item to restore it as a new memo. Capture entries try to restore the live capture source first and fall back to the saved snapshot if the original window is no longer available."/>
+
+                        <TextBlock Margin="0,8,0,0"
+                                   Foreground="#FFD6D6D6"
+                                   TextWrapping="Wrap"
+                                   Text="You can also drag a supported image file onto an existing memo. Binjyo creates a new memo and docks it to the side you dropped on. The original memo is left unchanged."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

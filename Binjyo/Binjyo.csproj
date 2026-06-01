@@ -158,8 +158,11 @@
     <Compile Include="Windows\HistoryWindow.xaml.cs">
       <DependentUpon>HistoryWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Windows\ShortcutHelp.xaml.cs">
-      <DependentUpon>ShortcutHelp.xaml</DependentUpon>
+    <Compile Include="Windows\About.xaml.cs">
+      <DependentUpon>About.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\Help.xaml.cs">
+      <DependentUpon>Help.xaml</DependentUpon>
     </Compile>
     <Compile Include="Windows\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
@@ -215,6 +218,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Windows\About.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -232,7 +239,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Windows\ShortcutHelp.xaml">
+    <Page Include="Windows\Help.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -240,6 +247,9 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\profile.png" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -277,15 +287,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="icon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\lockon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\lockoff.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Resources\lockmin.ico" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">

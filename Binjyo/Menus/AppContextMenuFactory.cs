@@ -68,7 +68,8 @@ namespace Binjyo
                 root.Items.Add(CreateMenuItem("Canvas Window", null, (s, e) => app.OpenCanvasWindow()));
             root.Items.Add(CreateMenuItem("Close All", null, (s, e) => app.CloseAll()));
             root.Items.Add(CreateMenuItem("History...", null, (s, e) => app.OpenHistory()));
-            root.Items.Add(CreateMenuItem("Shortcut Help", null, (s, e) => app.OpenShortcutHelp()));
+            root.Items.Add(CreateMenuItem("Help", null, (s, e) => app.OpenHelp()));
+            root.Items.Add(CreateMenuItem("About", null, (s, e) => app.OpenAbout()));
             root.Items.Add(CreateMenuItem("Settings...", null, (s, e) => app.OpenSettings()));
 
             if (includeExit)

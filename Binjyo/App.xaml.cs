@@ -29,7 +29,8 @@ namespace Binjyo
         static Mutex mutex = new Mutex(true, "{8F6F0AC4-B9A1-45fd-A8CF-72F04E6BDE8F}");
         private MainWindow mainWindow;
         private Settings settings;
-        private ShortcutHelp shortcutHelp;
+        private Help helpWindow;
+        private About aboutWindow;
         private HistoryWindow historyWindow;
         private CanvasWindow canvasWindow;
 
@@ -93,8 +94,8 @@ namespace Binjyo
             if (_screenshotHotKey != null) _screenshotHotKey.Unregister();
             _screenshotHotKey = new HotKey(key, (Binjyo.KeyModifier)modifier, OnScreenshotHotKeyHandler);
 
-            if (shortcutHelp != null)
-                shortcutHelp.UpdateGlobalShortcut(key, modifier);
+            if (helpWindow != null)
+                helpWindow.UpdateGlobalShortcut(key, modifier);
         }
 
         private void OnSettingsDisplayModeModifierSet(ModifierKeys modifier)
@@ -102,8 +103,8 @@ namespace Binjyo
             if (_displayModeHotKey != null) _displayModeHotKey.Unregister();
             _displayModeHotKey = new HotKey(Key.X, (Binjyo.KeyModifier)modifier, OnDisplayModeHotKeyHandler);
 
-            if (shortcutHelp != null)
-                shortcutHelp.UpdateDisplayModeShortcut(modifier);
+            if (helpWindow != null)
+                helpWindow.UpdateDisplayModeShortcut(modifier);
         }
 
         private void OnScreenshotHotKeyHandler(HotKey hotKey)
@@ -208,16 +209,16 @@ namespace Binjyo
             canvasWindow.Activate();
             canvasWindow.Focus();
         }
-        public void OpenShortcutHelp()
+        public void OpenHelp()
         {
-            if (shortcutHelp == null)
+            if (helpWindow == null)
             {
-                shortcutHelp = new ShortcutHelp();
-                shortcutHelp.Closed += (s, e) => shortcutHelp = null;
+                helpWindow = new Help();
+                helpWindow.Closed += (s, e) => helpWindow = null;
             }
-            shortcutHelp.UpdateDisplayModeShortcut((ModifierKeys)Binjyo.Properties.Settings.Default.ModifierDisplayMode);
-            shortcutHelp.Show();
-            shortcutHelp.Activate();
+            helpWindow.UpdateDisplayModeShortcut((ModifierKeys)Binjyo.Properties.Settings.Default.ModifierDisplayMode);
+            helpWindow.Show();
+            helpWindow.Activate();
         }
         public void OpenSettings()
         {
@@ -227,6 +228,17 @@ namespace Binjyo
                 settings.Closed += (s, e) => settings = null;
             }
             settings.Show();
+        }
+
+        public void OpenAbout()
+        {
+            if (aboutWindow == null)
+            {
+                aboutWindow = new About();
+                aboutWindow.Closed += (s, e) => aboutWindow = null;
+            }
+            aboutWindow.Show();
+            aboutWindow.Activate();
         }
         public void CloseAll()
         {
