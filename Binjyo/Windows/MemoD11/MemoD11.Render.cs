@@ -179,16 +179,8 @@ namespace Binjyo
             if (isGraphicsReady || !IsHandleCreated)
                 return;
 
-            try
-            {
-                d3dDevice = new Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-            }
-            catch
-            {
-                d3dDevice = new Device(DriverType.Warp, DeviceCreationFlags.BgraSupport);
-            }
-
-            deviceContext = d3dDevice.ImmediateContext;
+            d3dDevice = DX11.SharedDevice;
+            deviceContext = DX11.SharedImmediateContext;
             int initialWidth = Math.Max(1, currentHostBounds.Width > 0 ? currentHostBounds.Width : Width);
             int initialHeight = Math.Max(1, currentHostBounds.Height > 0 ? currentHostBounds.Height : Height);
             ResetRenderTargets(initialWidth, initialHeight);
@@ -603,9 +595,7 @@ namespace Binjyo
             vertexShader = null;
             pixelShader?.Dispose();
             pixelShader = null;
-            deviceContext?.Dispose();
             deviceContext = null;
-            d3dDevice?.Dispose();
             d3dDevice = null;
         }
 

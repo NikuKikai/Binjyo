@@ -23,6 +23,50 @@ namespace Binjyo
 {
     internal static class DX11
     {
+        private static readonly object SharedDeviceLock = new object();
+        private static Device sharedDevice;
+        private static DeviceContext sharedImmediateContext;
+
+        public static Device SharedDevice
+        {
+            get
+            {
+                EnsureSharedDevice();
+                return sharedDevice;
+            }
+        }
+
+        public static DeviceContext SharedImmediateContext
+        {
+            get
+            {
+                EnsureSharedDevice();
+                return sharedImmediateContext;
+            }
+        }
+
+        private static void EnsureSharedDevice()
+        {
+            if (sharedDevice != null && sharedImmediateContext != null)
+                return;
+
+            lock (SharedDeviceLock)
+            {
+                if (sharedDevice != null && sharedImmediateContext != null)
+                    return;
+
+                try
+                {
+                    sharedDevice = new Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
+                }
+                catch
+                {
+                    sharedDevice = new Device(DriverType.Warp, DeviceCreationFlags.BgraSupport);
+                }
+
+                sharedImmediateContext = sharedDevice.ImmediateContext;
+            }
+        }
 
         public static ShaderBytecode LoadPS(string path)
         {
