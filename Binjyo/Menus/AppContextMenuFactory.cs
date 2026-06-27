@@ -49,10 +49,25 @@ namespace Binjyo
                 FlowDirection = FlowDirection.LeftToRight
             };
 
+            MenuItem bakaItem = new MenuItem
+            {
+                Header = "Baka",
+                FlowDirection = FlowDirection.LeftToRight
+            };
+
             string gestureText = FormatDisplayModeGestureText();
             MenuItem expandedItem = CreateCheckableMenuItem("Expanded", gestureText, (s, e) => app.SetViewMode(EDisplayMode.Expanded));
             MenuItem autoHideItem = CreateCheckableMenuItem("Auto Hide", null, (s, e) => app.SetViewMode(EDisplayMode.AutoHide));
             MenuItem minimizedItem = CreateCheckableMenuItem("Minimized", null, (s, e) => app.SetViewMode(EDisplayMode.Minimized));
+            MenuItem evadeMouseItem = CreateCheckableMenuItem("Evade Mouse", null, null);
+            evadeMouseItem.Click += (s, e) =>
+            {
+                bool isEnabled = evadeMouseItem.IsChecked;
+                Properties.Settings.Default.AutoHideBehavior = (int)(isEnabled
+                    ? EAutoHideBehavior.EvadeMouse
+                    : EAutoHideBehavior.HideOnHover);
+                Properties.Settings.Default.Save();
+            };
             viewModeItem.SubmenuOpened += (s, e) =>
             {
                 EDisplayMode currentMode = Scene.DisplayMode;
@@ -60,12 +75,19 @@ namespace Binjyo
                 autoHideItem.IsChecked = currentMode == EDisplayMode.AutoHide;
                 minimizedItem.IsChecked = currentMode == EDisplayMode.Minimized;
             };
+            bakaItem.SubmenuOpened += (s, e) =>
+            {
+                evadeMouseItem.IsChecked =
+                    (EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == EAutoHideBehavior.EvadeMouse;
+            };
             viewModeItem.Items.Add(expandedItem);
             viewModeItem.Items.Add(autoHideItem);
             viewModeItem.Items.Add(minimizedItem);
+            bakaItem.Items.Add(evadeMouseItem);
 
             root.Items.Add(createItem);
             root.Items.Add(viewModeItem);
+            root.Items.Add(bakaItem);
             if (includeCanvasWindow)
                 root.Items.Add(CreateMenuItem("Canvas Window", null, (s, e) => app.OpenCanvasWindow()));
             root.Items.Add(CreateMenuItem("Close All", null, (s, e) => app.CloseAll()));
