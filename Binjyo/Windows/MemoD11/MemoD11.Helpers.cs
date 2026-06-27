@@ -70,6 +70,35 @@ namespace Binjyo
             return new Rectangle(sidecarLeft, hostTop, sidecarWidth, sidecarHeight);
         }
 
+        public bool ContainsScreenPoint(double screenX, double screenY)
+        {
+            return currentHostBounds.Left <= screenX &&
+                screenX < currentHostBounds.Right &&
+                currentHostBounds.Top <= screenY &&
+                screenY < currentHostBounds.Bottom;
+        }
+
+        public bool IsCaptureCursorTeleportTarget => Item.TextureSource is ICursorTeleportSceneTextureSource;
+
+        public long FocusOrder => Item.FocusOrder;
+
+        public bool TryGetCaptureTeleportTarget(int screenX, int screenY, out Point targetPoint)
+        {
+            targetPoint = Point.Empty;
+
+            if (!(Item.TextureSource is ICursorTeleportSceneTextureSource teleportSource))
+                return false;
+            if (!ContainsScreenPoint(screenX, screenY))
+                return false;
+            if (!TryMapHostPositionToBitmapPixels(screenX - currentHostBounds.Left, screenY - currentHostBounds.Top, out WpfPoint bitmapPixelPoint))
+                return false;
+
+            return teleportSource.TryGetScreenPoint(
+                (int)Math.Floor(bitmapPixelPoint.X),
+                (int)Math.Floor(bitmapPixelPoint.Y),
+                out targetPoint);
+        }
+
         #endregion
     }
 }

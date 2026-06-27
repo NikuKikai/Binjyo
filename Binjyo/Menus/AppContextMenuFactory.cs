@@ -68,6 +68,8 @@ namespace Binjyo
                     : EAutoHideBehavior.HideOnHover);
                 Properties.Settings.Default.Save();
             };
+            MenuItem teleportMouseItem = CreateCheckableMenuItem("Teleport Mouse", null, null);
+            teleportMouseItem.Click += (s, e) => app.SetCursorTeleportEnabled(teleportMouseItem.IsChecked);
             viewModeItem.SubmenuOpened += (s, e) =>
             {
                 EDisplayMode currentMode = Scene.DisplayMode;
@@ -79,11 +81,13 @@ namespace Binjyo
             {
                 evadeMouseItem.IsChecked =
                     (EAutoHideBehavior)Properties.Settings.Default.AutoHideBehavior == EAutoHideBehavior.EvadeMouse;
+                teleportMouseItem.IsChecked = app.IsCursorTeleportEnabled();
             };
             viewModeItem.Items.Add(expandedItem);
             viewModeItem.Items.Add(autoHideItem);
             viewModeItem.Items.Add(minimizedItem);
             bakaItem.Items.Add(evadeMouseItem);
+            bakaItem.Items.Add(teleportMouseItem);
 
             root.Items.Add(createItem);
             root.Items.Add(viewModeItem);

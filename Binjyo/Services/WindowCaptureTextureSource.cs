@@ -15,7 +15,7 @@ using FormsDragDropEffects = System.Windows.Forms.DragDropEffects;
 
 namespace Binjyo
 {
-    public sealed class WindowCaptureTextureSource : ISceneTextureSource, IActivatableSceneTextureSource, IHistorySceneTextureSource, IOverlayBadgeSceneTextureSource, IFileDropSceneTextureSource, IRelayMouseSceneTextureSource
+    public sealed class WindowCaptureTextureSource : ISceneTextureSource, IActivatableSceneTextureSource, IHistorySceneTextureSource, IOverlayBadgeSceneTextureSource, IFileDropSceneTextureSource, IRelayMouseSceneTextureSource, ICursorTeleportSceneTextureSource
     {
         private readonly object syncRoot = new object();
         private readonly WindowCaptureSelection selection;
@@ -191,6 +191,17 @@ namespace Binjyo
 
             GetClampedScreenPoint(bitmapPixelX, bitmapPixelY, out int screenX, out int screenY);
             return WinService.TryPostMouseWheel(selection.WindowHandle, screenX, screenY, delta);
+        }
+
+        public bool TryGetScreenPoint(int bitmapPixelX, int bitmapPixelY, out System.Drawing.Point screenPoint)
+        {
+            screenPoint = default;
+            if (!WinService.IsValidWindow(selection.WindowHandle))
+                return false;
+
+            GetClampedScreenPoint(bitmapPixelX, bitmapPixelY, out int screenX, out int screenY);
+            screenPoint = new System.Drawing.Point(screenX, screenY);
+            return true;
         }
 
         public void Dispose()

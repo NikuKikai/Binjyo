@@ -91,4 +91,9 @@ namespace Binjyo
         bool TryRelayMouseEvent(int bitmapPixelX, int bitmapPixelY, RelayMouseEventKind eventKind, bool isLeftButtonDown);
         bool TryRelayMouseWheel(int bitmapPixelX, int bitmapPixelY, int delta);
     }
+
+    public interface ICursorTeleportSceneTextureSource
+    {
+        bool TryGetScreenPoint(int bitmapPixelX, int bitmapPixelY, out System.Drawing.Point screenPoint);
+    }
 }

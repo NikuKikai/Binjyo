@@ -302,14 +302,6 @@ namespace Binjyo
             }
         }
 
-        private bool ContainsScreenPoint(double screenX, double screenY)
-        {
-            return currentHostBounds.Left <= screenX &&
-                screenX < currentHostBounds.Right &&
-                currentHostBounds.Top <= screenY &&
-                screenY < currentHostBounds.Bottom;
-        }
-
         private static int ThresholdToPercent(int threshold)
         {
             return (int)Math.Round(threshold * 100.0 / 255.0 / 10.0) * 10;

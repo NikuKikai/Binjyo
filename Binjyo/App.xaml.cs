@@ -63,7 +63,14 @@ namespace Binjyo
             canvasWindow = new CanvasWindow();
             canvasWindow.Hide();
 
+            CursorTeleportService.Initialize();
             CreateContextMenu();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            CursorTeleportService.Shutdown();
+            base.OnExit(e);
         }
 
         private void InitShotcut()
@@ -190,6 +197,17 @@ namespace Binjyo
         {
             Scene.SetDisplayMode(mode);
         }
+
+        public bool IsCursorTeleportEnabled()
+        {
+            return CursorTeleportService.IsEnabled;
+        }
+
+        public void SetCursorTeleportEnabled(bool enabled)
+        {
+            CursorTeleportService.SetEnabled(enabled);
+        }
+
         public void OpenHistory()
         {
             if (historyWindow == null)

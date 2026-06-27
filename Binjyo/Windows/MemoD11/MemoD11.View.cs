@@ -89,6 +89,13 @@ namespace Binjyo
             RefreshHSVWheelVisibility();
         }
 
+        public void FocusForCursorTeleport()
+        {
+            Scene.Focus(Id);
+            if (!ContainsFocus)
+                Activate();
+        }
+
         public void NotifiedSourceChanged()
         {
             RenderRequest();

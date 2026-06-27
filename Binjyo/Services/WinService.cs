@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace Binjyo
 {
@@ -54,6 +55,12 @@ namespace Binjyo
         [DllImport("user32.dll")]
         static extern bool IsIconic(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        static extern short GetAsyncKeyState(int vKey);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetCursorPos(int X, int Y);
+
         [DllImport("user32.dll", SetLastError = true)]
         static extern bool ScreenToClient(IntPtr hWnd, ref NativePoint lpPoint);
 
@@ -88,6 +95,16 @@ namespace Binjyo
         public static bool IsValidWindow(IntPtr hwnd)
         {
             return hwnd != IntPtr.Zero && IsWindow(hwnd);
+        }
+
+        public static bool IsKeyDown(Keys key)
+        {
+            return (GetAsyncKeyState((int)key) & 0x8000) != 0;
+        }
+
+        public static bool TrySetCursorPosition(int screenX, int screenY)
+        {
+            return SetCursorPos(screenX, screenY);
         }
 
         public static bool TryPostLeftMouseEvent(IntPtr rootHwnd, int screenX, int screenY, RelayMouseEventKind eventKind, bool isLeftButtonDown)
