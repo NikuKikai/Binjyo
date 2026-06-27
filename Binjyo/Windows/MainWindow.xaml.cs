@@ -30,6 +30,18 @@ namespace Binjyo
             ss.Shot(ScreenshotMode.WindowCapture);
         }
 
+        public void CaptureExplorerRegionDynamic()
+        {
+            Screenshot ss = new Screenshot { Owner = this };
+            ss.Shot(ScreenshotMode.ExplorerCaptureDynamic);
+        }
+
+        public void CaptureExplorerRegionStatic()
+        {
+            Screenshot ss = new Screenshot { Owner = this };
+            ss.Shot(ScreenshotMode.ExplorerCaptureStatic);
+        }
+
 
         /*private void OnSourceInitialized(object sender, EventArgs e)
         {

@@ -84,7 +84,7 @@ namespace Binjyo
         #region ======== Informations =======
         public double GetBaseWidth() => Bitmap.Width / DpiFactor;  // logical
         public double GetBaseHeight() => Bitmap.Height / DpiFactor;
-        public bool HasDynamicTextureSource => TextureSource != null;
+        public bool HasDynamicTextureSource => TextureSource?.IsDynamic == true;
         public Point GetCenter() => new Point(Left + Width / 2, Top + Height / 2);
         public Rect GetBounds() => new Rect(Left, Top, Width, Height);
 

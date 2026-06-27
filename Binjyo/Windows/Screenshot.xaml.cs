@@ -14,6 +14,8 @@ namespace Binjyo
     {
         StaticCapture = 0,
         WindowCapture = 1,
+        ExplorerCaptureDynamic = 2,
+        ExplorerCaptureStatic = 3,
     }
 
     /// <summary>
@@ -71,7 +73,7 @@ namespace Binjyo
 
             ReleaseScreenshotResources();
 
-            if (mode == ScreenshotMode.StaticCapture)
+            if (mode == ScreenshotMode.StaticCapture || mode == ScreenshotMode.ExplorerCaptureStatic)
             {
                 var wb = CaptureScreen.Run();
                 image.Source = wb;
@@ -215,47 +217,26 @@ namespace Binjyo
                 return;
             }
 
+            if (mode == ScreenshotMode.ExplorerCaptureDynamic)
+            {
+                CreateExplorerDynamicMemo();
+                return;
+            }
+
+            if (mode == ScreenshotMode.ExplorerCaptureStatic)
+            {
+                CreateExplorerStaticMemo();
+                return;
+            }
+
             CreateStaticMemo();
         }
 
         private void CreateStaticMemo()
         {
-            var source = (WriteableBitmap)this.image.Source;
-
-            // Crop bitmap with rect
-            var croppedImage = new WriteableBitmap(selectedWidth, selectedHeight, 96, 96, PixelFormats.Bgra32, null);
-            int srcStride = source.BackBufferStride;
-            int dstStride = croppedImage.BackBufferStride;
-
-            source.Lock();
-            croppedImage.Lock();
-            try
-            {
-                IntPtr srcPtr = source.BackBuffer;
-                IntPtr dstPtr = croppedImage.BackBuffer;
-
-                // クロップの開始位置までポインタを進める (1ピクセル = 4バイト)
-                IntPtr srcStartPtr = srcPtr + (selectedTop * srcStride) + (selectedLeft * 4);
-                int bytesToCopyPerRow = selectedWidth * 4;
-
-                // 2. 行（Row）ごとにメモリを一括コピーする
-                for (int row = 0; row < selectedHeight; row++)
-                {
-                    IntPtr currentSrcRow = srcStartPtr + (row * srcStride);
-                    IntPtr currentDstRow = dstPtr + (row * dstStride);
-
-                    // Win32のCopyMemory（RtlMoveMemory）を使って1行分を丸ごと高速コピー
-                    CaptureScreen.CopyMemory(currentDstRow, currentSrcRow, (uint)bytesToCopyPerRow);
-                }
-
-                // 変更を通知
-                croppedImage.AddDirtyRect(new Int32Rect(0, 0, selectedWidth, selectedHeight));
-            }
-            finally
-            {
-                croppedImage.Unlock();
-                source.Unlock();
-            }
+            WriteableBitmap croppedImage = CreateCroppedSelectionBitmap();
+            if (croppedImage == null)
+                return;
 
             // Get center DPI
             double left = selectedLeft + l;
@@ -274,15 +255,9 @@ namespace Binjyo
 
         private void CreateWindowCaptureMemo()
         {
-            Int32Rect selectionBounds = new Int32Rect(
-                selectedLeft + l,
-                selectedTop + t,
-                selectedWidth,
-                selectedHeight);
-
             try
             {
-                if (!WindowCaptureInterop.TryResolveWindowCaptureSelection(selectionBounds, out WindowCaptureSelection captureSelection))
+                if (!TryResolveWindowCaptureSelection(out WindowCaptureSelection captureSelection))
                 {
                     MessageBox.Show(
                         "No capturable window was found under the selected region.",
@@ -292,31 +267,9 @@ namespace Binjyo
                     return;
                 }
 
-                WriteableBitmap placeholderBitmap = new WriteableBitmap(
-                    Math.Max(1, captureSelection.PixelWidth),
-                    Math.Max(1, captureSelection.PixelHeight),
-                    96,
-                    96,
-                    PixelFormats.Bgra32,
-                    null);
-
-                double dpiFactor = Geo.GetDpiFactorAt(
-                    captureSelection.SelectionBounds.X + captureSelection.SelectionBounds.Width / 2.0,
-                    captureSelection.SelectionBounds.Y + captureSelection.SelectionBounds.Height / 2.0);
-
-                double logicalLeft = captureSelection.SelectionBounds.X / dpiFactor;
-                double logicalTop = captureSelection.SelectionBounds.Y / dpiFactor;
-
-                var textureSource = new WindowCaptureTextureSource(captureSelection);
-                SceneItem item = Scene.CreateItem(
-                    placeholderBitmap,
-                    logicalLeft,
-                    logicalTop,
-                    textureSource);
-
-                _ = new MemoD11(item);
-                CanvasWindow.CreateItem(item);
-                Scene.Focus(item.Id);
+                CreateWindowCaptureMemoCore(
+                    captureSelection,
+                    new WindowCaptureTextureSource(captureSelection));
             }
             catch (Exception ex)
             {
@@ -324,8 +277,175 @@ namespace Binjyo
                     $"Capture creation failed.{Environment.NewLine}{Environment.NewLine}{ex}",
                     "Capture Error",
                     MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+            }
+        }
+
+        private void CreateExplorerDynamicMemo()
+        {
+            try
+            {
+                if (!TryResolveWindowCaptureSelection(out WindowCaptureSelection captureSelection))
+                {
+                    MessageBox.Show(
+                        "No capturable window was found under the selected region.",
+                        "Explorer Capture",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                if (!ExplorerWindowService.TryGetCurrentDirectory(captureSelection.WindowHandle, out string explorerDirectoryPath))
+                {
+                    MessageBox.Show(
+                        "The selected window is not a supported File Explorer folder view.",
+                        "Explorer Capture",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                CreateWindowCaptureMemoCore(
+                    captureSelection,
+                    new WindowCaptureTextureSource(
+                        captureSelection,
+                        HistorySourceKind.ExplorerCaptureDynamic,
+                        explorerDirectoryPath));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Explorer capture creation failed.{Environment.NewLine}{Environment.NewLine}{ex}",
+                    "Explorer Capture Error",
+                    MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        private void CreateExplorerStaticMemo()
+        {
+            try
+            {
+                if (!TryResolveWindowCaptureSelection(out WindowCaptureSelection captureSelection))
+                {
+                    MessageBox.Show(
+                        "No capturable window was found under the selected region.",
+                        "Explorer Capture",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                if (!ExplorerWindowService.TryGetCurrentDirectory(captureSelection.WindowHandle, out string explorerDirectoryPath))
+                {
+                    MessageBox.Show(
+                        "The selected window is not a supported File Explorer folder view.",
+                        "Explorer Capture",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                WriteableBitmap croppedImage = CreateCroppedSelectionBitmap();
+                if (croppedImage == null)
+                    return;
+
+                double captureDpiFactor = Geo.GetDpiFactorAt(
+                    captureSelection.SelectionBounds.X + captureSelection.SelectionBounds.Width / 2.0,
+                    captureSelection.SelectionBounds.Y + captureSelection.SelectionBounds.Height / 2.0);
+                double logicalLeft = captureSelection.SelectionBounds.X / captureDpiFactor;
+                double logicalTop = captureSelection.SelectionBounds.Y / captureDpiFactor;
+
+                var textureSource = new ExplorerStaticTextureSource(croppedImage, explorerDirectoryPath);
+                SceneItem item = Scene.CreateItem(croppedImage, logicalLeft, logicalTop, textureSource);
+                _ = new MemoD11(item);
+                CanvasWindow.CreateItem(item);
+                Scene.Focus(item.Id);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Explorer capture creation failed.{Environment.NewLine}{Environment.NewLine}{ex}",
+                    "Explorer Capture Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private bool TryResolveWindowCaptureSelection(out WindowCaptureSelection captureSelection)
+        {
+            Int32Rect selectionBounds = new Int32Rect(
+                selectedLeft + l,
+                selectedTop + t,
+                selectedWidth,
+                selectedHeight);
+
+            return WindowCaptureInterop.TryResolveWindowCaptureSelection(selectionBounds, out captureSelection);
+        }
+
+        private void CreateWindowCaptureMemoCore(WindowCaptureSelection captureSelection, ISceneTextureSource textureSource)
+        {
+            WriteableBitmap placeholderBitmap = new WriteableBitmap(
+                Math.Max(1, captureSelection.PixelWidth),
+                Math.Max(1, captureSelection.PixelHeight),
+                96,
+                96,
+                PixelFormats.Bgra32,
+                null);
+
+            double dpiFactor = Geo.GetDpiFactorAt(
+                captureSelection.SelectionBounds.X + captureSelection.SelectionBounds.Width / 2.0,
+                captureSelection.SelectionBounds.Y + captureSelection.SelectionBounds.Height / 2.0);
+
+            double logicalLeft = captureSelection.SelectionBounds.X / dpiFactor;
+            double logicalTop = captureSelection.SelectionBounds.Y / dpiFactor;
+
+            SceneItem item = Scene.CreateItem(
+                placeholderBitmap,
+                logicalLeft,
+                logicalTop,
+                textureSource);
+
+            _ = new MemoD11(item);
+            CanvasWindow.CreateItem(item);
+            Scene.Focus(item.Id);
+        }
+
+        private WriteableBitmap CreateCroppedSelectionBitmap()
+        {
+            var source = image.Source as WriteableBitmap;
+            if (source == null)
+                return null;
+
+            var croppedImage = new WriteableBitmap(selectedWidth, selectedHeight, 96, 96, PixelFormats.Bgra32, null);
+            int srcStride = source.BackBufferStride;
+            int dstStride = croppedImage.BackBufferStride;
+
+            source.Lock();
+            croppedImage.Lock();
+            try
+            {
+                IntPtr srcPtr = source.BackBuffer;
+                IntPtr dstPtr = croppedImage.BackBuffer;
+                IntPtr srcStartPtr = srcPtr + (selectedTop * srcStride) + (selectedLeft * 4);
+                int bytesToCopyPerRow = selectedWidth * 4;
+
+                for (int row = 0; row < selectedHeight; row++)
+                {
+                    IntPtr currentSrcRow = srcStartPtr + (row * srcStride);
+                    IntPtr currentDstRow = dstPtr + (row * dstStride);
+                    CaptureScreen.CopyMemory(currentDstRow, currentSrcRow, (uint)bytesToCopyPerRow);
+                }
+
+                croppedImage.AddDirtyRect(new Int32Rect(0, 0, selectedWidth, selectedHeight));
+            }
+            finally
+            {
+                croppedImage.Unlock();
+                source.Unlock();
+            }
+
+            return croppedImage;
         }
 
 
@@ -369,7 +489,7 @@ namespace Binjyo
             HideSelectionPopup();
             HideCross();
 
-            if (mode == ScreenshotMode.WindowCapture)
+            if (RequiresWindowSelection(mode))
             {
                 suppressDeactivateClose = true;
                 try
@@ -389,6 +509,13 @@ namespace Binjyo
             }
 
             CloseThis();
+        }
+
+        private static bool RequiresWindowSelection(ScreenshotMode mode)
+        {
+            return mode == ScreenshotMode.WindowCapture
+                || mode == ScreenshotMode.ExplorerCaptureDynamic
+                || mode == ScreenshotMode.ExplorerCaptureStatic;
         }
 
         private void Window_Deactivated(object sender, EventArgs e)

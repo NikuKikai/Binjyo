@@ -255,6 +255,16 @@ namespace Binjyo
             mainWindow.CaptureWindowRegion();
         }
 
+        public void CreateExplorerCaptureMemoDynamic()
+        {
+            mainWindow.CaptureExplorerRegionDynamic();
+        }
+
+        public void CreateExplorerCaptureMemoStatic()
+        {
+            mainWindow.CaptureExplorerRegionStatic();
+        }
+
         public void CreateFileMemo()
         {
             var dialog = new OpenFileDialog

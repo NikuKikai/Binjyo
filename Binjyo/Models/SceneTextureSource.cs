@@ -1,6 +1,7 @@
 using SharpDX.Direct3D11;
 using System;
 using System.Runtime.Serialization;
+using System.Windows.Forms;
 using System.Windows.Media.Imaging;
 
 namespace Binjyo
@@ -12,7 +13,13 @@ namespace Binjyo
         StaticImage = 0,
 
         [EnumMember]
-        WindowCapture = 1
+        WindowCapture = 1,
+
+        [EnumMember]
+        ExplorerCaptureDynamic = 2,
+
+        [EnumMember]
+        ExplorerCaptureStatic = 3
     }
 
     [DataContract]
@@ -35,12 +42,16 @@ namespace Binjyo
 
         [DataMember(Order = 6)]
         public int PixelHeight { get; set; }
+
+        [DataMember(Order = 7)]
+        public string ExplorerDirectoryPath { get; set; }
     }
 
     public interface ISceneTextureSource : IDisposable
     {
         int PixelWidth { get; }
         int PixelHeight { get; }
+        bool IsDynamic { get; }
         event EventHandler SourceUpdated;
 
         bool TryAcquireShaderResourceView(out ShaderResourceView shaderResourceView);
@@ -55,5 +66,16 @@ namespace Binjyo
     public interface IHistorySceneTextureSource
     {
         SceneSourceHistoryDescriptor CreateHistoryDescriptor();
+    }
+
+    public interface IOverlayBadgeSceneTextureSource
+    {
+        string OverlayBadgeText { get; }
+    }
+
+    public interface IFileDropSceneTextureSource
+    {
+        DragDropEffects GetPreferredDropEffect(string[] filePaths, int keyState);
+        bool TryHandleFileDrop(string[] filePaths, DragDropEffects effect, out string errorMessage);
     }
 }

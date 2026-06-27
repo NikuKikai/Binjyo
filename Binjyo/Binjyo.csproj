@@ -127,6 +127,9 @@
     <Compile Include="Models\SceneTextureSource.cs" />
     <Compile Include="Models\WindowCaptureSelection.cs" />
     <Compile Include="Services\Effects.cs" />
+    <Compile Include="Services\ExplorerFileDropService.cs" />
+    <Compile Include="Services\ExplorerStaticTextureSource.cs" />
+    <Compile Include="Services\ExplorerWindowService.cs" />
     <Compile Include="Services\StitchFeatureExtractor.cs" />
     <Compile Include="Services\StitchSessionService.cs" />
     <Compile Include="Services\WindowCaptureTextureSource.cs" />

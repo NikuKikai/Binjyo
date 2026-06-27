@@ -6,17 +6,21 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Forms;
 using Windows.Graphics;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
+using FormsDragDropEffects = System.Windows.Forms.DragDropEffects;
 
 namespace Binjyo
 {
-    public sealed class WindowCaptureTextureSource : ISceneTextureSource, IActivatableSceneTextureSource, IHistorySceneTextureSource
+    public sealed class WindowCaptureTextureSource : ISceneTextureSource, IActivatableSceneTextureSource, IHistorySceneTextureSource, IOverlayBadgeSceneTextureSource, IFileDropSceneTextureSource
     {
         private readonly object syncRoot = new object();
         private readonly WindowCaptureSelection selection;
+        private readonly HistorySourceKind historyKind;
+        private readonly string explorerDirectoryPath;
         private readonly IDirect3DDevice winrtDevice;
         private readonly GraphicsCaptureItem captureItem;
         private Direct3D11CaptureFramePool framePool;
@@ -33,10 +37,19 @@ namespace Binjyo
 
         public int PixelWidth => selection.PixelWidth;
         public int PixelHeight => selection.PixelHeight;
+        public bool IsDynamic => true;
+        public string OverlayBadgeText => historyKind == HistorySourceKind.ExplorerCaptureDynamic ? "DIR" : null;
 
         public WindowCaptureTextureSource(WindowCaptureSelection selection)
+            : this(selection, HistorySourceKind.WindowCapture, null)
+        {
+        }
+
+        public WindowCaptureTextureSource(WindowCaptureSelection selection, HistorySourceKind historyKind, string explorerDirectoryPath)
         {
             this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
+            this.historyKind = historyKind;
+            this.explorerDirectoryPath = string.IsNullOrWhiteSpace(explorerDirectoryPath) ? null : explorerDirectoryPath;
 
             if (!GraphicsCaptureSession.IsSupported())
                 throw new NotSupportedException("Windows.Graphics.Capture is not supported on this system.");
@@ -123,13 +136,42 @@ namespace Binjyo
         {
             return new SceneSourceHistoryDescriptor
             {
-                Kind = HistorySourceKind.WindowCapture,
+                Kind = historyKind,
                 WindowHandleValue = selection.WindowHandle.ToInt64(),
                 OffsetX = selection.OffsetX,
                 OffsetY = selection.OffsetY,
                 PixelWidth = selection.PixelWidth,
-                PixelHeight = selection.PixelHeight
+                PixelHeight = selection.PixelHeight,
+                ExplorerDirectoryPath = explorerDirectoryPath
             };
+        }
+
+        public FormsDragDropEffects GetPreferredDropEffect(string[] filePaths, int keyState)
+        {
+            if (historyKind != HistorySourceKind.ExplorerCaptureDynamic)
+                return FormsDragDropEffects.None;
+
+            if (!TryGetCurrentExplorerDirectoryPath(out string currentDirectoryPath))
+                return FormsDragDropEffects.None;
+
+            return ExplorerFileDropService.GetPreferredEffect(currentDirectoryPath, filePaths, keyState);
+        }
+
+        public bool TryHandleFileDrop(string[] filePaths, FormsDragDropEffects effect, out string errorMessage)
+        {
+            if (historyKind != HistorySourceKind.ExplorerCaptureDynamic)
+            {
+                errorMessage = "This capture memo does not accept file drops.";
+                return false;
+            }
+
+            if (!TryGetCurrentExplorerDirectoryPath(out string currentDirectoryPath))
+            {
+                errorMessage = "Failed to resolve the current File Explorer directory.";
+                return false;
+            }
+
+            return ExplorerFileDropService.TryApplyDrop(currentDirectoryPath, filePaths, effect, out errorMessage);
         }
 
         public void Dispose()
@@ -217,13 +259,13 @@ namespace Binjyo
                     return;
 
                 hasReportedFrameFailure = true;
-                Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    MessageBox.Show(
+                    System.Windows.MessageBox.Show(
                         $"Capture frame processing failed.{Environment.NewLine}{Environment.NewLine}{ex}",
                         "Capture Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
                 }));
             }
         }
@@ -300,6 +342,16 @@ namespace Binjyo
             bitmap.WritePixels(new Int32Rect(0, 0, width, height), pixels, rowSize, 0);
             bitmap.Freeze();
             return new WriteableBitmap(bitmap);
+        }
+
+        private bool TryGetCurrentExplorerDirectoryPath(out string currentDirectoryPath)
+        {
+            currentDirectoryPath = null;
+
+            if (!ExplorerWindowService.TryGetCurrentDirectory(selection.WindowHandle, out currentDirectoryPath))
+                currentDirectoryPath = explorerDirectoryPath;
+
+            return !string.IsNullOrWhiteSpace(currentDirectoryPath);
         }
     }
 }

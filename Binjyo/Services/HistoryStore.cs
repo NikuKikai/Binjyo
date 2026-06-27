@@ -23,7 +23,7 @@ namespace Binjyo
         public bool IsFlipY { get; set; }
         public bool HasDrawingData { get; set; }
         public SceneSourceHistoryDescriptor Source { get; set; }
-        public bool IsCaptureSource => Source?.Kind == HistorySourceKind.WindowCapture;
+        public bool IsCaptureSource => Source != null && Source.Kind != HistorySourceKind.StaticImage;
     }
 
     [DataContract]
@@ -209,7 +209,7 @@ namespace Binjyo
                 return null;
 
             WriteableBitmap bitmap = LoadWriteableBitmap(entry);
-            ISceneTextureSource textureSource = CreateTextureSource(entry);
+            ISceneTextureSource textureSource = CreateTextureSource(entry, bitmap);
             SceneItem item = Scene.CreateItem(bitmap, 0, 0, textureSource);
             item.SetScale(entry.Scale);
             item.SetFlip(entry.IsFlipX, entry.IsFlipY);
@@ -320,10 +320,25 @@ namespace Binjyo
             };
         }
 
-        private static ISceneTextureSource CreateTextureSource(HistoryEntry entry)
+        private static ISceneTextureSource CreateTextureSource(HistoryEntry entry, WriteableBitmap bitmap)
         {
-            if (entry?.Source == null || entry.Source.Kind != HistorySourceKind.WindowCapture)
+            if (entry?.Source == null || entry.Source.Kind == HistorySourceKind.StaticImage)
                 return null;
+
+            if (entry.Source.Kind == HistorySourceKind.ExplorerCaptureStatic)
+            {
+                if (bitmap == null || string.IsNullOrWhiteSpace(entry.Source.ExplorerDirectoryPath))
+                    return null;
+
+                try
+                {
+                    return new ExplorerStaticTextureSource(bitmap, entry.Source.ExplorerDirectoryPath);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
 
             IntPtr hwnd = new IntPtr(entry.Source.WindowHandleValue);
             if (!WinService.IsValidWindow(hwnd))
@@ -338,7 +353,7 @@ namespace Binjyo
                     OffsetY = entry.Source.OffsetY,
                     PixelWidth = Math.Max(1, entry.Source.PixelWidth),
                     PixelHeight = Math.Max(1, entry.Source.PixelHeight)
-                });
+                }, entry.Source.Kind, entry.Source.ExplorerDirectoryPath);
             }
             catch
             {

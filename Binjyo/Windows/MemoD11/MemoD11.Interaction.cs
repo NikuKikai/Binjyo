@@ -136,6 +136,13 @@ namespace Binjyo
 
         private void MemoD11_DragEnter(object sender, DragEventArgs e)
         {
+            if (TryGetDroppedFilePaths(e, out string[] filePaths)
+                && Item.TextureSource is IFileDropSceneTextureSource fileDropSource)
+            {
+                e.Effect = fileDropSource.GetPreferredDropEffect(filePaths, e.KeyState);
+                return;
+            }
+
             if (TryGetSingleDroppedImagePath(e, out _))
                 e.Effect = DragDropEffects.Copy;
             else
@@ -144,6 +151,24 @@ namespace Binjyo
 
         private void MemoD11_DragDrop(object sender, DragEventArgs e)
         {
+            if (TryGetDroppedFilePaths(e, out string[] filePaths)
+                && Item.TextureSource is IFileDropSceneTextureSource fileDropSource)
+            {
+                DragDropEffects effect = fileDropSource.GetPreferredDropEffect(filePaths, e.KeyState);
+                if (effect == DragDropEffects.None)
+                    return;
+
+                if (!fileDropSource.TryHandleFileDrop(filePaths, effect, out string dropErrorMessage))
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Failed to drop the selected files.{Environment.NewLine}{Environment.NewLine}{dropErrorMessage}",
+                        "Explorer Drop",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+                return;
+            }
+
             if (!TryGetSingleDroppedImagePath(e, out string filePath))
                 return;
 
@@ -161,15 +186,24 @@ namespace Binjyo
             }
         }
 
-        private static bool TryGetSingleDroppedImagePath(DragEventArgs e, out string filePath)
+        private static bool TryGetDroppedFilePaths(DragEventArgs e, out string[] filePaths)
         {
-            filePath = null;
+            filePaths = null;
 
             if (e?.Data == null || !e.Data.GetDataPresent(DataFormats.FileDrop))
                 return false;
 
-            string[] filePaths = e.Data.GetData(DataFormats.FileDrop) as string[];
-            if (filePaths == null || filePaths.Length != 1)
+            filePaths = e.Data.GetData(DataFormats.FileDrop) as string[];
+            return filePaths != null && filePaths.Length > 0;
+        }
+
+        private static bool TryGetSingleDroppedImagePath(DragEventArgs e, out string filePath)
+        {
+            filePath = null;
+
+            if (!TryGetDroppedFilePaths(e, out string[] filePaths))
+                return false;
+            if (filePaths.Length != 1)
                 return false;
 
             if (!ImageFileLoader.IsSupportedPath(filePaths[0]))

@@ -3,6 +3,7 @@ using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System;
+using System.Globalization;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -364,6 +365,12 @@ namespace Binjyo
             else if (featureOverlayBitmap != null)
                 overlayBitmap = DrawingData.Composite(overlayBitmap, featureOverlayBitmap);
 
+            WriteableBitmap badgeBitmap = RenderSourceBadgeBitmap(Item.Bitmap.PixelWidth, Item.Bitmap.PixelHeight);
+            if (overlayBitmap == null)
+                overlayBitmap = badgeBitmap;
+            else if (badgeBitmap != null)
+                overlayBitmap = DrawingData.Composite(overlayBitmap, badgeBitmap);
+
             if (overlayBitmap == null)
             {
                 isDrawingOverlayDirty = false;
@@ -419,6 +426,51 @@ namespace Binjyo
         private void InvalidateDrawingOverlay()
         {
             isDrawingOverlayDirty = true;
+        }
+
+        private WriteableBitmap RenderSourceBadgeBitmap(int pixelWidth, int pixelHeight)
+        {
+            if (!(Item.TextureSource is IOverlayBadgeSceneTextureSource badgeSource))
+                return null;
+            if (string.IsNullOrWhiteSpace(badgeSource.OverlayBadgeText))
+                return null;
+
+            DrawingVisual visual = new DrawingVisual();
+            using (DrawingContext dc = visual.RenderOpen())
+            {
+                double padding = Math.Max(6, Math.Round(Math.Min(pixelWidth, pixelHeight) * 0.02));
+                double fontSize = Math.Max(14, Math.Round(Math.Min(pixelWidth, pixelHeight) * 0.08));
+                Typeface typeface = new Typeface(
+                    new System.Windows.Media.FontFamily("Consolas"),
+                    System.Windows.FontStyles.Normal,
+                    System.Windows.FontWeights.Bold,
+                    System.Windows.FontStretches.Normal);
+                FormattedText text = new FormattedText(
+                    badgeSource.OverlayBadgeText,
+                    CultureInfo.InvariantCulture,
+                    System.Windows.FlowDirection.LeftToRight,
+                    typeface,
+                    fontSize,
+                    System.Windows.Media.Brushes.White,
+                    1.0);
+
+                System.Windows.Rect badgeRect = new System.Windows.Rect(
+                    padding,
+                    padding,
+                    text.Width + padding * 2,
+                    text.Height + padding);
+                dc.DrawRoundedRectangle(
+                    new SolidColorBrush(System.Windows.Media.Color.FromArgb(200, 228, 178, 0)),
+                    null,
+                    badgeRect,
+                    6,
+                    6);
+                dc.DrawText(text, new System.Windows.Point(badgeRect.Left + padding, badgeRect.Top + padding / 2));
+            }
+
+            RenderTargetBitmap renderTarget = new RenderTargetBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Pbgra32);
+            renderTarget.Render(visual);
+            return new WriteableBitmap(renderTarget);
         }
 
         /// <summary>
