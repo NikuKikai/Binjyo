@@ -78,4 +78,17 @@ namespace Binjyo
         DragDropEffects GetPreferredDropEffect(string[] filePaths, int keyState);
         bool TryHandleFileDrop(string[] filePaths, DragDropEffects effect, out string errorMessage);
     }
+
+    public enum RelayMouseEventKind
+    {
+        Move = 0,
+        LeftButtonDown = 1,
+        LeftButtonUp = 2
+    }
+
+    public interface IRelayMouseSceneTextureSource
+    {
+        bool TryRelayMouseEvent(int bitmapPixelX, int bitmapPixelY, RelayMouseEventKind eventKind, bool isLeftButtonDown);
+        bool TryRelayMouseWheel(int bitmapPixelX, int bitmapPixelY, int delta);
+    }
 }

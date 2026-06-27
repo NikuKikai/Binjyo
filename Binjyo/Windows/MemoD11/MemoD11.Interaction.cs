@@ -33,6 +33,7 @@ namespace Binjyo
         private double rotateCenterScreenY;
         private bool isRotateAnimating;
         private double rotateAnimationRemainingDelta;
+        private bool isRelayingMouseInput;
         // Save
         private bool isKeyDownS;
         private int lastLeftClickTimestamp;
@@ -52,7 +53,11 @@ namespace Binjyo
             IActivatableSceneTextureSource activatableSource = Item.TextureSource as IActivatableSceneTextureSource;
 
             if (Item.HasDynamicTextureSource)
+            {
                 Item.CopyToClipboard(false);
+                activatableSource?.TryActivateSourceWindow();
+                return;
+            }
             else
                 Item.CopyToClipboard((ModifierKeys & Keys.Shift) != Keys.Shift);
 
@@ -70,6 +75,9 @@ namespace Binjyo
                 ShowContextMenuAtCursor();
                 return;
             }
+
+            if (TryBeginRelayedMouseInput(e))
+                return;
 
             if (TryHandleManualDoubleClick(e))
                 return;
@@ -105,6 +113,28 @@ namespace Binjyo
             }
 
             Capture = true;
+        }
+
+        private bool TryBeginRelayedMouseInput(MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Middle)
+                return false;
+            if (!(Item.TextureSource is IRelayMouseSceneTextureSource relaySource))
+                return false;
+            if (!TryMapHostPositionToBitmapPixels(e.X, e.Y, out System.Windows.Point bitmapPixelPoint))
+                return false;
+
+            int bitmapPixelX = (int)Math.Floor(bitmapPixelPoint.X);
+            int bitmapPixelY = (int)Math.Floor(bitmapPixelPoint.Y);
+            if (!relaySource.TryRelayMouseEvent(bitmapPixelX, bitmapPixelY, RelayMouseEventKind.Move, false))
+                return false;
+            if (!relaySource.TryRelayMouseEvent(bitmapPixelX, bitmapPixelY, RelayMouseEventKind.LeftButtonDown, true))
+                return false;
+
+            isRelayingMouseInput = true;
+            lastLeftClickTimestamp = 0;
+            Capture = true;
+            return true;
         }
 
         private bool TryHandleManualDoubleClick(MouseEventArgs e)
@@ -225,6 +255,22 @@ namespace Binjyo
                 return;
             }
 
+            if (isRelayingMouseInput)
+            {
+                if (TryMapHostPositionToBitmapPixels(e.X, e.Y, out System.Windows.Point bitmapPixelPoint)
+                    && Item.TextureSource is IRelayMouseSceneTextureSource relaySource)
+                {
+                    relaySource.TryRelayMouseEvent(
+                        (int)Math.Floor(bitmapPixelPoint.X),
+                        (int)Math.Floor(bitmapPixelPoint.Y),
+                        RelayMouseEventKind.Move,
+                        true);
+                }
+
+                RefreshHSVWheelVisibility();
+                return;
+            }
+
             if (!Capture || e.Button != MouseButtons.Left)
             {
                 RefreshHSVWheelVisibility();
@@ -256,6 +302,24 @@ namespace Binjyo
                 return;
             }
 
+            if (isRelayingMouseInput)
+            {
+                if (TryMapHostPositionToBitmapPixels(e.X, e.Y, out System.Windows.Point bitmapPixelPoint)
+                    && Item.TextureSource is IRelayMouseSceneTextureSource relaySource)
+                {
+                    relaySource.TryRelayMouseEvent(
+                        (int)Math.Floor(bitmapPixelPoint.X),
+                        (int)Math.Floor(bitmapPixelPoint.Y),
+                        RelayMouseEventKind.LeftButtonUp,
+                        false);
+                }
+
+                isRelayingMouseInput = false;
+                Capture = false;
+                RefreshHSVWheelVisibility();
+                return;
+            }
+
             if (!Capture)
                 return;
 
@@ -284,6 +348,17 @@ namespace Binjyo
             if ((ModifierKeys & Keys.Control) == Keys.Control)
             {
                 Item.SetScale(Item.Scale * (e.Delta > 0 ? 1.1 : 0.9));
+                RefreshHSVWheelVisibility();
+                return;
+            }
+
+            if (Item.TextureSource is IRelayMouseSceneTextureSource relaySource
+                && TryMapHostPositionToBitmapPixels(e.X, e.Y, out System.Windows.Point bitmapPixelPoint))
+            {
+                relaySource.TryRelayMouseWheel(
+                    (int)Math.Floor(bitmapPixelPoint.X),
+                    (int)Math.Floor(bitmapPixelPoint.Y),
+                    e.Delta);
                 RefreshHSVWheelVisibility();
                 return;
             }

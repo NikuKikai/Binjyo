@@ -15,7 +15,7 @@ using FormsDragDropEffects = System.Windows.Forms.DragDropEffects;
 
 namespace Binjyo
 {
-    public sealed class WindowCaptureTextureSource : ISceneTextureSource, IActivatableSceneTextureSource, IHistorySceneTextureSource, IOverlayBadgeSceneTextureSource, IFileDropSceneTextureSource
+    public sealed class WindowCaptureTextureSource : ISceneTextureSource, IActivatableSceneTextureSource, IHistorySceneTextureSource, IOverlayBadgeSceneTextureSource, IFileDropSceneTextureSource, IRelayMouseSceneTextureSource
     {
         private readonly object syncRoot = new object();
         private readonly WindowCaptureSelection selection;
@@ -172,6 +172,25 @@ namespace Binjyo
             }
 
             return ExplorerFileDropService.TryApplyDrop(currentDirectoryPath, filePaths, effect, out errorMessage);
+        }
+
+        public bool TryRelayMouseEvent(int bitmapPixelX, int bitmapPixelY, RelayMouseEventKind eventKind, bool isLeftButtonDown)
+        {
+            if (!WinService.IsValidWindow(selection.WindowHandle))
+                return false;
+
+            GetClampedScreenPoint(bitmapPixelX, bitmapPixelY, out int screenX, out int screenY);
+
+            return WinService.TryPostLeftMouseEvent(selection.WindowHandle, screenX, screenY, eventKind, isLeftButtonDown);
+        }
+
+        public bool TryRelayMouseWheel(int bitmapPixelX, int bitmapPixelY, int delta)
+        {
+            if (!WinService.IsValidWindow(selection.WindowHandle))
+                return false;
+
+            GetClampedScreenPoint(bitmapPixelX, bitmapPixelY, out int screenX, out int screenY);
+            return WinService.TryPostMouseWheel(selection.WindowHandle, screenX, screenY, delta);
         }
 
         public void Dispose()
@@ -352,6 +371,14 @@ namespace Binjyo
                 currentDirectoryPath = explorerDirectoryPath;
 
             return !string.IsNullOrWhiteSpace(currentDirectoryPath);
+        }
+
+        private void GetClampedScreenPoint(int bitmapPixelX, int bitmapPixelY, out int screenX, out int screenY)
+        {
+            int clampedBitmapX = Math.Max(0, Math.Min(selection.PixelWidth - 1, bitmapPixelX));
+            int clampedBitmapY = Math.Max(0, Math.Min(selection.PixelHeight - 1, bitmapPixelY));
+            screenX = selection.WindowBounds.X + selection.OffsetX + clampedBitmapX;
+            screenY = selection.WindowBounds.Y + selection.OffsetY + clampedBitmapY;
         }
     }
 }
