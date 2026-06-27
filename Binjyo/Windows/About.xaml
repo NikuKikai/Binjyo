@@ -39,7 +39,7 @@
                 <TextBlock Foreground="#FFF3F3F3"
                            FontSize="20"
                            FontWeight="SemiBold"
-                           Text="Binjyo v0.7.0 (MIT LICENCE)"/>
+                           Text="Binjyo v0.7.1 (MIT LICENCE)"/>
                 <TextBlock Margin="0,14,0,0"
                            Foreground="#FFD6D6D6"
                            FontSize="15"
