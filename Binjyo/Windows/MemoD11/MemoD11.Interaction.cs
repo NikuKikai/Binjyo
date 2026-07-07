@@ -49,17 +49,17 @@ namespace Binjyo
         /// </summary>
         private void MemoD11_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (Scene.IsDragMoving) return;
             IActivatableSceneTextureSource activatableSource = Item.TextureSource as IActivatableSceneTextureSource;
 
-            if (Item.HasDynamicTextureSource)
+            if (Item.TextureSource is WindowCaptureTextureSource captureSource
+                && captureSource.IsPlainWindowCapture)
             {
                 Item.CopyToClipboard(false);
                 activatableSource?.TryActivateSourceWindow();
                 return;
             }
-            else
-                Item.CopyToClipboard((ModifierKeys & Keys.Shift) != Keys.Shift);
+
+            Item.CopyToClipboard((ModifierKeys & Keys.Shift) != Keys.Shift);
 
             Scene.CloseItem(Id);
             activatableSource?.TryActivateSourceWindow();
@@ -159,6 +159,13 @@ namespace Binjyo
 
             if (!isDoubleClick)
                 return false;
+
+            if (Capture)
+                Capture = false;
+            if (isRotateDragging)
+                isRotateDragging = false;
+            if (Scene.IsDragMoving)
+                Scene.DragMoveEnd();
 
             MemoD11_MouseDoubleClick(this, e);
             return true;

@@ -141,12 +141,9 @@ namespace Binjyo
             if (!IsValidWindow(rootHwnd))
                 return false;
 
-            if (!TryResolveDeepestChildWindow(rootHwnd, screenX, screenY, out IntPtr targetHwnd, out _))
-                return false;
-
             IntPtr wParam = new IntPtr((delta & 0xFFFF) << 16);
             IntPtr lParam = MakeLParam(screenX, screenY);
-            return PostMessage(targetHwnd, WM_MOUSEWHEEL, wParam, lParam);
+            return PostMessage(rootHwnd, WM_MOUSEWHEEL, wParam, lParam);
         }
 
         private static bool TryResolveDeepestChildWindow(IntPtr rootHwnd, int screenX, int screenY, out IntPtr targetHwnd, out NativePoint clientPoint)

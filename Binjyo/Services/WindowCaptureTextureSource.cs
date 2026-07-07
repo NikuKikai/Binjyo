@@ -38,6 +38,7 @@ namespace Binjyo
         public int PixelWidth => selection.PixelWidth;
         public int PixelHeight => selection.PixelHeight;
         public bool IsDynamic => true;
+        public bool IsPlainWindowCapture => historyKind == HistorySourceKind.WindowCapture;
         public string OverlayBadgeText => historyKind == HistorySourceKind.ExplorerCaptureDynamic ? "DIR" : null;
 
         public WindowCaptureTextureSource(WindowCaptureSelection selection)
